@@ -25,7 +25,6 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
 
   const handleNumbersSelected = (numbers: number[]) => {
     setSelectedNumbers(numbers);
-    // Atualiza os matches para todas as previsões existentes
     if (predictions.length > 0) {
       setPredictions(predictions.map(pred => ({
         ...pred,
@@ -126,7 +125,10 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
 
   return (
     <div className="space-y-4">
-      <NumberSelector onNumbersSelected={handleNumbersSelected} />
+      <NumberSelector 
+        onNumbersSelected={handleNumbersSelected} 
+        predictions={predictions}
+      />
       
       <Card className="mt-4">
         <CardHeader>

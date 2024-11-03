@@ -4,36 +4,46 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 interface EvolutionChartProps {
   data: Array<{
     generation: number;
-    playerId: number;
     score: number;
     fitness: number;
   }>;
 }
 
 const EvolutionChart: React.FC<EvolutionChartProps> = ({ data = [] }) => {
-  const playerIds = [...new Set(data.map(item => item.playerId))];
-  const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a4de6c', '#d0ed57'];
+  // Filtra apenas os dados do campeão
+  const championData = data.reduce((acc, curr) => {
+    const existingGen = acc.find(item => item.generation === curr.generation);
+    if (!existingGen || curr.fitness > existingGen.fitness) {
+      if (existingGen) {
+        acc = acc.filter(item => item.generation !== curr.generation);
+      }
+      acc.push(curr);
+    }
+    return acc;
+  }, [] as typeof data);
 
   return (
     <div className="mb-8">
-      <h3 className="text-lg font-semibold mb-2">Evolução das Gerações por Jogador</h3>
+      <h3 className="text-lg font-semibold mb-2">Evolução do Campeão por Geração</h3>
       <ResponsiveContainer width="100%" height={400}>
-        <LineChart data={data}>
+        <LineChart data={championData}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="generation" />
           <YAxis />
           <Tooltip />
           <Legend />
-          {playerIds.map((playerId, index) => (
-            <Line
-              key={playerId}
-              type="monotone"
-              dataKey="score"
-              data={data.filter(item => item.playerId === playerId)}
-              name={`Jogador ${playerId}`}
-              stroke={colors[index % colors.length]}
-            />
-          ))}
+          <Line 
+            type="monotone" 
+            dataKey="score" 
+            stroke="#8884d8" 
+            name="Pontuação Total" 
+          />
+          <Line 
+            type="monotone" 
+            dataKey="fitness" 
+            stroke="#82ca9d" 
+            name="Fitness (Acertos)" 
+          />
         </LineChart>
       </ResponsiveContainer>
     </div>
