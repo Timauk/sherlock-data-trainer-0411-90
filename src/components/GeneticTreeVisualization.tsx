@@ -9,6 +9,19 @@ interface GeneticTreeVisualizationProps {
 }
 
 const GeneticTreeVisualization: React.FC<GeneticTreeVisualizationProps> = ({ players, generation }) => {
+  if (!players || players.length === 0) {
+    return (
+      <Card className="w-full mt-4">
+        <CardHeader>
+          <CardTitle>Evolução do Campeão</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">Aguardando dados de evolução...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const champion = players.reduce((prev, current) => 
     (current.fitness > prev.fitness) ? current : prev, players[0]);
 
