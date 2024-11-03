@@ -51,7 +51,7 @@ async function saveCheckpoint(data) {
 
 // Limpa cache periodicamente
 setInterval(() => {
-  cache.prune();
+  cache.flushAll(); // Using flushAll instead of prune
   if (global.gc) {
     global.gc();
   }

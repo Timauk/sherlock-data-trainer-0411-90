@@ -15,7 +15,7 @@ setInterval(() => {
   
   if (stats.keys > 800) { // 80% do limite
     systemLogger.log('system', 'Cache reaching capacity, cleaning old entries');
-    cache.prune();
+    cache.flushAll(); // Using flushAll instead of prune
   }
 }, 300000); // A cada 5 minutos
 
