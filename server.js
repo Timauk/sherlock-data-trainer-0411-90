@@ -6,6 +6,7 @@ import path from 'path';
 import NodeCache from 'node-cache';
 import * as tf from '@tensorflow/tfjs';
 import { logger } from './src/utils/logging/logger.js';
+import { cacheMiddleware } from './src/utils/performance/serverCache.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,21 +14,12 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3001;
 
-// Middlewares
+// Middlewares otimizados
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(compression());
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Request logging middleware
-app.use((req, res, next) => {
-  logger.info({
-    method: req.method,
-    url: req.url,
-    ip: req.ip
-  }, 'Incoming request');
-  next();
-});
+app.use(cacheMiddleware);
 
 // Rotas
 import { modelRouter } from './routes/model.js';
@@ -87,6 +79,13 @@ const logsDir = path.join(__dirname, 'logs');
     fs.mkdirSync(dir, { recursive: true });
   }
 });
+
+// Gerenciamento de memória
+setInterval(() => {
+  if (global.gc) {
+    global.gc();
+  }
+}, 300000); // Limpa a cada 5 minutos
 
 app.listen(PORT, () => {
   logger.info(`Servidor rodando em http://localhost:${PORT}`);
