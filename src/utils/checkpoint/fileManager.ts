@@ -34,4 +34,26 @@ export class FileManager {
     }
     return JSON.parse(await fs.promises.readFile(fullPath, 'utf8'));
   }
+
+  listFiles() {
+    const files: string[] = [];
+    
+    const readDirRecursive = (dir: string) => {
+      const items = fs.readdirSync(dir);
+      
+      items.forEach(item => {
+        const fullPath = path.join(dir, item);
+        const stat = fs.statSync(fullPath);
+        
+        if (stat.isDirectory()) {
+          readDirRecursive(fullPath);
+        } else {
+          files.push(path.relative(this.basePath, fullPath));
+        }
+      });
+    };
+    
+    readDirRecursive(this.basePath);
+    return files;
+  }
 }

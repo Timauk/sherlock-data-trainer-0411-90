@@ -5,9 +5,10 @@ import { useToast } from "@/hooks/use-toast";
 
 interface NumberSelectorProps {
   onNumbersSelected: (numbers: number[]) => void;
+  predictions?: Array<{ numbers: number[] }>;
 }
 
-const NumberSelector: React.FC<NumberSelectorProps> = ({ onNumbersSelected }) => {
+const NumberSelector: React.FC<NumberSelectorProps> = ({ onNumbersSelected, predictions }) => {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const { toast } = useToast();
 
@@ -16,6 +17,7 @@ const NumberSelector: React.FC<NumberSelectorProps> = ({ onNumbersSelected }) =>
       setSelectedNumbers(prev => prev.filter(n => n !== num));
     } else if (selectedNumbers.length < 15) {
       setSelectedNumbers(prev => [...prev, num].sort((a, b) => a - b));
+      onNumbersSelected([...selectedNumbers, num].sort((a, b) => a - b));
     } else {
       toast({
         title: "Limite Atingido",
@@ -23,6 +25,10 @@ const NumberSelector: React.FC<NumberSelectorProps> = ({ onNumbersSelected }) =>
         variant: "destructive"
       });
     }
+  };
+
+  const getMatchCount = (predictionNumbers: number[]) => {
+    return predictionNumbers.filter(num => selectedNumbers.includes(num)).length;
   };
 
   return (
@@ -43,11 +49,17 @@ const NumberSelector: React.FC<NumberSelectorProps> = ({ onNumbersSelected }) =>
             </Button>
           ))}
         </div>
-        <div className="mt-4">
-          <p className="text-sm text-muted-foreground">
-            Números selecionados: {selectedNumbers.length}/15
-          </p>
-        </div>
+        
+        {selectedNumbers.length === 15 && predictions && predictions.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <h3 className="font-semibold">Comparação com Previsões:</h3>
+            {predictions.map((pred, idx) => (
+              <div key={idx} className="p-2 bg-gray-100 dark:bg-gray-800 rounded">
+                <div>Jogo {idx + 1}: {getMatchCount(pred.numbers)} acertos</div>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

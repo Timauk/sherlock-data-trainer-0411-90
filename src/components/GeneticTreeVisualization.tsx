@@ -9,22 +9,33 @@ interface GeneticTreeVisualizationProps {
 }
 
 const GeneticTreeVisualization: React.FC<GeneticTreeVisualizationProps> = ({ players, generation }) => {
-  const genealogyData = players.map(player => ({
-    id: player.id,
-    generation: player.generation,
-    score: player.score,
-    fitness: player.fitness,
-  }));
+  const champion = players.reduce((prev, current) => 
+    (current.fitness > prev.fitness) ? current : prev, players[0]);
+
+  const evolutionData = [{
+    generation: generation - 1,
+    score: champion.score - champion.fitness,
+    fitness: champion.fitness - 1
+  }, {
+    generation,
+    score: champion.score,
+    fitness: champion.fitness
+  }];
+
+  const improved = champion.fitness > (champion.fitness - 1);
 
   return (
     <Card className="w-full mt-4">
       <CardHeader>
-        <CardTitle>Árvore Genealógica dos Jogadores</CardTitle>
+        <CardTitle className="flex justify-between items-center">
+          <span>Evolução do Campeão</span>
+          {improved && <span className="text-green-500">↑ Melhorou</span>}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={genealogyData}>
+            <LineChart data={evolutionData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="generation" />
               <YAxis />
