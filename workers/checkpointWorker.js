@@ -1,9 +1,10 @@
 import { parentPort } from 'worker_threads';
-import { createClient } from 'redis';
 import fs from 'fs/promises';
 import path from 'path';
+import { createRedisClient } from '../src/config/redis.js';
+import { logger } from '../utils/logging/logger.js';
 
-const redis = createClient();
+const redis = createRedisClient();
 
 async function saveCheckpoint(data) {
   try {
@@ -56,6 +57,7 @@ async function saveCheckpoint(data) {
     });
 
   } catch (error) {
+    logger.error('Erro ao salvar checkpoint:', error);
     parentPort.postMessage({
       success: false,
       error: error.message
