@@ -6,7 +6,7 @@ interface BoardDisplayProps {
 }
 
 const BoardDisplay: React.FC<BoardDisplayProps> = ({ numbers, concursoNumber }) => {
-  const isSimulated = numbers.length === 0 || concursoNumber > 3184;
+  const isSimulated = numbers.length === 0;
 
   return (
     <div className="mb-4">
@@ -14,7 +14,7 @@ const BoardDisplay: React.FC<BoardDisplayProps> = ({ numbers, concursoNumber }) 
         Quadro (Banca) - Concurso #{concursoNumber}
         {isSimulated && (
           <span className="ml-2 text-sm text-red-500 font-normal">
-            (Simulação - Além dos dados reais)
+            (Simulação)
           </span>
         )}
       </h3>

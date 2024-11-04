@@ -41,21 +41,17 @@ export const useGameLoop = (
   const gameLoop = useCallback(async () => {
     if (csvData.length === 0 || !trainedModel) return;
 
-    // Verifica se chegamos ao final dos dados reais
-    if (concursoNumber >= csvData.length) {
-      showToast?.("Fim dos Dados", "Chegamos ao final dos concursos disponíveis.");
-      return;
-    }
-
-    setConcursoNumber(concursoNumber + 1);
+    // Incrementa o número do concurso e reinicia se necessário
+    const nextConcurso = (concursoNumber + 1) % csvData.length;
+    setConcursoNumber(nextConcurso);
     setGameCount(prev => prev + 1);
 
-    const currentBoardNumbers = csvData[concursoNumber];
+    const currentBoardNumbers = csvData[nextConcurso];
     setBoardNumbers(currentBoardNumbers);
     
     const validationMetrics = performCrossValidation(
       [players[0].predictions],
-      csvData.slice(Math.max(0, concursoNumber - 10), concursoNumber)
+      csvData.slice(Math.max(0, nextConcurso - 10), nextConcurso)
     );
 
     const currentDate = new Date();
@@ -75,7 +71,7 @@ export const useGameLoop = (
           trainedModel, 
           currentBoardNumbers, 
           player.weights, 
-          concursoNumber,
+          nextConcurso,
           setNeuralNetworkVisualization,
           { lunarPhase, lunarPatterns },
           { numbers: [[...currentBoardNumbers]], dates: [currentDate] }
@@ -94,7 +90,7 @@ export const useGameLoop = (
     let randomMatches = 0;
     let currentGameMatches = 0;
     let currentGameRandomMatches = 0;
-    const totalPredictions = players.length * (concursoNumber + 1);
+    const totalPredictions = players.length * (nextConcurso + 1);
 
     const updatedPlayers = players.map((player, index) => {
       const predictions = playerPredictions[index];
@@ -160,7 +156,7 @@ export const useGameLoop = (
     setTrainingData(currentTrainingData => 
       [...currentTrainingData, enhancedTrainingData]);
 
-    if (concursoNumber % Math.min(updateInterval, 50) === 0 && trainingData.length > 0) {
+    if (nextConcurso % Math.min(updateInterval, 50) === 0 && trainingData.length > 0) {
       await updateModelWithNewData(trainedModel, trainingData, addLog, showToast);
       setTrainingData([]);
     }
