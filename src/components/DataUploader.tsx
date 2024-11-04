@@ -8,13 +8,14 @@ import CheckpointControls from './CheckpointControls';
 
 interface DataUploaderProps {
   onCsvUpload: (file: File) => void;
-  onModelUpload: (jsonFile: File, weightsFile: File) => void;
+  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile: File) => void;
   onSaveModel: () => void;
 }
 
 const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload, onSaveModel }) => {
   const jsonFileRef = useRef<HTMLInputElement>(null);
   const weightsFileRef = useRef<HTMLInputElement>(null);
+  const metadataFileRef = useRef<HTMLInputElement>(null);
   const [timeUntilCheckpoint, setTimeUntilCheckpoint] = useState(1800);
   const [savePath, setSavePath] = useState(localStorage.getItem('checkpointPath') || '');
   const { toast } = useToast();
@@ -101,7 +102,7 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
             />
           </div>
           <div>
-            <label htmlFor="modelJsonInput" className="block mb-2">Carregar Modelo Treinado (JSON):</label>
+            <label htmlFor="modelJsonInput" className="block mb-2">Carregar Modelo (JSON):</label>
             <input
               type="file"
               id="modelJsonInput"
@@ -111,7 +112,7 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
             />
           </div>
           <div>
-            <label htmlFor="modelWeightsInput" className="block mb-2">Carregar Pesos do Modelo (bin):</label>
+            <label htmlFor="modelWeightsInput" className="block mb-2">Carregar Pesos (bin):</label>
             <input
               type="file"
               id="modelWeightsInput"
@@ -120,11 +121,28 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
               className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
           </div>
+          <div>
+            <label htmlFor="modelMetadataInput" className="block mb-2">Carregar Metadata (JSON):</label>
+            <input
+              type="file"
+              id="modelMetadataInput"
+              accept=".json"
+              ref={metadataFileRef}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+          </div>
           <Button onClick={() => {
             const jsonFile = jsonFileRef.current?.files?.[0];
             const weightsFile = weightsFileRef.current?.files?.[0];
-            if (jsonFile && weightsFile) {
-              onModelUpload(jsonFile, weightsFile);
+            const metadataFile = metadataFileRef.current?.files?.[0];
+            if (jsonFile && weightsFile && metadataFile) {
+              onModelUpload(jsonFile, weightsFile, metadataFile);
+            } else {
+              toast({
+                title: "Arquivos Faltando",
+                description: "Por favor, selecione todos os três arquivos: model.json, weights.bin e metadata.json",
+                variant: "destructive"
+              });
             }
           }}>
             <Upload className="mr-2 h-4 w-4" /> Carregar Modelo

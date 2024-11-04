@@ -10,7 +10,7 @@ import { Slider } from "@/components/ui/slider";
 const PlayPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [gameSpeed, setGameSpeed] = useState(1000); // Default 1 second
+  const [gameSpeed, setGameSpeed] = useState(1000);
   const [csvData, setCsvData] = useState<number[][]>([]);
   const [csvDates, setCsvDates] = useState<Date[]>([]);
   const [trainedModel, setTrainedModel] = useState<tf.LayersModel | null>(null);
@@ -22,7 +22,7 @@ const PlayPage: React.FC = () => {
   const loadCSV = useCallback(async (file: File) => {
     try {
       const text = await file.text();
-      const lines = text.trim().split('\n').slice(1); // Ignorar o cabeçalho
+      const lines = text.trim().split('\n').slice(1);
       const data = lines.map(line => {
         const values = line.split(',');
         return {
@@ -40,24 +40,46 @@ const PlayPage: React.FC = () => {
     }
   }, [gameLogic]);
 
-  const loadModel = useCallback(async (jsonFile: File, weightsFile: File) => {
+  const loadModel = useCallback(async (jsonFile: File, weightsFile: File, metadataFile: File) => {
     try {
-      // Carrega o modelo usando os dois arquivos
+      // Carrega o modelo usando os dois arquivos principais
       const model = await tf.loadLayersModel(
         tf.io.browserFiles([jsonFile, weightsFile])
       );
+      
+      // Carrega o metadata
+      const metadataReader = new FileReader();
+      const metadata = await new Promise((resolve, reject) => {
+        metadataReader.onload = (e) => {
+          try {
+            const content = e.target?.result;
+            resolve(JSON.parse(content as string));
+          } catch (error) {
+            reject(error);
+          }
+        };
+        metadataReader.onerror = (error) => reject(error);
+        metadataReader.readAsText(metadataFile);
+      });
+
       setTrainedModel(model);
-      gameLogic.addLog("Modelo carregado com sucesso!");
+      gameLogic.addLog("Modelo e metadata carregados com sucesso!");
+      
+      // Atualiza o estado do jogo com os dados do metadata
+      if (metadata) {
+        gameLogic.loadMetadata(metadata);
+      }
+
       toast({
         title: "Modelo Carregado",
-        description: "O modelo foi carregado com sucesso.",
+        description: "O modelo e seus metadados foram carregados com sucesso.",
       });
     } catch (error) {
       gameLogic.addLog(`Erro ao carregar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
       console.error("Detalhes do erro:", error);
       toast({
         title: "Erro ao Carregar Modelo",
-        description: "Certifique-se de selecionar tanto o arquivo .json quanto o arquivo .weights.bin",
+        description: "Certifique-se de selecionar os três arquivos necessários: model.json, weights.bin e metadata.json",
         variant: "destructive",
       });
     }
@@ -134,7 +156,7 @@ const PlayPage: React.FC = () => {
   }, [isPlaying, csvData, gameLogic, gameSpeed]);
 
   const handleSpeedChange = (value: number[]) => {
-    const newSpeed = 2000 - value[0]; // Inverte a escala para que maior valor = mais rápido
+    const newSpeed = 2000 - value[0];
     setGameSpeed(newSpeed);
     toast({
       title: "Velocidade Ajustada",
