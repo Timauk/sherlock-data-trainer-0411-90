@@ -2,7 +2,7 @@ import { parentPort } from 'worker_threads';
 import fs from 'fs/promises';
 import path from 'path';
 import NodeCache from 'node-cache';
-import { logger } from '../src/utils/logging/logger.js';
+import { logger } from '../utils/logging/logger.js';
 
 // Cache configurado com TTL de 1 hora e limpeza a cada 2 minutos
 const cache = new NodeCache({ 
