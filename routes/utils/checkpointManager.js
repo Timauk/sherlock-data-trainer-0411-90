@@ -1,8 +1,9 @@
-import { FileManager } from '../../src/utils/checkpoint/fileManager';
-import { ModelManager } from '../../src/utils/checkpoint/modelManager';
-import { StateManager } from '../../src/utils/checkpoint/stateManager';
+import { FileManager } from '../../src/utils/checkpoint/fileManager.js';
+import { ModelManager } from '../../src/utils/checkpoint/modelManager.js';
+import { StateManager } from '../../src/utils/checkpoint/stateManager.js';
 import { logger } from '../../src/utils/logging/logger.js';
 import path from 'path';
+import fs from 'fs';
 
 class CheckpointManager {
   static instance = null;
