@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import * as tf from '@tensorflow/tfjs';
-import { Upload, BarChart2, Save } from 'lucide-react';
+import { Upload, BarChart2, Save, Download } from 'lucide-react';
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import TrainingChart from '@/components/TrainingChart';
 import { processarCSV } from '@/utils/dataProcessing';
+import { useToast } from "@/hooks/use-toast";
 
 const TrainingPage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [trainingProgress, setTrainingProgress] = useState(0);
   const [model, setModel] = useState<tf.LayersModel | null>(null);
   const [logs, setLogs] = useState<{ epoch: number; loss: number; val_loss: number }[]>([]);
+  const { toast } = useToast();
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -64,7 +66,24 @@ const TrainingPage: React.FC = () => {
   const saveModel = async () => {
     if (model) {
       try {
-        // Coleta dados dos jogadores e histórico de evolução do localStorage
+        await model.save('downloads://modelo-aprendiz');
+        toast({
+          title: "Modelo Base Salvo",
+          description: "O modelo base foi salvo com sucesso.",
+        });
+      } catch (error) {
+        toast({
+          title: "Erro ao Salvar",
+          description: error instanceof Error ? error.message : "Erro desconhecido",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  const saveFullModel = async () => {
+    if (model) {
+      try {
         const playersData = JSON.parse(localStorage.getItem('playersData') || '[]');
         const evolutionHistory = JSON.parse(localStorage.getItem('evolutionHistory') || '[]');
         
@@ -83,17 +102,60 @@ const TrainingPage: React.FC = () => {
         
         if (result.success) {
           toast({
-            title: "Modelo Salvo com Sucesso",
+            title: "Modelo Completo Salvo",
             description: `Modelo salvo com ${result.totalSamples} amostras totais, incluindo conhecimento dos jogadores.`,
           });
         }
       } catch (error) {
         toast({
-          title: "Erro ao Salvar",
+          title: "Erro ao Salvar Modelo Completo",
           description: error instanceof Error ? error.message : "Erro desconhecido",
           variant: "destructive"
         });
       }
+    }
+  };
+
+  const loadFullModel = async () => {
+    try {
+      const [modelJson, modelWeights] = await Promise.all([
+        new Promise<File>((resolve) => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.json';
+          input.onchange = (e) => {
+            const files = (e.target as HTMLInputElement).files;
+            if (files) resolve(files[0]);
+          };
+          input.click();
+        }),
+        new Promise<File>((resolve) => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.bin';
+          input.onchange = (e) => {
+            const files = (e.target as HTMLInputElement).files;
+            if (files) resolve(files[0]);
+          };
+          input.click();
+        })
+      ]);
+
+      const loadedModel = await tf.loadLayersModel(tf.io.browserFiles(
+        [modelJson, modelWeights]
+      ));
+
+      setModel(loadedModel);
+      toast({
+        title: "Modelo Carregado",
+        description: "O modelo treinado foi carregado com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao Carregar Modelo",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive"
+      });
     }
   };
 
@@ -117,23 +179,44 @@ const TrainingPage: React.FC = () => {
         />
       </div>
 
-      <Button
-        onClick={startTraining}
-        disabled={!trainingData}
-        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mr-2"
-      >
-        <BarChart2 className="inline-block mr-2" />
-        Iniciar Treinamento
-      </Button>
+      <div className="space-y-4">
+        <Button
+          onClick={startTraining}
+          disabled={!trainingData}
+          className="w-full"
+        >
+          <BarChart2 className="inline-block mr-2" />
+          Iniciar Treinamento
+        </Button>
 
-      <Button
-        onClick={saveModel}
-        disabled={!model}
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-      >
-        <Save className="inline-block mr-2" />
-        Salvar Modelo
-      </Button>
+        <Button
+          onClick={saveModel}
+          disabled={!model}
+          className="w-full"
+        >
+          <Save className="inline-block mr-2" />
+          Salvar Modelo Base
+        </Button>
+
+        <Button
+          onClick={saveFullModel}
+          disabled={!model}
+          className="w-full"
+          variant="secondary"
+        >
+          <Save className="inline-block mr-2" />
+          Salvar Modelo Completo
+        </Button>
+
+        <Button
+          onClick={loadFullModel}
+          className="w-full"
+          variant="outline"
+        >
+          <Download className="inline-block mr-2" />
+          Carregar Modelo Treinado
+        </Button>
+      </div>
 
       {trainingProgress > 0 && (
         <div className="mt-4">
