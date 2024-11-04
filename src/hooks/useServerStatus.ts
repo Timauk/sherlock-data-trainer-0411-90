@@ -18,28 +18,36 @@ export const useServerStatus = () => {
       });
       
       if (response.ok) {
-        setStatus('online');
+        const data = await response.json();
+        if (data.status === 'online') {
+          setStatus('online');
+          if (status === 'offline') {
+            toast({
+              title: "Servidor Conectado",
+              description: "Conexão estabelecida com sucesso.",
+            });
+          }
+        } else {
+          throw new Error('Status do servidor não é online');
+        }
       } else {
-        setStatus('offline');
-        toast({
-          title: "Server Unavailable",
-          description: "Could not connect to the server.",
-          variant: "destructive",
-        });
+        throw new Error('Resposta do servidor não ok');
       }
     } catch (error) {
       setStatus('offline');
-      toast({
-        title: "Connection Error",
-        description: "Please verify if the server is running on localhost:3001",
-        variant: "destructive",
-      });
+      if (status === 'online') {
+        toast({
+          title: "Servidor Desconectado",
+          description: "Verifique se o servidor está rodando em localhost:3001",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   useEffect(() => {
     checkServerStatus();
-    const interval = setInterval(checkServerStatus, 30000);
+    const interval = setInterval(checkServerStatus, 5000); // Verifica a cada 5 segundos
     return () => clearInterval(interval);
   }, []);
 

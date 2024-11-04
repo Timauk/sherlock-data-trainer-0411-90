@@ -14,8 +14,14 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3001;
 
-// Middlewares otimizados
-app.use(cors());
+// Configuração CORS atualizada
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json({ limit: '50mb' }));
 app.use(compression());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -30,31 +36,24 @@ app.use('/api/model', modelRouter);
 app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
 
-// Rota principal
-app.get('/', (req, res) => {
-  res.json({
-    status: 'online',
-    endpoints: {
-      '/api/model': 'Gerenciamento do modelo de IA',
-      '/api/checkpoint': 'Gerenciamento de checkpoints',
-      '/api/status': 'Status do servidor'
-    }
-  });
+// Rota de status atualizada
+app.get('/api/status', (req, res) => {
+  try {
+    const healthInfo = {
+      status: 'online',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      version: '1.0.0'
+    };
+    logger.info(healthInfo, 'Health check');
+    res.json(healthInfo);
+  } catch (error) {
+    logger.error(error, 'Error in health check');
+    res.status(500).json({ status: 'error', message: error.message });
+  }
 });
 
-// Rota para verificar se o servidor está online
-app.get('/health', (req, res) => {
-  const healthInfo = {
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    memory: process.memoryUsage()
-  };
-  logger.info(healthInfo, 'Health check');
-  res.json(healthInfo);
-});
-
-// Middleware de erro
 app.use((err, req, res, next) => {
   logger.error({
     err,

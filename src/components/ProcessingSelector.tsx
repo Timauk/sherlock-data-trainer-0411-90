@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Server, Globe } from 'lucide-react';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ProcessingSelectorProps {
   isServerProcessing: boolean;
@@ -20,7 +21,7 @@ const ProcessingSelector: React.FC<ProcessingSelectorProps> = ({
     if (serverStatus === 'offline' && !isServerProcessing) {
       toast({
         title: "Servidor Indisponível",
-        description: "O servidor Node.js não está respondendo. Verifique se ele está rodando.",
+        description: "O servidor Node.js não está respondendo. Verifique se ele está rodando em localhost:3001",
         variant: "destructive"
       });
       return;
@@ -31,11 +32,20 @@ const ProcessingSelector: React.FC<ProcessingSelectorProps> = ({
   return (
     <div className="flex flex-col gap-2 p-4 bg-background rounded-lg border">
       <h3 className="text-lg font-semibold mb-2">Modo de Processamento</h3>
+      
+      {serverStatus === 'offline' && (
+        <Alert variant="destructive" className="mb-2">
+          <AlertDescription>
+            Servidor Node.js está offline. Verifique se o servidor está rodando em localhost:3001
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <div className="flex items-center gap-2">
         <Button
           onClick={handleToggle}
           variant={isServerProcessing ? "default" : "outline"}
-          className="flex-1"
+          className={`flex-1 ${serverStatus === 'offline' ? 'opacity-50' : ''}`}
           disabled={serverStatus === 'checking'}
         >
           <Server className="mr-2 h-4 w-4" />
