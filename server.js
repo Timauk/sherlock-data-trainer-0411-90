@@ -69,12 +69,13 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Cria a pasta checkpoints e logs se não existirem
+// Cria as pastas necessárias se não existirem
 import fs from 'fs';
 const checkpointsDir = path.join(__dirname, 'checkpoints');
 const logsDir = path.join(__dirname, 'logs');
+const savedModelsDir = path.join(__dirname, 'saved-models');
 
-[checkpointsDir, logsDir].forEach(dir => {
+[checkpointsDir, logsDir, savedModelsDir].forEach(dir => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -91,4 +92,5 @@ app.listen(PORT, () => {
   logger.info(`Servidor rodando em http://localhost:${PORT}`);
   logger.info(`Diretório de checkpoints: ${checkpointsDir}`);
   logger.info(`Diretório de logs: ${logsDir}`);
+  logger.info(`Diretório de modelos salvos: ${savedModelsDir}`);
 });

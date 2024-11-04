@@ -46,10 +46,8 @@ router.post('/train', async (req, res) => {
     const { trainingData, playersKnowledge } = req.body;
     const model = await getOrCreateModel();
     
-    // Atualiza contador de amostras
     totalSamples += trainingData.length;
     
-    // Combina dados de treinamento com conhecimento dos jogadores
     const combinedData = playersKnowledge ? [...trainingData, ...playersKnowledge] : trainingData;
     
     const xs = tf.tensor2d(combinedData.map(d => d.slice(0, -15)));
@@ -91,12 +89,12 @@ router.post('/save-full-model', async (req, res) => {
     const { playersData, evolutionHistory } = req.body;
     const model = await getOrCreateModel();
     
-    // Salva o modelo com todo o conhecimento acumulado
-    const modelArtifacts = await model.save('file://./saved-models/full-model');
+    // Salvar o modelo em um diretório específico no servidor
+    const modelPath = './saved-models/full-model';
+    await model.save(`file://${modelPath}`);
     
-    // Salva os dados complementares
+    // Salvar os dados complementares
     const fullModelData = {
-      modelArtifacts,
       totalSamples,
       playersData,
       evolutionHistory,
@@ -113,6 +111,7 @@ router.post('/save-full-model', async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Erro ao salvar modelo completo:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -126,9 +125,7 @@ router.post('/predict', async (req, res) => {
     const prediction = model.predict(inputTensor);
     const result = Array.from(await prediction.data());
     
-    // Verifica se é hora de retreinar
     if (totalSamples > 0 && totalSamples % RETRAIN_INTERVAL === 0) {
-      // Sinaliza que é necessário retreinamento
       res.json({ 
         prediction: result,
         needsRetraining: true,
