@@ -6,11 +6,15 @@ interface NeuralNetworkVisualizationProps {
   outputData?: number[];
 }
 
-const NeuralNetworkVisualization: React.FC<NeuralNetworkVisualizationProps> = ({ layers, inputData, outputData }) => {
+const NeuralNetworkVisualization: React.FC<NeuralNetworkVisualizationProps> = ({ 
+  layers = [17, 256, 128, 64, 15], 
+  inputData, 
+  outputData 
+}) => {
   const [activeNodes, setActiveNodes] = useState<string[]>([]);
-  const width = 600;
-  const height = 400;
-  const nodeRadius = 10;
+  const width = 800;
+  const height = 500;
+  const nodeRadius = 8;
   const layerSpacing = width / (layers.length + 1);
 
   useEffect(() => {
@@ -19,15 +23,23 @@ const NeuralNetworkVisualization: React.FC<NeuralNetworkVisualizationProps> = ({
       
       // Ativar nós da camada de entrada
       inputData.forEach((value, index) => {
-        if (value > 0.5) { // Podemos ajustar este limiar conforme necessário
+        if (value > 0.3) {
           newActiveNodes.push(`node-0-${index}`);
         }
       });
       
       // Ativar nós da camada de saída
       outputData.forEach((value, index) => {
-        if (value > 0.5) { // Podemos ajustar este limiar conforme necessário
+        if (value > 0.3) {
           newActiveNodes.push(`node-${layers.length - 1}-${index}`);
+        }
+      });
+      
+      // Ativar alguns nós das camadas intermediárias aleatoriamente
+      layers.slice(1, -1).forEach((_, layerIndex) => {
+        const activationCount = Math.floor(Math.random() * 5) + 2;
+        for (let i = 0; i < activationCount; i++) {
+          newActiveNodes.push(`node-${layerIndex + 1}-${Math.floor(Math.random() * layers[layerIndex + 1])}`);
         }
       });
       
@@ -47,15 +59,18 @@ const NeuralNetworkVisualization: React.FC<NeuralNetworkVisualizationProps> = ({
       Array.from({ length: nodesInLayer }, (_, nodeIndex) => {
         const { x, y } = calculateNodePosition(layerIndex, nodeIndex, nodesInLayer);
         const nodeKey = `node-${layerIndex}-${nodeIndex}`;
+        const isActive = activeNodes.includes(nodeKey);
         return (
           <circle
             key={nodeKey}
             cx={x}
             cy={y}
             r={nodeRadius}
-            className={`fill-blue-500 transition-all duration-300 ${
-              activeNodes.includes(nodeKey) ? 'animate-pulse' : ''
-            }`}
+            className={`${
+              isActive 
+                ? 'fill-green-500 animate-pulse' 
+                : 'fill-blue-500'
+            } transition-all duration-300`}
           />
         );
       })
@@ -67,7 +82,17 @@ const NeuralNetworkVisualization: React.FC<NeuralNetworkVisualizationProps> = ({
       Array.from({ length: nodesInLayer }, (_, nodeIndex) =>
         Array.from({ length: layers[layerIndex + 1] }, (_, nextNodeIndex) => {
           const start = calculateNodePosition(layerIndex, nodeIndex, nodesInLayer);
-          const end = calculateNodePosition(layerIndex + 1, nextNodeIndex, layers[layerIndex + 1]);
+          const end = calculateNodePosition(
+            layerIndex + 1, 
+            nextNodeIndex, 
+            layers[layerIndex + 1]
+          );
+          
+          const startNodeKey = `node-${layerIndex}-${nodeIndex}`;
+          const endNodeKey = `node-${layerIndex + 1}-${nextNodeIndex}`;
+          const isActive = activeNodes.includes(startNodeKey) && 
+                          activeNodes.includes(endNodeKey);
+          
           return (
             <line
               key={`connection-${layerIndex}-${nodeIndex}-${nextNodeIndex}`}
@@ -75,8 +100,11 @@ const NeuralNetworkVisualization: React.FC<NeuralNetworkVisualizationProps> = ({
               y1={start.y}
               x2={end.x}
               y2={end.y}
-              className="stroke-gray-300"
-              strokeWidth="1"
+              className={`${
+                isActive 
+                  ? 'stroke-green-300 stroke-2' 
+                  : 'stroke-gray-300 stroke-1'
+              } transition-all duration-300`}
             />
           );
         })
@@ -86,11 +114,16 @@ const NeuralNetworkVisualization: React.FC<NeuralNetworkVisualizationProps> = ({
 
   return (
     <div className="mt-8 bg-white p-4 rounded-lg shadow">
-      <h3 className="text-xl font-bold mb-4">Visualização da Rede Neural</h3>
-      <svg width={width} height={height}>
-        {renderConnections()}
-        {renderNodes()}
-      </svg>
+      <h3 className="text-xl font-bold mb-4">Visualização da Rede Neural Melhorada</h3>
+      <div className="relative">
+        <svg width={width} height={height}>
+          {renderConnections()}
+          {renderNodes()}
+        </svg>
+        <div className="absolute top-2 right-2 text-sm text-gray-600">
+          Camadas: {layers.join(' → ')}
+        </div>
+      </div>
     </div>
   );
 };
