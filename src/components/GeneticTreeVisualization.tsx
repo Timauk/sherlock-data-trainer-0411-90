@@ -2,6 +2,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Player } from '@/types/gameTypes';
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 interface GeneticTreeVisualizationProps {
   players: Player[];
@@ -9,6 +11,8 @@ interface GeneticTreeVisualizationProps {
 }
 
 const GeneticTreeVisualization: React.FC<GeneticTreeVisualizationProps> = ({ players, generation }) => {
+  const { toast } = useToast();
+
   if (!players || players.length === 0) {
     return (
       <Card className="w-full mt-4">
@@ -25,6 +29,11 @@ const GeneticTreeVisualization: React.FC<GeneticTreeVisualizationProps> = ({ pla
   const champion = players.reduce((prev, current) => 
     (current.fitness > prev.fitness) ? current : prev, players[0]);
 
+  // Encontra o melhor "filho" (jogador com geração maior que o campeão)
+  const bestChild = players.find(player => 
+    player.generation > champion.generation && player.fitness > champion.fitness
+  );
+
   const evolutionData = [{
     generation: generation - 1,
     score: champion.score - champion.fitness,
@@ -35,14 +44,28 @@ const GeneticTreeVisualization: React.FC<GeneticTreeVisualizationProps> = ({ pla
     fitness: champion.fitness
   }];
 
-  const improved = champion.fitness > (champion.fitness - 1);
+  if (bestChild) {
+    toast({
+      title: "Novo Talento!",
+      description: `Jogador #${bestChild.id} está superando o campeão atual!`,
+    });
+  }
 
   return (
     <Card className="w-full mt-4">
       <CardHeader>
         <CardTitle className="flex justify-between items-center">
-          <span>Evolução do Campeão</span>
-          {improved && <span className="text-green-500">↑ Melhorou</span>}
+          <div className="flex items-center gap-2">
+            <span>Campeão #{champion.id}</span>
+            <Badge variant="secondary">
+              Geração {champion.generation}
+            </Badge>
+          </div>
+          {bestChild && (
+            <Badge variant="default" className="bg-green-500">
+              Filho #{bestChild.id} Superando!
+            </Badge>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
