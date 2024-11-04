@@ -9,7 +9,8 @@ const Header: React.FC = () => {
         <nav>
           <Link to="/" className="mr-4 hover:underline">Home</Link>
           <Link to="/training" className="mr-4 hover:underline">Treinamento</Link>
-          <Link to="/play" className="hover:underline">Jogar</Link>
+          <Link to="/play" className="mr-4 hover:underline">Jogar</Link>
+          <Link to="/manual" className="hover:underline">Manual</Link>
         </nav>
       </div>
     </header>
