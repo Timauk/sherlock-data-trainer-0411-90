@@ -4,17 +4,19 @@ import * as tf from '@tensorflow/tfjs';
 const router = express.Router();
 let globalModel = null;
 let totalSamples = 0;
-const RETRAIN_INTERVAL = 1000; // Retreinar a cada 1000 previsões
+const RETRAIN_INTERVAL = 1000;
 
 async function getOrCreateModel() {
   if (!globalModel) {
     globalModel = tf.sequential();
     
+    // Melhorada a arquitetura da rede neural
     globalModel.add(tf.layers.dense({ 
       units: 256, 
       activation: 'relu', 
       inputShape: [17],
-      kernelInitializer: 'glorotNormal'
+      kernelInitializer: 'glorotNormal',
+      kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
     }));
     globalModel.add(tf.layers.batchNormalization());
     globalModel.add(tf.layers.dropout({ rate: 0.3 }));
@@ -22,7 +24,8 @@ async function getOrCreateModel() {
     globalModel.add(tf.layers.dense({ 
       units: 128, 
       activation: 'relu',
-      kernelInitializer: 'glorotNormal'
+      kernelInitializer: 'glorotNormal',
+      kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
     }));
     globalModel.add(tf.layers.batchNormalization());
     
@@ -50,8 +53,12 @@ router.post('/train', async (req, res) => {
     
     const combinedData = playersKnowledge ? [...trainingData, ...playersKnowledge] : trainingData;
     
-    const xs = tf.tensor2d(combinedData.map(d => d.slice(0, -15)));
-    const ys = tf.tensor2d(combinedData.map(d => d.slice(-15)));
+    // Análise de padrões melhorada
+    const patterns = analyzePatterns(combinedData);
+    const enhancedData = enrichDataWithPatterns(combinedData, patterns);
+    
+    const xs = tf.tensor2d(enhancedData.map(d => d.slice(0, -15)));
+    const ys = tf.tensor2d(enhancedData.map(d => d.slice(-15)));
     
     const result = await model.fit(xs, ys, {
       epochs: 50,
@@ -73,7 +80,8 @@ router.post('/train', async (req, res) => {
       modelInfo: {
         layers: model.layers.length,
         totalParams: model.countParams(),
-        combinedSamples: combinedData.length
+        combinedSamples: combinedData.length,
+        patternsFound: patterns.length
       }
     });
     
@@ -89,11 +97,9 @@ router.post('/save-full-model', async (req, res) => {
     const { playersData, evolutionHistory } = req.body;
     const model = await getOrCreateModel();
     
-    // Salvar o modelo em um diretório específico no servidor
     const modelPath = './saved-models/full-model';
     await model.save(`file://${modelPath}`);
     
-    // Salvar os dados complementares
     const fullModelData = {
       totalSamples,
       playersData,
@@ -121,7 +127,11 @@ router.post('/predict', async (req, res) => {
     const { inputData } = req.body;
     const model = await getOrCreateModel();
     
-    const inputTensor = tf.tensor2d([inputData]);
+    // Análise de padrões para previsão
+    const patterns = analyzePatterns([inputData]);
+    const enhancedInput = enrichDataWithPatterns([inputData], patterns)[0];
+    
+    const inputTensor = tf.tensor2d([enhancedInput]);
     const prediction = model.predict(inputTensor);
     const result = Array.from(await prediction.data());
     
@@ -133,7 +143,8 @@ router.post('/predict', async (req, res) => {
         modelInfo: {
           layers: model.layers.length,
           totalParams: model.countParams()
-        }
+        },
+        patterns: patterns
       });
     } else {
       res.json({ 
@@ -142,7 +153,8 @@ router.post('/predict', async (req, res) => {
         modelInfo: {
           layers: model.layers.length,
           totalParams: model.countParams()
-        }
+        },
+        patterns: patterns
       });
     }
     
@@ -152,5 +164,59 @@ router.post('/predict', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+function analyzePatterns(data) {
+  const patterns = [];
+  
+  // Análise de sequências
+  for (const entry of data) {
+    const numbers = entry.slice(0, 15);
+    
+    // Verifica números consecutivos
+    for (let i = 0; i < numbers.length - 1; i++) {
+      if (numbers[i + 1] - numbers[i] === 1) {
+        patterns.push({
+          type: 'consecutive',
+          numbers: [numbers[i], numbers[i + 1]]
+        });
+      }
+    }
+    
+    // Verifica números pares/ímpares
+    const evenCount = numbers.filter(n => n % 2 === 0).length;
+    patterns.push({
+      type: 'evenOdd',
+      evenPercentage: (evenCount / numbers.length) * 100
+    });
+    
+    // Verifica números primos
+    const primeCount = numbers.filter(isPrime).length;
+    patterns.push({
+      type: 'prime',
+      primePercentage: (primeCount / numbers.length) * 100
+    });
+  }
+  
+  return patterns;
+}
+
+function enrichDataWithPatterns(data, patterns) {
+  return data.map(entry => {
+    const patternFeatures = [
+      patterns.filter(p => p.type === 'consecutive').length / patterns.length,
+      patterns.find(p => p.type === 'evenOdd')?.evenPercentage / 100 || 0.5,
+      patterns.find(p => p.type === 'prime')?.primePercentage / 100 || 0.5
+    ];
+    
+    return [...entry, ...patternFeatures];
+  });
+}
+
+function isPrime(num) {
+  for (let i = 2, sqrt = Math.sqrt(num); i <= sqrt; i++) {
+    if (num % i === 0) return false;
+  }
+  return num > 1;
+}
 
 export { router as modelRouter };
