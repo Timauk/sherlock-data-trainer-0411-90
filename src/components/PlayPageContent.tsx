@@ -47,7 +47,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
       const playersData = JSON.parse(localStorage.getItem('playersData') || '[]');
       const evolutionHistory = JSON.parse(localStorage.getItem('evolutionHistory') || '[]');
       
-      const response = await fetch('/api/model/save-full-model', {
+      const response = await fetch('http://localhost:3001/api/model/save-full-model', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
