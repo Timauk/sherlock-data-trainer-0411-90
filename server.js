@@ -4,7 +4,7 @@ import compression from 'compression';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import NodeCache from 'node-cache';
-import * as tf from '@tensorflow/tfjs';
+import * as tf from '@tensorflow/tfjs-node-gpu';
 import { logger } from './src/utils/logging/logger.js';
 import { cacheMiddleware } from './src/utils/performance/serverCache.js';
 
