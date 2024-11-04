@@ -7,6 +7,7 @@ import { performanceMonitor } from "@/utils/performance/performanceMonitor";
 import { modelMonitoring } from "@/utils/monitoring/modelMonitoring";
 import { feedbackSystem } from "@/utils/prediction/feedbackSystem";
 import DiagnosticResults from './DiagnosticResults';
+import ConnectionStatus from './SystemDiagnostics/ConnectionStatus';
 import { SystemStatus, SpecializedModelsStatus, DataQualityMetrics, AnalysisStatus } from '@/types/monitoring';
 
 export interface DiagnosticResult {
@@ -131,6 +132,8 @@ const SystemDiagnostics = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        <ConnectionStatus />
+        
         {isRunning && (
           <div className="mb-4">
             <Progress value={progress} className="mb-2" />

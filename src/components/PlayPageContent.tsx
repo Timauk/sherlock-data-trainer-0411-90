@@ -1,14 +1,7 @@
 import React, { useState } from 'react';
 import { useServerStatus } from '@/hooks/useServerStatus';
-import GameMetrics from './GameMetrics';
-import ControlPanel from './GameControls/ControlPanel';
-import AnalysisTabs from './GameAnalysis/AnalysisTabs';
-import ChampionPredictions from './ChampionPredictions';
-import ProcessingSelector from './ProcessingSelector';
-import GeneticTreeVisualization from './GeneticTreeVisualization';
-import { useGameLogic } from '@/hooks/useGameLogic';
-import { Button } from "@/components/ui/button";
-import { Save, Download } from 'lucide-react';
+import ProcessingPanel from './PlayPageContent/ProcessingPanel';
+import AnalysisPanel from './PlayPageContent/AnalysisPanel';
 import { useToast } from "@/hooks/use-toast";
 import * as tf from '@tensorflow/tfjs';
 
@@ -23,7 +16,7 @@ interface PlayPageContentProps {
   onSaveModel: () => void;
   progress: number;
   generation: number;
-  gameLogic: ReturnType<typeof useGameLogic>;
+  gameLogic: any;
 }
 
 const PlayPageContent: React.FC<PlayPageContentProps> = ({
@@ -70,7 +63,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
       if (result.success) {
         toast({
           title: "Modelo Completo Salvo",
-          description: `Modelo salvo com ${result.totalSamples} amostras totais, incluindo conhecimento dos jogadores.`,
+          description: `Modelo salvo com ${result.totalSamples} amostras totais.`,
         });
       }
     } catch (error) {
@@ -107,10 +100,6 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         })
       ]);
 
-      const loadedModel = await tf.loadLayersModel(tf.io.browserFiles(
-        [modelJson, modelWeights]
-      ));
-
       onModelUpload(modelJson, modelWeights);
       toast({
         title: "Modelo Carregado",
@@ -127,78 +116,39 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <ProcessingSelector
-        isServerProcessing={isServerProcessing}
-        onToggleProcessing={() => setIsServerProcessing(prev => !prev)}
-        serverStatus={serverStatus}
-      />
-      
-      <GameMetrics 
+      <ProcessingPanel
+        isPlaying={isPlaying}
+        onPlay={onPlay}
+        onPause={onPause}
+        onReset={onReset}
+        onThemeToggle={onThemeToggle}
+        onCsvUpload={onCsvUpload}
+        onModelUpload={onModelUpload}
+        onSaveModel={onSaveModel}
         progress={progress}
         champion={champion}
         modelMetrics={gameLogic.modelMetrics}
+        gameLogic={gameLogic}
+        isServerProcessing={isServerProcessing}
+        serverStatus={serverStatus}
+        onToggleProcessing={() => setIsServerProcessing(prev => !prev)}
+        saveFullModel={saveFullModel}
+        loadFullModel={loadFullModel}
       />
       
-      <GeneticTreeVisualization 
-        players={gameLogic.players}
-        generation={gameLogic.generation}
-      />
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="space-y-4">
-          <ControlPanel
-            isPlaying={isPlaying}
-            onPlay={onPlay}
-            onPause={onPause}
-            onReset={onReset}
-            onThemeToggle={onThemeToggle}
-            onCsvUpload={onCsvUpload}
-            onModelUpload={onModelUpload}
-            onSaveModel={onSaveModel}
-            toggleInfiniteMode={gameLogic.toggleInfiniteMode}
-            toggleManualMode={gameLogic.toggleManualMode}
-            isInfiniteMode={gameLogic.isInfiniteMode}
-            isManualMode={gameLogic.isManualMode}
-            disabled={serverStatus === 'checking' || (isServerProcessing && serverStatus === 'offline')}
-          />
-
-          <Button
-            onClick={saveFullModel}
-            className="w-full"
-            variant="secondary"
-          >
-            <Save className="inline-block mr-2" />
-            Salvar Modelo Completo
-          </Button>
-
-          <Button
-            onClick={loadFullModel}
-            className="w-full"
-            variant="outline"
-          >
-            <Download className="inline-block mr-2" />
-            Carregar Modelo Treinado
-          </Button>
-        </div>
-        
-        <ChampionPredictions
-          champion={champion}
-          trainedModel={gameLogic.trainedModel}
-          lastConcursoNumbers={gameLogic.boardNumbers}
-          isServerProcessing={isServerProcessing}
-        />
-      </div>
-
-      <AnalysisTabs
+      <AnalysisPanel
+        champion={champion}
+        trainedModel={gameLogic.trainedModel}
         boardNumbers={gameLogic.boardNumbers}
-        concursoNumber={gameLogic.concursoNumber}
+        isServerProcessing={isServerProcessing}
         players={gameLogic.players}
+        generation={generation}
         evolutionData={gameLogic.evolutionData}
         dates={gameLogic.dates}
         numbers={gameLogic.numbers}
-        updateFrequencyData={gameLogic.updateFrequencyData}
         modelMetrics={gameLogic.modelMetrics}
         neuralNetworkVisualization={gameLogic.neuralNetworkVisualization}
+        concursoNumber={gameLogic.concursoNumber}
       />
     </div>
   );
