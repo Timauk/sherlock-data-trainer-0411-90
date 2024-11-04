@@ -5,7 +5,8 @@ export const useGameInitialization = () => {
   const [players, setPlayers] = useState<Player[]>([]);
 
   const initializePlayers = useCallback(() => {
-    const newPlayers = Array.from({ length: 10 }, (_, i) => ({
+    // Aumentado para 20 jogadores
+    const newPlayers = Array.from({ length: 20 }, (_, i) => ({
       id: i + 1,
       score: 0,
       predictions: [],

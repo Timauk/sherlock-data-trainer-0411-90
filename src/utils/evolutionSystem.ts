@@ -6,9 +6,10 @@ export const createOffspring = (parent1: Player, parent2: Player, generation: nu
     return Math.random() > 0.5 ? weight : parent2.weights[index];
   });
 
-  // Mutação
+  // Mutação com taxa adaptativa baseada no tamanho da população
+  const mutationRate = 0.1 * (1 + (generation / 100)); // Taxa aumenta gradualmente com as gerações
   const mutatedWeights = childWeights.map(weight => {
-    return Math.random() < 0.1 ? weight + (Math.random() - 0.5) * 0.1 : weight;
+    return Math.random() < mutationRate ? weight + (Math.random() - 0.5) * 0.1 : weight;
   });
 
   return {
@@ -22,6 +23,8 @@ export const createOffspring = (parent1: Player, parent2: Player, generation: nu
 };
 
 export const selectBestPlayers = (players: Player[]): Player[] => {
-  return [...players].sort((a, b) => b.fitness - a.fitness)
-                    .slice(0, Math.ceil(players.length / 2));
+  // Seleciona os 10 melhores jogadores (50% da população)
+  return [...players]
+    .sort((a, b) => b.fitness - a.fitness)
+    .slice(0, Math.ceil(players.length / 2));
 };
