@@ -5,7 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useGameLogic } from '@/hooks/useGameLogic';
 import { PlayPageHeader } from '@/components/PlayPageHeader';
 import PlayPageContent from '@/components/PlayPageContent';
-import { Slider } from "@/components/ui/slider";
+import SpeedControl from '@/components/SpeedControl';
+import { loadModelFiles, ModelMetadata } from '@/utils/modelLoader';
 
 const PlayPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -42,32 +43,13 @@ const PlayPage: React.FC = () => {
 
   const loadModel = useCallback(async (jsonFile: File, weightsFile: File, metadataFile: File) => {
     try {
-      // Carrega o modelo usando os dois arquivos principais
-      const model = await tf.loadLayersModel(
-        tf.io.browserFiles([jsonFile, weightsFile])
-      );
-      
-      // Carrega o metadata
-      const metadataReader = new FileReader();
-      const metadata = await new Promise((resolve, reject) => {
-        metadataReader.onload = (e) => {
-          try {
-            const content = e.target?.result;
-            resolve(JSON.parse(content as string));
-          } catch (error) {
-            reject(error);
-          }
-        };
-        metadataReader.onerror = (error) => reject(error);
-        metadataReader.readAsText(metadataFile);
-      });
-
+      const { model, metadata } = await loadModelFiles(jsonFile, weightsFile, metadataFile);
       setTrainedModel(model);
       gameLogic.addLog("Modelo e metadata carregados com sucesso!");
       
-      // Atualiza o estado do jogo com os dados do metadata
-      if (metadata) {
-        gameLogic.loadMetadata(metadata);
+      // Update game state with metadata
+      if (metadata.playersData) {
+        gameLogic.initializePlayers(metadata.playersData);
       }
 
       toast({
@@ -155,32 +137,10 @@ const PlayPage: React.FC = () => {
     return () => clearInterval(intervalId);
   }, [isPlaying, csvData, gameLogic, gameSpeed]);
 
-  const handleSpeedChange = (value: number[]) => {
-    const newSpeed = 2000 - value[0];
-    setGameSpeed(newSpeed);
-    toast({
-      title: "Velocidade Ajustada",
-      description: `${newSpeed}ms por jogada`,
-    });
-  };
-
   return (
     <div className="p-6">
       <PlayPageHeader />
-      <div className="mb-4 p-4 bg-background rounded-lg shadow">
-        <h3 className="text-lg font-semibold mb-2">Controle de Velocidade</h3>
-        <Slider
-          defaultValue={[1000]}
-          max={1900}
-          min={100}
-          step={100}
-          onValueChange={handleSpeedChange}
-          className="w-full"
-        />
-        <p className="text-sm text-muted-foreground mt-1">
-          Intervalo atual: {gameSpeed}ms
-        </p>
-      </div>
+      <SpeedControl onSpeedChange={setGameSpeed} />
       <PlayPageContent
         isPlaying={isPlaying}
         onPlay={playGame}
