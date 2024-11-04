@@ -25,21 +25,29 @@ router.post('/save-full-model', async (req, res) => {
 
     const model = await getOrCreateModel();
     
-    // Ensure the directory exists with absolute path
-    const modelPath = path.join(__dirname, '..', '..', 'saved-models', 'full-model');
-    fs.mkdirSync(path.dirname(modelPath), { recursive: true });
+    // Cria o diretório base saved-models se não existir
+    const baseModelDir = path.join(__dirname, '..', '..', 'saved-models');
+    if (!fs.existsSync(baseModelDir)) {
+      fs.mkdirSync(baseModelDir, { recursive: true });
+    }
     
-    // Save the model weights as a binary file
+    // Cria o diretório específico para este modelo
+    const modelPath = path.join(baseModelDir, 'full-model');
+    if (!fs.existsSync(modelPath)) {
+      fs.mkdirSync(modelPath, { recursive: true });
+    }
+    
+    // Salva o modelo weights como arquivo binário
     const modelArtifacts = await model.save(tf.io.withSaveHandler(async (artifacts) => {
       const weightsData = Buffer.from(artifacts.weightData);
       
-      // Save model topology
+      // Salva topologia do modelo
       fs.writeFileSync(
         path.join(modelPath, 'model.json'),
         JSON.stringify(artifacts.modelTopology)
       );
       
-      // Save weights
+      // Salva weights
       fs.writeFileSync(
         path.join(modelPath, 'weights.bin'),
         weightsData
@@ -60,7 +68,7 @@ router.post('/save-full-model', async (req, res) => {
       timestamp: new Date().toISOString()
     };
 
-    // Save additional metadata
+    // Salva metadados adicionais
     fs.writeFileSync(
       path.join(modelPath, 'metadata.json'),
       JSON.stringify(fullModelData, null, 2)
