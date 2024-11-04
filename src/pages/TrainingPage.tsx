@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import * as tf from '@tensorflow/tfjs';
-import { Upload, BarChart2, Save, Download } from 'lucide-react';
+import { Upload, BarChart2, Save } from 'lucide-react';
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import TrainingChart from '@/components/TrainingChart';
@@ -81,84 +81,6 @@ const TrainingPage: React.FC = () => {
     }
   };
 
-  const saveFullModel = async () => {
-    if (model) {
-      try {
-        const playersData = JSON.parse(localStorage.getItem('playersData') || '[]');
-        const evolutionHistory = JSON.parse(localStorage.getItem('evolutionHistory') || '[]');
-        
-        const response = await fetch('/api/model/save-full-model', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            playersData,
-            evolutionHistory
-          })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-          toast({
-            title: "Modelo Completo Salvo",
-            description: `Modelo salvo com ${result.totalSamples} amostras totais, incluindo conhecimento dos jogadores.`,
-          });
-        }
-      } catch (error) {
-        toast({
-          title: "Erro ao Salvar Modelo Completo",
-          description: error instanceof Error ? error.message : "Erro desconhecido",
-          variant: "destructive"
-        });
-      }
-    }
-  };
-
-  const loadFullModel = async () => {
-    try {
-      const [modelJson, modelWeights] = await Promise.all([
-        new Promise<File>((resolve) => {
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = '.json';
-          input.onchange = (e) => {
-            const files = (e.target as HTMLInputElement).files;
-            if (files) resolve(files[0]);
-          };
-          input.click();
-        }),
-        new Promise<File>((resolve) => {
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = '.bin';
-          input.onchange = (e) => {
-            const files = (e.target as HTMLInputElement).files;
-            if (files) resolve(files[0]);
-          };
-          input.click();
-        })
-      ]);
-
-      const loadedModel = await tf.loadLayersModel(tf.io.browserFiles(
-        [modelJson, modelWeights]
-      ));
-
-      setModel(loadedModel);
-      toast({
-        title: "Modelo Carregado",
-        description: "O modelo treinado foi carregado com sucesso.",
-      });
-    } catch (error) {
-      toast({
-        title: "Erro ao Carregar Modelo",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
-        variant: "destructive"
-      });
-    }
-  };
-
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-4">Página de Treinamento</h2>
@@ -196,25 +118,6 @@ const TrainingPage: React.FC = () => {
         >
           <Save className="inline-block mr-2" />
           Salvar Modelo Base
-        </Button>
-
-        <Button
-          onClick={saveFullModel}
-          disabled={!model}
-          className="w-full"
-          variant="secondary"
-        >
-          <Save className="inline-block mr-2" />
-          Salvar Modelo Completo
-        </Button>
-
-        <Button
-          onClick={loadFullModel}
-          className="w-full"
-          variant="outline"
-        >
-          <Download className="inline-block mr-2" />
-          Carregar Modelo Treinado
         </Button>
       </div>
 
