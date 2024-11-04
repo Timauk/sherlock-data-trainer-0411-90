@@ -63,7 +63,37 @@ const TrainingPage: React.FC = () => {
 
   const saveModel = async () => {
     if (model) {
-      await model.save('downloads://modelo-aprendiz');
+      try {
+        // Coleta dados dos jogadores e histórico de evolução do localStorage
+        const playersData = JSON.parse(localStorage.getItem('playersData') || '[]');
+        const evolutionHistory = JSON.parse(localStorage.getItem('evolutionHistory') || '[]');
+        
+        const response = await fetch('/api/model/save-full-model', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            playersData,
+            evolutionHistory
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          toast({
+            title: "Modelo Salvo com Sucesso",
+            description: `Modelo salvo com ${result.totalSamples} amostras totais, incluindo conhecimento dos jogadores.`,
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Erro ao Salvar",
+          description: error instanceof Error ? error.message : "Erro desconhecido",
+          variant: "destructive"
+        });
+      }
     }
   };
 

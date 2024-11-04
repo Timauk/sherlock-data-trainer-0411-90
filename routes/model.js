@@ -43,14 +43,17 @@ async function getOrCreateModel() {
 
 router.post('/train', async (req, res) => {
   try {
-    const { trainingData } = req.body;
+    const { trainingData, playersKnowledge } = req.body;
     const model = await getOrCreateModel();
     
     // Atualiza contador de amostras
     totalSamples += trainingData.length;
     
-    const xs = tf.tensor2d(trainingData.map(d => d.slice(0, -15)));
-    const ys = tf.tensor2d(trainingData.map(d => d.slice(-15)));
+    // Combina dados de treinamento com conhecimento dos jogadores
+    const combinedData = playersKnowledge ? [...trainingData, ...playersKnowledge] : trainingData;
+    
+    const xs = tf.tensor2d(combinedData.map(d => d.slice(0, -15)));
+    const ys = tf.tensor2d(combinedData.map(d => d.slice(-15)));
     
     const result = await model.fit(xs, ys, {
       epochs: 50,
@@ -71,12 +74,44 @@ router.post('/train', async (req, res) => {
       totalSamples,
       modelInfo: {
         layers: model.layers.length,
-        totalParams: model.countParams()
+        totalParams: model.countParams(),
+        combinedSamples: combinedData.length
       }
     });
     
     xs.dispose();
     ys.dispose();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/save-full-model', async (req, res) => {
+  try {
+    const { playersData, evolutionHistory } = req.body;
+    const model = await getOrCreateModel();
+    
+    // Salva o modelo com todo o conhecimento acumulado
+    const modelArtifacts = await model.save('file://./saved-models/full-model');
+    
+    // Salva os dados complementares
+    const fullModelData = {
+      modelArtifacts,
+      totalSamples,
+      playersData,
+      evolutionHistory,
+      timestamp: new Date().toISOString()
+    };
+    
+    res.json({
+      success: true,
+      savedAt: fullModelData.timestamp,
+      totalSamples,
+      modelInfo: {
+        layers: model.layers.length,
+        totalParams: model.countParams()
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
