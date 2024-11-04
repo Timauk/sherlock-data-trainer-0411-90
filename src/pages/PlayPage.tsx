@@ -6,7 +6,7 @@ import { useGameLogic } from '@/hooks/useGameLogic';
 import { PlayPageHeader } from '@/components/PlayPageHeader';
 import PlayPageContent from '@/components/PlayPageContent';
 import SpeedControl from '@/components/SpeedControl';
-import { loadModelFiles, ModelMetadata } from '@/utils/modelLoader';
+import { loadModelFiles } from '@/utils/modelLoader';
 
 const PlayPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -47,9 +47,8 @@ const PlayPage: React.FC = () => {
       setTrainedModel(model);
       gameLogic.addLog("Modelo e metadata carregados com sucesso!");
       
-      // Update game state with metadata
       if (metadata.playersData) {
-        gameLogic.initializePlayers(metadata.playersData);
+        gameLogic.initializePlayers();
       }
 
       toast({

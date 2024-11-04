@@ -1,5 +1,5 @@
 import * as tf from '@tensorflow/tfjs';
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 export interface ModelMetadata {
   totalSamples?: number;
