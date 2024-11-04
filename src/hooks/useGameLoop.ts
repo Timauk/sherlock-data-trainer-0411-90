@@ -41,10 +41,16 @@ export const useGameLoop = (
   const gameLoop = useCallback(async () => {
     if (csvData.length === 0 || !trainedModel) return;
 
+    // Verifica se chegamos ao final dos dados reais
+    if (concursoNumber >= csvData.length) {
+      showToast?.("Fim dos Dados", "Chegamos ao final dos concursos disponíveis.");
+      return;
+    }
+
     setConcursoNumber(concursoNumber + 1);
     setGameCount(prev => prev + 1);
 
-    const currentBoardNumbers = csvData[concursoNumber % csvData.length];
+    const currentBoardNumbers = csvData[concursoNumber];
     setBoardNumbers(currentBoardNumbers);
     
     const validationMetrics = performCrossValidation(
@@ -158,7 +164,7 @@ export const useGameLoop = (
       await updateModelWithNewData(trainedModel, trainingData, addLog, showToast);
       setTrainingData([]);
     }
-
+    
   }, [
     players,
     setPlayers,
