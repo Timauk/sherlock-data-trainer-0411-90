@@ -42,7 +42,10 @@ const PlayPage: React.FC = () => {
 
   const loadModel = useCallback(async (jsonFile: File, weightsFile: File) => {
     try {
-      const model = await tf.loadLayersModel(tf.io.browserFiles([jsonFile, weightsFile]));
+      // Carrega o modelo usando os dois arquivos
+      const model = await tf.loadLayersModel(
+        tf.io.browserFiles([jsonFile, weightsFile])
+      );
       setTrainedModel(model);
       gameLogic.addLog("Modelo carregado com sucesso!");
       toast({
@@ -54,7 +57,7 @@ const PlayPage: React.FC = () => {
       console.error("Detalhes do erro:", error);
       toast({
         title: "Erro ao Carregar Modelo",
-        description: "Ocorreu um erro ao carregar o modelo. Verifique o console para mais detalhes.",
+        description: "Certifique-se de selecionar tanto o arquivo .json quanto o arquivo .weights.bin",
         variant: "destructive",
       });
     }

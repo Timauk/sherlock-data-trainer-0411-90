@@ -66,10 +66,12 @@ const TrainingPage: React.FC = () => {
   const saveModel = async () => {
     if (model) {
       try {
+        // Salva o modelo completo (arquitetura + pesos)
         await model.save('downloads://modelo-aprendiz');
+        
         toast({
           title: "Modelo Base Salvo",
-          description: "O modelo base foi salvo com sucesso.",
+          description: "O modelo base e seus pesos foram salvos com sucesso.",
         });
       } catch (error) {
         toast({
