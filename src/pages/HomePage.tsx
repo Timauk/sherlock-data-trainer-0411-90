@@ -1,9 +1,9 @@
 import React from 'react';
-import ImplementationChecklist from '@/components/ImplementationChecklist';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ImplementationChecklist from '@/components/ImplementationChecklist';
 
 const HomePage = () => {
   return (
@@ -11,10 +11,13 @@ const HomePage = () => {
       <h1 className="text-3xl font-bold mb-6 neon-title">Plano de Implementação</h1>
       
       <Tabs defaultValue="current" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="current">Plano Atual</TabsTrigger>
           <TabsTrigger value="evolution">Evolução do Sistema</TabsTrigger>
-          <TabsTrigger value="layout">Layout e Melhorias Visuais</TabsTrigger>
+          <TabsTrigger value="layout">Layout e UI</TabsTrigger>
+          <TabsTrigger value="security">Segurança</TabsTrigger>
+          <TabsTrigger value="performance">Performance</TabsTrigger>
+          <TabsTrigger value="integrations">Integrações</TabsTrigger>
         </TabsList>
 
         <TabsContent value="current">
@@ -171,6 +174,141 @@ const HomePage = () => {
                     <div className="flex items-center space-x-2">
                       <Checkbox id="contrast" checked />
                       <label htmlFor="contrast">Alto Contraste ✅</label>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="security">
+          <ScrollArea className="h-[600px]">
+            <Card>
+              <CardHeader>
+                <CardTitle>Segurança e Privacidade</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="font-semibold">1. Autenticação e Autorização</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="2fa" />
+                      <label htmlFor="2fa">Autenticação em Dois Fatores</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="roles" />
+                      <label htmlFor="roles">Sistema de Papéis e Permissões</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="oauth" />
+                      <label htmlFor="oauth">Integração com OAuth</label>
+                    </div>
+                  </div>
+
+                  <h3 className="font-semibold">2. Proteção de Dados</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="encryption" />
+                      <label htmlFor="encryption">Criptografia de Dados Sensíveis</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="backup" />
+                      <label htmlFor="backup">Sistema de Backup Automático</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="audit" />
+                      <label htmlFor="audit">Trilha de Auditoria</label>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="performance">
+          <ScrollArea className="h-[600px]">
+            <Card>
+              <CardHeader>
+                <CardTitle>Otimização de Performance</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="font-semibold">1. Frontend</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="code-splitting" />
+                      <label htmlFor="code-splitting">Code Splitting</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="lazy-loading" />
+                      <label htmlFor="lazy-loading">Lazy Loading</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="caching" />
+                      <label htmlFor="caching">Estratégias de Cache</label>
+                    </div>
+                  </div>
+
+                  <h3 className="font-semibold">2. Backend</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="query-optimization" />
+                      <label htmlFor="query-optimization">Otimização de Queries</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="load-balancing" />
+                      <label htmlFor="load-balancing">Balanceamento de Carga</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="cdn" />
+                      <label htmlFor="cdn">Integração com CDN</label>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="integrations">
+          <ScrollArea className="h-[600px]">
+            <Card>
+              <CardHeader>
+                <CardTitle>Integrações e APIs</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="font-semibold">1. Serviços de Terceiros</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="analytics" />
+                      <label htmlFor="analytics">Analytics</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="monitoring" />
+                      <label htmlFor="monitoring">Monitoramento</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="payment" />
+                      <label htmlFor="payment">Gateway de Pagamento</label>
+                    </div>
+                  </div>
+
+                  <h3 className="font-semibold">2. APIs</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="rest-api" />
+                      <label htmlFor="rest-api">API REST</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="graphql" />
+                      <label htmlFor="graphql">GraphQL</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="webhooks" />
+                      <label htmlFor="webhooks">Webhooks</label>
                     </div>
                   </div>
                 </div>
