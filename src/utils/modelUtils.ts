@@ -15,12 +15,7 @@ export const updateModelWithNewData = async (
       metrics: ['accuracy']
     });
 
-    // Reshape the input data to match expected shape [*,17]
-    const processedData = trainingData.map(row => {
-      // Take only first 17 elements to match expected input shape
-      return row.slice(0, 17);
-    });
-
+    const processedData = trainingData.map(row => row.slice(0, 17));
     const xs = tf.tensor2d(processedData);
     const ys = tf.tensor2d(trainingData.map(row => row.slice(-15)));
 
@@ -46,5 +41,34 @@ export const updateModelWithNewData = async (
     addLog(errorMessage);
     console.error("Detalhes do erro:", error);
     return trainedModel;
+  }
+};
+
+export const saveModelWithWeights = async (
+  model: tf.LayersModel,
+  name: string = 'modelo-atual'
+): Promise<void> => {
+  try {
+    // Save model with weights in one file
+    await model.save(`downloads://${name}`);
+    
+    // Also save to IndexedDB for backup
+    await model.save(`indexeddb://${name}`);
+  } catch (error) {
+    console.error('Erro ao salvar modelo:', error);
+    throw error;
+  }
+};
+
+export const loadModelWithWeights = async (
+  name: string = 'modelo-atual'
+): Promise<tf.LayersModel> => {
+  try {
+    // Try loading from IndexedDB first
+    const model = await tf.loadLayersModel(`indexeddb://${name}`);
+    return model;
+  } catch (error) {
+    console.error('Erro ao carregar modelo do IndexedDB:', error);
+    throw new Error(`Falha ao carregar modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
   }
 };

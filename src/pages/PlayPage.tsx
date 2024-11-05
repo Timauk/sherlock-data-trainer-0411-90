@@ -7,6 +7,7 @@ import { PlayPageHeader } from '@/components/PlayPageHeader';
 import PlayPageContent from '@/components/PlayPageContent';
 import SpeedControl from '@/components/SpeedControl';
 import { loadModelFiles } from '@/utils/modelLoader';
+import { loadModelWithWeights, saveModelWithWeights } from '@/utils/modelUtils';
 
 const PlayPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -45,6 +46,10 @@ const PlayPage: React.FC = () => {
     try {
       const { model, metadata } = await loadModelFiles(jsonFile, weightsFile, metadataFile);
       setTrainedModel(model);
+      
+      // Save model immediately after loading for future use
+      await saveModelWithWeights(model);
+      
       gameLogic.addLog("Modelo e metadata carregados com sucesso!");
       
       if (metadata.playersData) {
@@ -69,7 +74,7 @@ const PlayPage: React.FC = () => {
   const saveModel = useCallback(async () => {
     if (trainedModel) {
       try {
-        await trainedModel.save('downloads://modelo-atual');
+        await saveModelWithWeights(trainedModel);
         gameLogic.addLog("Modelo salvo com sucesso!");
         toast({
           title: "Modelo Salvo",
