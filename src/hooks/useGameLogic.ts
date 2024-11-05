@@ -69,8 +69,15 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
 
   const evolveGeneration = useCallback(async () => {
     const bestPlayers = selectBestPlayers(players);
-    setGameCount(prev => prev + 1);
+    
+    // Incrementa idade apenas quando completa um ciclo
+    const updatedPlayers = players.map(player => ({
+      ...player,
+      age: player.age + 1
+    }));
+    setPlayers(updatedPlayers);
 
+    // Clonagem apenas a cada 1000 jogos para dar tempo de avaliar
     if (gameCount % 1000 === 0 && bestPlayers.length > 0) {
       const champion = bestPlayers[0];
       const clones = cloneChampion(champion, players.length);
@@ -84,17 +91,20 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
             championData.trainingData
           );
           
-          systemLogger.log('player', `Conhecimento do Campeão (Score: ${champion.score}) incorporado ao modelo`);
+          systemLogger.log('player', 
+            `Conhecimento do Campeão (Score: ${champion.score}) incorporado ao modelo`);
           
           setChampionData({
             player: champion,
             trainingData: trainingData
           });
         } catch (error) {
-          systemLogger.log('system', `Erro ao atualizar modelo com conhecimento do campeão: ${error}`);
+          systemLogger.log('system', 
+            `Erro ao atualizar modelo com conhecimento do campeão: ${error}`);
         }
       }
     } else {
+      // Mantém os melhores jogadores com idade incrementada
       const newGeneration = bestPlayers.map(player => ({
         ...player,
         generation: generation + 1
@@ -116,7 +126,8 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     ]);
 
     if (bestPlayers.length > 0) {
-      systemLogger.log('player', `Melhor jogador da geração ${generation}: Score ${bestPlayers[0].score}`);
+      systemLogger.log('player', 
+        `Melhor jogador da geração ${generation}: Score ${bestPlayers[0].score}`);
     }
   }, [players, generation, trainedModel, gameCount, championData, trainingData]);
 

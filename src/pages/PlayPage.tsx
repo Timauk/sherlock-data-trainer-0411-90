@@ -128,8 +128,11 @@ const PlayPage: React.FC = () => {
         gameLogic.gameLoop();
         setProgress((prevProgress) => {
           const newProgress = prevProgress + (100 / csvData.length);
+          
+          // Verifica se completou um ciclo
           if (newProgress >= 100) {
             if (!gameLogic.isManualMode) {
+              // Evolui apenas ao completar um ciclo completo
               gameLogic.evolveGeneration();
             }
             return gameLogic.isInfiniteMode ? 0 : 100;
