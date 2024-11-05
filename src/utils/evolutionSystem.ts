@@ -20,7 +20,7 @@ export const createOffspring = (parent1: Player, parent2: Player, generation: nu
     fitness: 0,
     generation: generation + 1,
     age: 0,
-    niche: Math.floor(Math.random() * 4) // Herda aleatoriamente um nicho
+    niche: Math.random() < 0.5 ? parent1.niche : parent2.niche // Herda o nicho de um dos pais
   };
 };
 

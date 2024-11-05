@@ -35,7 +35,7 @@ const calculateAdaptabilityScore = (player: Player): number => {
   const validPredictions = recentPredictions.map(pred => pred as number[]);
   const uniqueNumbers = new Set(validPredictions.flat());
   
-  return (uniqueNumbers.size / (25 * 0.6)) * 5; // 60% de cobertura dos números possíveis
+  return (uniqueNumbers.size / (25 * 0.6)) * 5;
 };
 
 const calculateNicheBonus = (player: Player, boardNumbers: number[]): number => {
@@ -50,7 +50,7 @@ const calculateNicheBonus = (player: Player, boardNumbers: number[]): number => 
       const sequences = findSequences(boardNumbers);
       return sequences * 0.5;
     case 3: // Geral
-      return 0.5; // Bônus base para generalistas
+      return 0.5;
     default:
       return 0;
   }
@@ -72,7 +72,7 @@ const findSequences = (numbers: number[]): number => {
 export const createMutatedClone = (player: Player, mutationRate: number = 0.1): Player => {
   const mutatedWeights = player.weights.map(weight => {
     if (Math.random() < mutationRate) {
-      const mutation = (Math.random() - 0.5) * 0.2; // Mutação de ±10%
+      const mutation = (Math.random() - 0.5) * 0.2;
       return weight * (1 + mutation);
     }
     return weight;
@@ -87,7 +87,7 @@ export const createMutatedClone = (player: Player, mutationRate: number = 0.1): 
     fitness: 0,
     generation: player.generation + 1,
     age: 0,
-    niche: Math.random() < 0.1 ? Math.floor(Math.random() * 4) : player.niche // 10% de chance de mudar de nicho
+    niche: Math.random() < 0.1 ? Math.floor(Math.random() * 4) : player.niche
   };
 };
 
@@ -104,6 +104,8 @@ export const crossoverPlayers = (parent1: Player, parent2: Player): Player => {
     predictions: [],
     weights: childWeights,
     fitness: 0,
-    generation: Math.max(parent1.generation, parent2.generation) + 1
+    generation: Math.max(parent1.generation, parent2.generation) + 1,
+    age: 0,
+    niche: Math.random() < 0.5 ? parent1.niche : parent2.niche
   };
 };
