@@ -11,6 +11,31 @@ interface PlayerCardProps {
   onClonePlayer: (player: Player, e: React.MouseEvent) => void;
 }
 
+const getNicheColor = (niche: number) => {
+  switch (niche) {
+    case 0: // Pares
+      return 'bg-blue-100 dark:bg-blue-900';
+    case 1: // Ímpares
+      return 'bg-green-100 dark:bg-green-900';
+    case 2: // Sequências
+      return 'bg-purple-100 dark:bg-purple-900';
+    case 3: // Geral
+      return 'bg-orange-100 dark:bg-orange-900';
+    default:
+      return 'bg-card';
+  }
+};
+
+const getNicheName = (niche: number) => {
+  switch (niche) {
+    case 0: return 'Pares';
+    case 1: return 'Ímpares';
+    case 2: return 'Sequências';
+    case 3: return 'Geral';
+    default: return 'Desconhecido';
+  }
+};
+
 const PlayerCard: React.FC<PlayerCardProps> = ({
   player,
   isTopPlayer,
@@ -23,11 +48,13 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       : 'Aguardando próxima rodada';
   };
 
+  const nicheColor = getNicheColor(player.niche);
+
   return (
     <div 
       onClick={() => onPlayerClick(player)}
       className={`p-4 rounded-lg shadow cursor-pointer transition-all hover:shadow-lg
-        ${isTopPlayer ? 'bg-yellow-100 dark:bg-yellow-900 border-2 border-yellow-500' : 'bg-card'}`}
+        ${isTopPlayer ? 'border-2 border-yellow-500' : ''} ${nicheColor}`}
     >
       <div className="flex items-center justify-between mb-2">
         <h4 className="font-semibold text-lg">
@@ -41,13 +68,16 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       
       <div className="space-y-2">
         <p className="text-sm">
+          <span className="font-medium">Nicho:</span> {getNicheName(player.niche)}
+        </p>
+        <p className="text-sm">
+          <span className="font-medium">Idade:</span> {player.age} gerações
+        </p>
+        <p className="text-sm">
           <span className="font-medium">Previsões:</span> {formatPredictions(player.predictions)}
         </p>
         <p className="text-sm">
           <span className="font-medium">Acertos:</span> {player.fitness}
-        </p>
-        <p className="text-sm">
-          <span className="font-medium">Fitness:</span> {player.fitness.toFixed(2)}
         </p>
         <Button 
           onClick={(e) => onClonePlayer(player, e)}
