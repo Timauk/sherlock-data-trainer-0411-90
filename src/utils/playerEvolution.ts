@@ -20,7 +20,9 @@ export const cloneChampion = (champion: Player, totalPlayers: number): Player[] 
       predictions: [],
       weights: modifiedWeights,
       fitness: 0,
-      generation: champion.generation + 1
+      generation: champion.generation + 1,
+      age: 0,
+      niche: Math.floor(Math.random() * 4) // Permite mutação do nicho nos clones
     });
   }
   

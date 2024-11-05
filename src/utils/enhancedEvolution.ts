@@ -4,8 +4,9 @@ export const calculateFitness = (player: Player, boardNumbers: number[]): number
   const matches = player.predictions.filter(num => boardNumbers.includes(num)).length;
   const consistencyBonus = calculateConsistencyBonus(player);
   const adaptabilityScore = calculateAdaptabilityScore(player);
+  const nicheBonus = calculateNicheBonus(player, boardNumbers);
   
-  return matches + (consistencyBonus * 0.2) + (adaptabilityScore * 0.1);
+  return matches + (consistencyBonus * 0.2) + (adaptabilityScore * 0.1) + nicheBonus;
 };
 
 const calculateConsistencyBonus = (player: Player): number => {
@@ -37,6 +38,37 @@ const calculateAdaptabilityScore = (player: Player): number => {
   return (uniqueNumbers.size / (25 * 0.6)) * 5; // 60% de cobertura dos números possíveis
 };
 
+const calculateNicheBonus = (player: Player, boardNumbers: number[]): number => {
+  switch (player.niche) {
+    case 0: // Pares
+      const evenNumbers = boardNumbers.filter(n => n % 2 === 0);
+      return evenNumbers.length * 0.5;
+    case 1: // Ímpares
+      const oddNumbers = boardNumbers.filter(n => n % 2 !== 0);
+      return oddNumbers.length * 0.5;
+    case 2: // Sequências
+      const sequences = findSequences(boardNumbers);
+      return sequences * 0.5;
+    case 3: // Geral
+      return 0.5; // Bônus base para generalistas
+    default:
+      return 0;
+  }
+};
+
+const findSequences = (numbers: number[]): number => {
+  let sequences = 0;
+  const sorted = [...numbers].sort((a, b) => a - b);
+  
+  for (let i = 0; i < sorted.length - 2; i++) {
+    if (sorted[i + 1] === sorted[i] + 1 && sorted[i + 2] === sorted[i] + 2) {
+      sequences++;
+    }
+  }
+  
+  return sequences;
+};
+
 export const createMutatedClone = (player: Player, mutationRate: number = 0.1): Player => {
   const mutatedWeights = player.weights.map(weight => {
     if (Math.random() < mutationRate) {
@@ -53,7 +85,9 @@ export const createMutatedClone = (player: Player, mutationRate: number = 0.1): 
     predictions: [],
     weights: mutatedWeights,
     fitness: 0,
-    generation: player.generation + 1
+    generation: player.generation + 1,
+    age: 0,
+    niche: Math.random() < 0.1 ? Math.floor(Math.random() * 4) : player.niche // 10% de chance de mudar de nicho
   };
 };
 

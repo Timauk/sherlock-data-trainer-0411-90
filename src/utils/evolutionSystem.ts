@@ -18,7 +18,9 @@ export const createOffspring = (parent1: Player, parent2: Player, generation: nu
     predictions: [],
     weights: mutatedWeights,
     fitness: 0,
-    generation: generation + 1
+    generation: generation + 1,
+    age: 0,
+    niche: Math.floor(Math.random() * 4) // Herda aleatoriamente um nicho
   };
 };
 
