@@ -5,8 +5,11 @@ export const calculateFitness = (player: Player, boardNumbers: number[]): number
   const consistencyBonus = calculateConsistencyBonus(player);
   const adaptabilityScore = calculateAdaptabilityScore(player);
   const nicheBonus = calculateNicheBonus(player, boardNumbers);
+  const specialization = calculateSpecialization(player);
   
-  return matches + (consistencyBonus * 0.2) + (adaptabilityScore * 0.1) + nicheBonus;
+  // Aumentando o peso do nicho na pontuação final
+  return (matches * 1.5) + (consistencyBonus * 0.2) + (adaptabilityScore * 0.1) + 
+         (nicheBonus * 2.0) + (specialization * 1.5);
 };
 
 const calculateConsistencyBonus = (player: Player): number => {
@@ -42,18 +45,29 @@ const calculateNicheBonus = (player: Player, boardNumbers: number[]): number => 
   switch (player.niche) {
     case 0: // Pares
       const evenNumbers = boardNumbers.filter(n => n % 2 === 0);
-      return evenNumbers.length * 0.5;
+      const evenPredictions = player.predictions.filter(n => n % 2 === 0);
+      return (evenNumbers.length * 0.8) + (evenPredictions.length * 0.5);
+      
     case 1: // Ímpares
       const oddNumbers = boardNumbers.filter(n => n % 2 !== 0);
-      return oddNumbers.length * 0.5;
+      const oddPredictions = player.predictions.filter(n => n % 2 !== 0);
+      return (oddNumbers.length * 0.8) + (oddPredictions.length * 0.5);
+      
     case 2: // Sequências
       const sequences = findSequences(boardNumbers);
-      return sequences * 0.5;
+      const predictionSequences = findSequences(player.predictions);
+      return (sequences * 1.2) + (predictionSequences * 0.8);
+      
     case 3: // Geral
-      return 0.5;
-    default:
-      return 0;
+      // Bonus menor para generalistas para incentivar especialização
+      return 0.3;
   }
+  return 0;
+};
+
+const calculateSpecialization = (player: Player): number => {
+  // Recompensa por manter-se no mesmo nicho por várias gerações
+  return Math.min(player.age / 10, 5); // Máximo de 5 pontos de bonus
 };
 
 const findSequences = (numbers: number[]): number => {
@@ -70,8 +84,11 @@ const findSequences = (numbers: number[]): number => {
 };
 
 export const createMutatedClone = (player: Player, mutationRate: number = 0.1): Player => {
+  // Aumenta a taxa de mutação para jogadores mais velhos
+  const adjustedMutationRate = mutationRate * (1 + (player.age / 20));
+  
   const mutatedWeights = player.weights.map(weight => {
-    if (Math.random() < mutationRate) {
+    if (Math.random() < adjustedMutationRate) {
       const mutation = (Math.random() - 0.5) * 0.2;
       return weight * (1 + mutation);
     }
@@ -87,7 +104,8 @@ export const createMutatedClone = (player: Player, mutationRate: number = 0.1): 
     fitness: 0,
     generation: player.generation + 1,
     age: 0,
-    niche: Math.random() < 0.1 ? Math.floor(Math.random() * 4) : player.niche
+    // Reduz a chance de mudar de nicho para promover especialização
+    niche: Math.random() < 0.05 ? Math.floor(Math.random() * 4) : player.niche
   };
 };
 
@@ -98,6 +116,10 @@ export const crossoverPlayers = (parent1: Player, parent2: Player): Player => {
     ...parent2.weights.slice(crossoverPoint)
   ];
 
+  // Favorece herdar o nicho do pai com maior fitness
+  const preferredNiche = parent1.fitness > parent2.fitness ? 
+    parent1.niche : parent2.niche;
+
   return {
     id: Math.random(),
     score: 0,
@@ -106,6 +128,6 @@ export const crossoverPlayers = (parent1: Player, parent2: Player): Player => {
     fitness: 0,
     generation: Math.max(parent1.generation, parent2.generation) + 1,
     age: 0,
-    niche: Math.random() < 0.5 ? parent1.niche : parent2.niche
+    niche: Math.random() < 0.8 ? preferredNiche : Math.floor(Math.random() * 4)
   };
 };
