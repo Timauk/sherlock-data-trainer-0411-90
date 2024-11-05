@@ -39,6 +39,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const [trainingData, setTrainingData] = useState<number[][]>([]);
   const [boardNumbers, setBoardNumbers] = useState<number[]>([]);
   const [isManualMode, setIsManualMode] = useState(false);
+  const [shouldStop, setShouldStop] = useState(false);
 
   const addLog = useCallback((message: string, matches?: number) => {
     const logType = matches ? 'prediction' : 'action';
@@ -64,20 +65,20 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     setModelMetrics,
     setConcursoNumber,
     setGameCount,
-    (title, description) => toast({ title, description })
+    (title, description) => toast({ title, description }),
+    shouldStop,
+    setShouldStop
   );
 
   const evolveGeneration = useCallback(async () => {
     const bestPlayers = selectBestPlayers(players);
     
-    // Incrementa idade apenas quando completa um ciclo
     const updatedPlayers = players.map(player => ({
       ...player,
       age: player.age + 1
     }));
     setPlayers(updatedPlayers);
 
-    // Clonagem apenas a cada 1000 jogos para dar tempo de avaliar
     if (gameCount % 1000 === 0 && bestPlayers.length > 0) {
       const champion = bestPlayers[0];
       const clones = cloneChampion(champion, players.length);
@@ -98,13 +99,21 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
             player: champion,
             trainingData: trainingData
           });
+
+          // Para o jogo quando encontrar um campeão com score alto
+          if (champion.score >= 14) {
+            setShouldStop(true);
+            toast({
+              title: "Campeão Encontrado!",
+              description: `Um jogador atingiu ${champion.score} pontos! O jogo será pausado.`
+            });
+          }
         } catch (error) {
           systemLogger.log('system', 
             `Erro ao atualizar modelo com conhecimento do campeão: ${error}`);
         }
       }
     } else {
-      // Mantém os melhores jogadores com idade incrementada
       const newGeneration = bestPlayers.map(player => ({
         ...player,
         generation: generation + 1
@@ -129,7 +138,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       systemLogger.log('player', 
         `Melhor jogador da geração ${generation}: Score ${bestPlayers[0].score}`);
     }
-  }, [players, generation, trainedModel, gameCount, championData, trainingData]);
+  }, [players, generation, trainedModel, gameCount, championData, trainingData, toast]);
 
   const updateFrequencyData = useCallback((newFrequencyData: { [key: string]: number[] }) => {
     setFrequencyData(newFrequencyData);
@@ -195,5 +204,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     isManualMode,
     toggleManualMode,
     clonePlayer,
+    shouldStop,
+    setShouldStop
   };
 };
