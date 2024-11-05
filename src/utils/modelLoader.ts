@@ -37,9 +37,20 @@ export const loadModelFiles = async (
       };
     }
 
+    // Add weightManifest if missing
+    if (!modelJson.weightsManifest) {
+      modelJson.weightsManifest = [{
+        paths: ["weights.bin"],
+        weights: [{
+          name: "dense_1/kernel",
+          shape: [17, 25],
+          dtype: "float32"
+        }]
+      }];
+    }
+
     // Create a blob URL for the model JSON
     const modelJsonBlob = new Blob([JSON.stringify(modelJson)], { type: 'application/json' });
-    const modelJsonUrl = URL.createObjectURL(modelJsonBlob);
 
     try {
       // Load the model using tf.loadLayersModel
@@ -63,9 +74,9 @@ export const loadModelFiles = async (
       });
 
       return { model, metadata };
-    } finally {
-      // Clean up the blob URL
-      URL.revokeObjectURL(modelJsonUrl);
+    } catch (error) {
+      console.error('Error loading model:', error);
+      throw new Error(`Failed to load model: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   } catch (error) {
     console.error('Error loading model:', error);
