@@ -24,29 +24,13 @@ export const loadModelFiles = async (
     // Parse the JSON content
     const modelJson = JSON.parse(modelJsonContent);
 
-    // Create a new model topology if missing
+    // Verify model structure
     if (!modelJson.modelTopology) {
-      modelJson.modelTopology = {
-        class_name: "Sequential",
-        config: {
-          name: "sequential_1",
-          layers: []
-        },
-        keras_version: "2.9.0",
-        backend: "tensorflow"
-      };
+      throw new Error('Invalid model.json file: missing modelTopology field');
     }
 
-    // Add weightManifest if missing
     if (!modelJson.weightsManifest) {
-      modelJson.weightsManifest = [{
-        paths: ["weights.bin"],
-        weights: [{
-          name: "dense_1/kernel",
-          shape: [17, 25],
-          dtype: "float32"
-        }]
-      }];
+      throw new Error('Invalid model.json file: missing weightsManifest field');
     }
 
     // Create a blob URL for the model JSON
