@@ -36,12 +36,10 @@ export const useGameLoop = (
   }) => void,
   setConcursoNumber: (num: number) => void,
   setGameCount: React.Dispatch<React.SetStateAction<number>>,
-  showToast?: (title: string, description: string) => void,
-  shouldStop: boolean,
-  setShouldStop: (stop: boolean) => void
+  showToast?: (title: string, description: string) => void
 ) => {
   const gameLoop = useCallback(async () => {
-    if (csvData.length === 0 || !trainedModel || shouldStop) return;
+    if (csvData.length === 0 || !trainedModel) return;
 
     const nextConcurso = (concursoNumber + 1) % csvData.length;
     setConcursoNumber(nextConcurso);
@@ -98,12 +96,11 @@ export const useGameLoop = (
       const matches = predictions.filter(num => currentBoardNumbers.includes(num)).length;
       totalMatches += matches;
       currentGameMatches += matches;
-      
-      // Se encontrar um jogador com 14+ acertos, parar o jogo
-      if (matches >= 14) {
-        setShouldStop(true);
+
+      // Apenas notifica acertos excepcionais, sem parar o jogo
+      if (matches >= 15) {
         showToast?.("Resultado Excepcional!", 
-          `Jogador ${player.id} acertou ${matches} números! O jogo será pausado.`);
+          `Jogador ${player.id} acertou ${matches} números!`);
       }
 
       const randomPrediction = Array.from({ length: 15 }, () => Math.floor(Math.random() * 25) + 1);
@@ -188,9 +185,7 @@ export const useGameLoop = (
     setModelMetrics,
     setConcursoNumber,
     setGameCount,
-    showToast,
-    shouldStop,
-    setShouldStop
+    showToast
   ]);
 
   return gameLoop;

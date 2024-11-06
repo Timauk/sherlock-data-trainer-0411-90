@@ -39,7 +39,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const [trainingData, setTrainingData] = useState<number[][]>([]);
   const [boardNumbers, setBoardNumbers] = useState<number[]>([]);
   const [isManualMode, setIsManualMode] = useState(false);
-  const [shouldStop, setShouldStop] = useState(false);
 
   const addLog = useCallback((message: string, matches?: number) => {
     const logType = matches ? 'prediction' : 'action';
@@ -65,9 +64,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     setModelMetrics,
     setConcursoNumber,
     setGameCount,
-    (title, description) => toast({ title, description }),
-    shouldStop,
-    setShouldStop
+    (title, description) => toast({ title, description })
   );
 
   const evolveGeneration = useCallback(async () => {
@@ -100,14 +97,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
             trainingData: trainingData
           });
 
-          // Para o jogo quando encontrar um campeão com score alto
-          if (champion.score >= 14) {
-            setShouldStop(true);
-            toast({
-              title: "Campeão Encontrado!",
-              description: `Um jogador atingiu ${champion.score} pontos! O jogo será pausado.`
-            });
-          }
         } catch (error) {
           systemLogger.log('system', 
             `Erro ao atualizar modelo com conhecimento do campeão: ${error}`);
@@ -203,8 +192,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     gameCount,
     isManualMode,
     toggleManualMode,
-    clonePlayer,
-    shouldStop,
-    setShouldStop
+    clonePlayer
   };
 };
