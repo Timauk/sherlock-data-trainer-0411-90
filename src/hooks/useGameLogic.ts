@@ -39,6 +39,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const [trainingData, setTrainingData] = useState<number[][]>([]);
   const [boardNumbers, setBoardNumbers] = useState<number[]>([]);
   const [isManualMode, setIsManualMode] = useState(false);
+  const [cycleCompleted, setCycleCompleted] = useState(false);
 
   const addLog = useCallback((message: string, matches?: number) => {
     const logType = matches ? 'prediction' : 'action';
@@ -70,39 +71,50 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const evolveGeneration = useCallback(async () => {
     const bestPlayers = selectBestPlayers(players);
     
+    // Atualiza a idade dos jogadores
     const updatedPlayers = players.map(player => ({
       ...player,
       age: player.age + 1
     }));
     setPlayers(updatedPlayers);
 
-    if (gameCount % 1000 === 0 && bestPlayers.length > 0) {
-      const champion = bestPlayers[0];
-      const clones = cloneChampion(champion, players.length);
-      setPlayers(clones);
+    // Verifica se completou um ciclo do CSV
+    if (concursoNumber >= csvData.length - 1) {
+      setCycleCompleted(true);
       
-      if (trainedModel && championData) {
-        try {
-          const updatedModel = await updateModelWithChampionKnowledge(
-            trainedModel,
-            champion,
-            championData.trainingData
-          );
-          
-          systemLogger.log('player', 
-            `Conhecimento do Campeão (Score: ${champion.score}) incorporado ao modelo`);
-          
-          setChampionData({
-            player: champion,
-            trainingData: trainingData
-          });
+      if (bestPlayers.length > 0) {
+        const champion = bestPlayers[0];
+        const clones = cloneChampion(champion, players.length);
+        setPlayers(clones);
+        
+        systemLogger.log('player', 
+          `Ciclo completo - Clonando campeão #${champion.id} (Score: ${champion.score})`);
+        
+        if (trainedModel && championData) {
+          try {
+            const updatedModel = await updateModelWithChampionKnowledge(
+              trainedModel,
+              champion,
+              championData.trainingData
+            );
+            
+            setChampionData({
+              player: champion,
+              trainingData: trainingData
+            });
 
-        } catch (error) {
-          systemLogger.log('system', 
-            `Erro ao atualizar modelo com conhecimento do campeão: ${error}`);
+          } catch (error) {
+            systemLogger.log('system', 
+              `Erro ao atualizar modelo com conhecimento do campeão: ${error}`);
+          }
         }
       }
+    } else if (concursoNumber === 0) {
+      // Reinicia o ciclo
+      setCycleCompleted(false);
+      systemLogger.log('system', 'Iniciando novo ciclo');
     } else {
+      // Durante o ciclo, mantém os melhores jogadores sem clonar
       const newGeneration = bestPlayers.map(player => ({
         ...player,
         generation: generation + 1
@@ -127,7 +139,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       systemLogger.log('player', 
         `Melhor jogador da geração ${generation}: Score ${bestPlayers[0].score}`);
     }
-  }, [players, generation, trainedModel, gameCount, championData, trainingData, toast]);
+  }, [players, generation, trainedModel, championData, trainingData, concursoNumber, csvData.length, toast]);
 
   const updateFrequencyData = useCallback((newFrequencyData: { [key: string]: number[] }) => {
     setFrequencyData(newFrequencyData);
