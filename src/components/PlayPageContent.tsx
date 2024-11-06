@@ -42,11 +42,45 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
   const fitnessData = gameLogic.players && gameLogic.players.length > 0 
     ? Array.from({ length: gameLogic.gameCount }, (_, index) => ({
         gameNumber: index + 1,
-        totalFitness: gameLogic.players.reduce((sum, player) => sum + player.fitness, 0)
+        totalFitness: gameLogic.players.reduce((sum: number, player: any) => sum + player.fitness, 0)
       }))
     : [];
 
   const cycleCount = Math.floor(gameLogic.gameCount / gameLogic.csvData?.length) || 0;
+
+  const saveFullModel = async () => {
+    try {
+      // Implementação do salvamento do modelo completo
+      await gameLogic.saveModel();
+      toast({
+        title: "Modelo Salvo",
+        description: "O modelo completo foi salvo com sucesso"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar o modelo completo",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const loadFullModel = async () => {
+    try {
+      // Implementação do carregamento do modelo completo
+      await gameLogic.loadModel();
+      toast({
+        title: "Modelo Carregado",
+        description: "O modelo completo foi carregado com sucesso"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar o modelo completo",
+        variant: "destructive"
+      });
+    }
+  };
   
   return (
     <div className="flex flex-col gap-4">
@@ -77,6 +111,8 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         isServerProcessing={isServerProcessing}
         serverStatus={serverStatus}
         onToggleProcessing={() => setIsServerProcessing(prev => !prev)}
+        saveFullModel={saveFullModel}
+        loadFullModel={loadFullModel}
       />
       
       <TotalFitnessChart fitnessData={fitnessData} />

@@ -31,9 +31,10 @@ export const updateModelWithNewData = async (
       callbacks: {
         onEpochEnd: (epoch, logs) => {
           if (logs) {
+            const lossValue = typeof logs.loss === 'number' ? logs.loss : (logs.loss as tf.Tensor).dataSync()[0];
             systemLogger.log('training', `📊 Retreino - Época ${epoch + 1}`, {
-              loss: logs.loss.toFixed(4),
-              accuracy: logs.acc ? logs.acc.toFixed(4) : 'N/A'
+              loss: lossValue.toFixed(4),
+              accuracy: logs.acc ? (typeof logs.acc === 'number' ? logs.acc.toFixed(4) : 'N/A') : 'N/A'
             });
           }
         }
@@ -43,7 +44,11 @@ export const updateModelWithNewData = async (
     xs.dispose();
     ys.dispose();
 
-    const message = `✅ Modelo retreinado com ${trainingData.length} novos registros. Loss: ${result.history.loss[0].toFixed(4)}`;
+    const finalLoss = typeof result.history.loss[0] === 'number' 
+      ? result.history.loss[0] 
+      : (result.history.loss[0] as tf.Tensor).dataSync()[0];
+
+    const message = `✅ Modelo retreinado com ${trainingData.length} novos registros. Loss: ${finalLoss.toFixed(4)}`;
     systemLogger.log('training', message, { history: result.history });
     addLog(message);
     
