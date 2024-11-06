@@ -34,12 +34,16 @@ interface PlayerListProps {
   players: Player[];
   onUpdatePlayer?: (playerId: number, newWeights: number[]) => void;
   onClonePlayer?: (player: Player) => void;
+  currentCycle: number;
+  lastCloneCycle: number;
 }
 
 const PlayerList: React.FC<PlayerListProps> = ({ 
   players, 
   onUpdatePlayer,
-  onClonePlayer 
+  onClonePlayer,
+  currentCycle,
+  lastCloneCycle
 }) => {
   const { toast } = useToast();
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -88,6 +92,17 @@ const PlayerList: React.FC<PlayerListProps> = ({
 
   const handleClonePlayer = (player: Player, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    
+    // Verifica se já houve clonagem neste ciclo
+    if (currentCycle <= lastCloneCycle) {
+      toast({
+        title: "Clonagem não permitida",
+        description: "Você só pode clonar uma vez por ciclo completo do CSV.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (onClonePlayer) {
       onClonePlayer(player);
       toast({

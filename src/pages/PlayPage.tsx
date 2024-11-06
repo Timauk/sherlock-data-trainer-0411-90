@@ -18,8 +18,8 @@ const PlayPage: React.FC = () => {
   const [trainedModel, setTrainedModel] = useState<tf.LayersModel | null>(null);
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
-
   const gameLogic = useGameLogic(csvData, trainedModel);
+  const [lastCloneCycle, setLastCloneCycle] = useState(0);
 
   const loadCSV = useCallback(async (file: File) => {
     try {
@@ -47,7 +47,6 @@ const PlayPage: React.FC = () => {
       const { model, metadata } = await loadModelFiles(jsonFile, weightsFile, metadataFile);
       setTrainedModel(model);
       
-      // Save model immediately after loading for future use
       await saveModelWithWeights(model);
       
       gameLogic.addLog("Modelo e metadata carregados com sucesso!");
@@ -99,6 +98,24 @@ const PlayPage: React.FC = () => {
     }
   }, [trainedModel, gameLogic, toast]);
 
+  const handleClonePlayer = useCallback((player: Player) => {
+    const currentCycle = Math.floor(gameLogic.gameCount / csvData.length);
+    
+    if (currentCycle <= lastCloneCycle) {
+      toast({
+        title: "Clonagem não permitida",
+        description: "Você só pode clonar uma vez por ciclo completo do CSV.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (gameLogic.clonePlayer) {
+      gameLogic.clonePlayer(player);
+      setLastCloneCycle(currentCycle);
+    }
+  }, [gameLogic, csvData.length, lastCloneCycle, toast]);
+
   const playGame = useCallback(() => {
     if (!trainedModel || csvData.length === 0) {
       gameLogic.addLog("Não é possível iniciar o jogo. Verifique se o modelo e os dados CSV foram carregados.");
@@ -129,10 +146,8 @@ const PlayPage: React.FC = () => {
         setProgress((prevProgress) => {
           const newProgress = prevProgress + (100 / csvData.length);
           
-          // Verifica se completou um ciclo
           if (newProgress >= 100) {
             if (!gameLogic.isManualMode) {
-              // Evolui apenas ao completar um ciclo completo
               gameLogic.evolveGeneration();
             }
             return gameLogic.isInfiniteMode ? 0 : 100;
@@ -160,6 +175,9 @@ const PlayPage: React.FC = () => {
         progress={progress}
         generation={gameLogic.generation}
         gameLogic={gameLogic}
+        currentCycle={Math.floor(gameLogic.gameCount / csvData.length)}
+        lastCloneCycle={lastCloneCycle}
+        onClonePlayer={handleClonePlayer}
       />
     </div>
   );

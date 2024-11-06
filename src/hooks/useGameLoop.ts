@@ -45,6 +45,13 @@ export const useGameLoop = (
     setConcursoNumber(nextConcurso);
     setGameCount(prev => prev + 1);
 
+    // Verifica se é hora de retreinar (a cada 200 jogos)
+    if (nextConcurso % 200 === 0 && trainingData.length > 0) {
+      await updateModelWithNewData(trainedModel, trainingData, addLog, showToast);
+      setTrainingData([]);
+      addLog("Retreino programado executado após 200 jogos");
+    }
+
     const currentBoardNumbers = csvData[nextConcurso];
     setBoardNumbers(currentBoardNumbers);
     
