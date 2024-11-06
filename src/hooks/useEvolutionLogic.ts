@@ -2,14 +2,14 @@ import { useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
-import { selectBestPlayers } from '@/utils/evolutionSystem';
+import { selectBestPlayers, updatePlayerGenerations } from '@/utils/evolutionSystem';
 import { cloneChampion, updateModelWithChampionKnowledge } from '@/utils/playerEvolution';
 
 export const useEvolutionLogic = (
   players: Player[],
   setPlayers: (players: Player[]) => void,
   generation: number,
-  setGeneration: (gen: number | ((prev: number) => number)) => void,
+  setGeneration: (gen: number) => void,
   setEvolutionData: (data: any) => void,
   trainedModel: tf.LayersModel | null,
   trainingData: number[][],
@@ -19,15 +19,10 @@ export const useEvolutionLogic = (
   setChampionData: (data: { player: Player; trainingData: number[][] }) => void,
 ) => {
   return useCallback(async () => {
-    const bestPlayers = selectBestPlayers(players);
+    // Atualiza a idade e geração dos jogadores
+    const updatedPlayers = updatePlayerGenerations(players, generation);
+    const bestPlayers = selectBestPlayers(updatedPlayers);
     
-    // Atualiza a idade dos jogadores
-    const updatedPlayers = players.map(player => ({
-      ...player,
-      age: player.age + 1
-    }));
-    setPlayers(updatedPlayers);
-
     // Verifica se completou um ciclo do CSV
     if (concursoNumber >= csvData.length - 1) {
       if (bestPlayers.length > 0) {
@@ -67,7 +62,7 @@ export const useEvolutionLogic = (
       setPlayers(newGeneration);
     }
 
-    setGeneration(prev => prev + 1);
+    setGeneration(generation + 1);
     
     setEvolutionData(prev => [
       ...prev,
