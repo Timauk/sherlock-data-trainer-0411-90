@@ -8,6 +8,7 @@ import PlayPageContent from '@/components/PlayPageContent';
 import SpeedControl from '@/components/SpeedControl';
 import { loadModelFiles } from '@/utils/modelLoader';
 import { loadModelWithWeights, saveModelWithWeights } from '@/utils/modelUtils';
+import { Player } from '@/types/gameTypes';
 
 const PlayPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -184,3 +185,4 @@ const PlayPage: React.FC = () => {
 };
 
 export default PlayPage;
+
