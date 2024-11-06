@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import * as tf from '@tensorflow/tfjs';
 import { Badge } from "@/components/ui/badge";
 import TotalFitnessChart from './TotalFitnessChart';
+import { Player } from '@/types/gameTypes';
 
 interface PlayPageContentProps {
   isPlaying: boolean;
@@ -19,6 +20,9 @@ interface PlayPageContentProps {
   progress: number;
   generation: number;
   gameLogic: any;
+  currentCycle: number;
+  lastCloneCycle: number;
+  onClonePlayer: (player: Player) => void;
 }
 
 const PlayPageContent: React.FC<PlayPageContentProps> = ({
@@ -32,7 +36,10 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
   onSaveModel,
   progress,
   generation,
-  gameLogic
+  gameLogic,
+  currentCycle,
+  lastCloneCycle,
+  onClonePlayer
 }) => {
   const [isServerProcessing, setIsServerProcessing] = useState(false);
   const { status: serverStatus } = useServerStatus();
@@ -130,6 +137,9 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         modelMetrics={gameLogic.modelMetrics}
         neuralNetworkVisualization={gameLogic.neuralNetworkVisualization}
         concursoNumber={gameLogic.concursoNumber}
+        currentCycle={currentCycle}
+        lastCloneCycle={lastCloneCycle}
+        onClonePlayer={onClonePlayer}
       />
     </div>
   );

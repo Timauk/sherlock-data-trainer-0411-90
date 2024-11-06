@@ -16,6 +16,9 @@ interface GameBoardProps {
     fitness: number;
   }>;
   onUpdatePlayer?: (playerId: number, newWeights: number[]) => void;
+  currentCycle: number;
+  lastCloneCycle: number;
+  onClonePlayer?: (player: Player) => void;
 }
 
 const GameBoard: React.FC<GameBoardProps> = ({ 
@@ -23,7 +26,10 @@ const GameBoard: React.FC<GameBoardProps> = ({
   concursoNumber, 
   players, 
   evolutionData = [],
-  onUpdatePlayer
+  onUpdatePlayer,
+  currentCycle,
+  lastCloneCycle,
+  onClonePlayer
 }) => {
   // Processar dados para o gráfico de evolução genética
   const processedEvolutionData = evolutionData.reduce((acc, curr) => {
@@ -71,7 +77,13 @@ const GameBoard: React.FC<GameBoardProps> = ({
   return (
     <div>
       <BoardDisplay numbers={boardNumbers} concursoNumber={concursoNumber} />
-      <PlayerList players={players} onUpdatePlayer={onUpdatePlayer} />
+      <PlayerList 
+        players={players} 
+        onUpdatePlayer={onUpdatePlayer}
+        onClonePlayer={onClonePlayer}
+        currentCycle={currentCycle}
+        lastCloneCycle={lastCloneCycle}
+      />
       <EvolutionChart data={evolutionData} />
       <GeneticEvolutionChart evolutionData={processedEvolutionData} />
     </div>
