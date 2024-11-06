@@ -22,6 +22,6 @@ export const getAIDiagnostics = (): AIDiagnosticResult => {
     stability: feedback.averagePatternDepth
   };
 
-  systemLogger.log('diagnostic', 'AI Diagnostic completed', result);
+  systemLogger.log('system', 'AI Diagnostic completed', result);
   return result;
 };

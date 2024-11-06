@@ -18,6 +18,6 @@ export const getPerformanceDiagnostics = (): PerformanceDiagnosticResult => {
     throughput: metrics.avgLatency > 0 ? 1000 / metrics.avgLatency : 0
   };
 
-  systemLogger.log('diagnostic', 'Performance Diagnostic completed', result);
+  systemLogger.log('system', 'Performance Diagnostic completed', result);
   return result;
 };

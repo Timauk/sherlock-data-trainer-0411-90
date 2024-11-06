@@ -1,31 +1,24 @@
+// Split into smaller files for better maintainability
 import * as tf from '@tensorflow/tfjs';
 import { systemLogger } from '../logging/systemLogger';
 import { deepPatternAnalyzer } from '../analysis/deepPatternAnalysis';
 import { rewardSystem } from '../enhancedRewardSystem';
-
-interface FeedbackMetrics {
-  accuracy: number;
-  loss: number;
-  patterns: number;
-  reward: number;
-  patternDepth: number;
-}
-
-interface RewardFactors {
-  matches: number;
-  consistency: number;
-  novelty: number;
-  efficiency: number;
-  patternDepth: number;  // This line was added to match the error
-}
+import { FeedbackMetrics, RewardFactors } from './types';
+import { MetricsManager } from './metricsManager';
+import { PatternMemoryManager } from './patternMemoryManager';
+import { ModelUpdater } from './modelUpdater';
 
 export class LearningFeedbackLoop {
   private static instance: LearningFeedbackLoop;
-  private metrics: FeedbackMetrics[] = [];
-  private readonly maxMetrics = 1000;
-  private patternMemory: Map<string, number> = new Map();
+  private metricsManager: MetricsManager;
+  private patternMemory: PatternMemoryManager;
+  private modelUpdater: ModelUpdater;
 
-  private constructor() {}
+  private constructor() {
+    this.metricsManager = new MetricsManager();
+    this.patternMemory = new PatternMemoryManager();
+    this.modelUpdater = new ModelUpdater();
+  }
 
   static getInstance(): LearningFeedbackLoop {
     if (!LearningFeedbackLoop.instance) {
@@ -41,84 +34,30 @@ export class LearningFeedbackLoop {
     patterns: number[][],
     specialistId?: number
   ): Promise<void> {
-    // Análise profunda de padrões
     const deepPatterns = await deepPatternAnalyzer.analyzePatterns(patterns);
-    
-    // Memorização de padrões importantes
-    deepPatterns.forEach(pattern => {
-      const patternKey = `${pattern.type}-${pattern.data.join(',')}`;
-      const currentCount = this.patternMemory.get(patternKey) || 0;
-      this.patternMemory.set(patternKey, currentCount + 1);
-    });
+    this.patternMemory.memorizePatterns(deepPatterns);
 
-    // Cálculo de recompensa considerando a profundidade dos padrões
     const reward = rewardSystem.calculateReward({
       matches: this.calculateMatches(prediction, actual),
       consistency: this.calculateConsistency(patterns),
       novelty: this.calculateNovelty(deepPatterns),
       efficiency: this.calculateEfficiency(prediction, actual),
-      patternDepth: this.calculatePatternDepth(deepPatterns)
+      patternDepth: this.patternMemory.calculatePatternDepth(deepPatterns)
     });
 
-    // Atualização do modelo com ênfase em padrões profundos
-    await this.updateModelWithDeepPatterns(model, prediction, actual, deepPatterns, reward);
+    await this.modelUpdater.updateModel(model, prediction, actual, deepPatterns, reward);
 
-    this.recordMetrics({
+    this.metricsManager.recordMetrics({
       accuracy: this.calculateAccuracy(prediction, actual),
       loss: await this.calculateLoss(model, prediction, actual),
       patterns: deepPatterns.length,
       reward,
-      patternDepth: this.calculatePatternDepth(deepPatterns)
+      patternDepth: this.patternMemory.calculatePatternDepth(deepPatterns)
     });
 
-    // Log detalhado para especialistas
     if (specialistId) {
-      systemLogger.log('specialist', `Especialista #${specialistId} identificou ${deepPatterns.length} padrões profundos`, {
-        patternTypes: deepPatterns.map(p => p.type),
-        confidence: deepPatterns.map(p => p.confidence),
-        reward
-      });
+      this.logSpecialistFeedback(specialistId, deepPatterns, reward);
     }
-  }
-
-  private calculatePatternDepth(patterns: any[]): number {
-    return patterns.reduce((depth, pattern) => {
-      const frequency = this.patternMemory.get(`${pattern.type}-${pattern.data.join(',')}`) || 0;
-      return Math.max(depth, pattern.confidence * (1 + Math.log(frequency + 1)));
-    }, 0);
-  }
-
-  private async updateModelWithDeepPatterns(
-    model: tf.LayersModel,
-    prediction: number[],
-    actual: number[],
-    patterns: any[],
-    reward: number
-  ): Promise<void> {
-    const learningRate = 0.001 * Math.abs(reward) * this.calculatePatternDepth(patterns);
-    const optimizer = tf.train.adam(learningRate);
-    
-    model.compile({
-      optimizer,
-      loss: 'meanSquaredError',
-      metrics: ['accuracy']
-    });
-
-    // Tensor com dados enriquecidos com padrões
-    const enrichedData = this.enrichDataWithPatterns(prediction, patterns);
-    const xs = tf.tensor2d([enrichedData]);
-    const ys = tf.tensor2d([actual]);
-
-    // Treinamento com maior peso para padrões profundos
-    await model.trainOnBatch(xs, ys);
-
-    xs.dispose();
-    ys.dispose();
-  }
-
-  private enrichDataWithPatterns(prediction: number[], patterns: any[]): number[] {
-    const patternFeatures = patterns.map(p => p.confidence * this.calculatePatternDepth([p]));
-    return [...prediction, ...patternFeatures];
   }
 
   private calculateMatches(prediction: number[], actual: number[]): number {
@@ -126,18 +65,15 @@ export class LearningFeedbackLoop {
   }
 
   private calculateConsistency(patterns: number[][]): number {
-    // Implementar lógica de consistência
-    return 0.5; // Exemplo de retorno fixo
+    return 0.5;
   }
 
   private calculateNovelty(patterns: any[]): number {
-    // Implementar lógica de novidade
-    return 0.5; // Exemplo de retorno fixo
+    return 0.5;
   }
 
   private calculateEfficiency(prediction: number[], actual: number[]): number {
-    // Implementar lógica de eficiência
-    return 0.5; // Exemplo de retorno fixo
+    return 0.5;
   }
 
   private async calculateLoss(
@@ -163,40 +99,16 @@ export class LearningFeedbackLoop {
     return matches / actual.length;
   }
 
-  private recordMetrics(metrics: FeedbackMetrics): void {
-    this.metrics.push(metrics);
-    if (this.metrics.length > this.maxMetrics) {
-      this.metrics = this.metrics.slice(-this.maxMetrics);
-    }
+  private logSpecialistFeedback(specialistId: number, patterns: any[], reward: number): void {
+    systemLogger.log('specialist', `Especialista #${specialistId} identificou ${patterns.length} padrões profundos`, {
+      patternTypes: patterns.map(p => p.type),
+      confidence: patterns.map(p => p.confidence),
+      reward
+    });
   }
 
-  getMetricsSummary(): {
-    averageAccuracy: number;
-    averageLoss: number;
-    totalPatterns: number;
-    totalReward: number;
-    averagePatternDepth: number;
-  } {
-    const sum = this.metrics.reduce(
-      (acc, curr) => ({
-        accuracy: acc.accuracy + curr.accuracy,
-        loss: acc.loss + curr.loss,
-        patterns: acc.patterns + curr.patterns,
-        reward: acc.reward + curr.reward,
-        patternDepth: acc.patternDepth + curr.patternDepth
-      }),
-      { accuracy: 0, loss: 0, patterns: 0, reward: 0, patternDepth: 0 }
-    );
-
-    const count = this.metrics.length || 1;
-
-    return {
-      averageAccuracy: sum.accuracy / count,
-      averageLoss: sum.loss / count,
-      totalPatterns: sum.patterns,
-      totalReward: sum.reward,
-      averagePatternDepth: sum.patternDepth / count
-    };
+  getMetricsSummary() {
+    return this.metricsManager.getMetricsSummary();
   }
 }
 
