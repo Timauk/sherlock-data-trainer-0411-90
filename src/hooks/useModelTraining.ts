@@ -33,18 +33,13 @@ export const useModelTraining = () => {
       const models = await createEnsembleModels();
       setProgress(40);
 
-      // Incorpora conhecimento do campeão se disponível
-      if (championKnowledge) {
-        models.champion = championKnowledge;
-      }
-
       // Treinamento dos modelos com mínimo de 50 épocas
-      await trainEnsemble(models, historicalData, summaries, lunarData, {
-        minEpochs: 50,
-        maxEpochs: 100,
-        batchSize: 32,
-        validationSplit: 0.2
-      });
+      await trainEnsemble(
+        models, 
+        historicalData, 
+        summaries, 
+        lunarData
+      );
       setProgress(90);
 
       // Salva os modelos
