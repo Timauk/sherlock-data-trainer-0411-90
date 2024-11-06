@@ -3,12 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { usePerformanceAlerts } from "@/hooks/usePerformanceAlerts";
-import { performanceMonitor } from "@/utils/performance/performanceMonitor";
-import { modelMonitoring } from "@/utils/monitoring/modelMonitoring";
-import { feedbackSystem } from "@/utils/prediction/feedbackSystem";
 import DiagnosticResults from './DiagnosticResults';
 import ConnectionStatus from './SystemDiagnostics/ConnectionStatus';
-import { SystemStatus, SpecializedModelsStatus, DataQualityMetrics, AnalysisStatus } from '@/types/monitoring';
+import { getAIDiagnostics } from '@/utils/diagnostics/aiDiagnostics';
+import { getPerformanceDiagnostics } from '@/utils/diagnostics/performanceDiagnostics';
+import { getDataQualityDiagnostics } from '@/utils/diagnostics/dataQualityDiagnostics';
 
 export interface DiagnosticResult {
   phase: string;
@@ -24,19 +23,6 @@ const SystemDiagnostics = () => {
   const { toast } = useToast();
   usePerformanceAlerts();
 
-  const getUIComponentCount = () => {
-    return document.querySelectorAll('[data-testid], [role]').length;
-  };
-
-  const getPerformanceMetrics = () => {
-    const metrics = performanceMonitor.getAverageMetrics();
-    return {
-      avgLatency: metrics.avgLatency || 0,
-      avgMemory: metrics.avgMemory || 0,
-      avgCPU: metrics.avgCPU || 0
-    };
-  };
-
   const runDiagnostics = async () => {
     setIsRunning(true);
     setProgress(0);
@@ -44,57 +30,50 @@ const SystemDiagnostics = () => {
 
     try {
       // Fase 1: Gestão de Dados e IA
-      const metrics = modelMonitoring.getMetricsSummary();
-      const accuracyPercentage = metrics.avgAccuracy * 100;
+      const aiMetrics = getAIDiagnostics();
       diagnosticResults.push({
         phase: "Fase 1: Gestão de Dados e IA",
-        status: accuracyPercentage > 50 ? 'success' : 'warning',
-        message: `Precisão média: ${accuracyPercentage.toFixed(2)}%`,
-        details: `Modelo treinado com ${metrics.totalSamples} amostras`
+        status: aiMetrics.accuracy > 0.5 ? 'success' : 'warning',
+        message: `Precisão média: ${(aiMetrics.accuracy * 100).toFixed(2)}%`,
+        details: `Modelo treinado com ${aiMetrics.samples} amostras`
       });
-      setProgress(25);
+      setProgress(20);
 
-      // Fase 2: Otimização de Performance
-      const perfMetrics = getPerformanceMetrics();
-      const memoryMB = (perfMetrics.avgMemory / 1024 / 1024).toFixed(1);
+      // Fase 2: Performance do Sistema
+      const perfMetrics = getPerformanceDiagnostics();
       diagnosticResults.push({
-        phase: "Fase 2: Otimização de Performance",
-        status: perfMetrics.avgLatency < 1000 ? 'success' : 'warning',
-        message: `Latência média: ${perfMetrics.avgLatency.toFixed(2)}ms`,
-        details: `CPU: ${perfMetrics.avgCPU?.toFixed(1) || 0}%, Memória: ${memoryMB}MB`
+        phase: "Fase 2: Performance do Sistema",
+        status: perfMetrics.latency < 1000 ? 'success' : 'warning',
+        message: `Latência: ${perfMetrics.latency.toFixed(2)}ms`,
+        details: `CPU: ${perfMetrics.cpuUsage?.toFixed(1) || 0}%, Memória: ${(perfMetrics.memoryUsage * 100).toFixed(1)}%`
       });
-      setProgress(50);
+      setProgress(40);
 
-      // Fase 3: Modelos Especializados
-      const specializedModels = modelMonitoring.getSpecializedModelsStatus();
-      const modelsRatio = specializedModels.activeCount / specializedModels.totalCount;
+      // Fase 3: Qualidade dos Dados
+      const dataQuality = getDataQualityDiagnostics([]);
       diagnosticResults.push({
-        phase: "Fase 3: Modelos Especializados",
-        status: modelsRatio >= 0.75 ? 'success' : 'warning',
-        message: "Status dos Modelos Especializados",
-        details: `Ativos: ${specializedModels.activeCount}, Total: ${specializedModels.totalCount}`
+        phase: "Fase 3: Qualidade dos Dados",
+        status: dataQuality.completeness > 0.8 ? 'success' : 'warning',
+        message: `Completude: ${(dataQuality.completeness * 100).toFixed(1)}%`,
+        details: `Consistência: ${(dataQuality.consistency * 100).toFixed(1)}%, Unicidade: ${(dataQuality.uniqueness * 100).toFixed(1)}%`
       });
-      setProgress(75);
+      setProgress(60);
 
       // Fase 4: Validação e Qualidade
-      const confidenceCorrelation = feedbackSystem.getConfidenceCorrelation();
-      const accuracyTrend = feedbackSystem.getAccuracyTrend();
-      const lastAccuracy = accuracyTrend[accuracyTrend.length - 1] || 0;
       diagnosticResults.push({
         phase: "Fase 4: Validação e Qualidade",
-        status: confidenceCorrelation > 0.5 ? 'success' : 'warning',
-        message: `Correlação de confiança: ${confidenceCorrelation.toFixed(2)}`,
-        details: `Tendência de precisão: ${(lastAccuracy * 100).toFixed(1)}%`
+        status: aiMetrics.confidence > 0.7 ? 'success' : 'warning',
+        message: `Correlação de confiança: ${aiMetrics.confidence.toFixed(2)}`,
+        details: `Tendência de precisão: ${(aiMetrics.trend * 100).toFixed(1)}%`
       });
-      setProgress(85);
+      setProgress(80);
 
-      // Fase 5: Análise Avançada
-      const analysisStatus = modelMonitoring.getAnalysisStatus();
+      // Fase 5: Estabilidade do Sistema
       diagnosticResults.push({
-        phase: "Fase 5: Análise Avançada",
-        status: analysisStatus.activeAnalyses >= 6 ? 'success' : 'warning',
-        message: "Status das Análises Avançadas",
-        details: `Análises ativas: ${analysisStatus.activeAnalyses}`
+        phase: "Fase 5: Estabilidade do Sistema",
+        status: aiMetrics.stability > 0.8 ? 'success' : 'warning',
+        message: `Estabilidade: ${(aiMetrics.stability * 100).toFixed(1)}%`,
+        details: `Throughput: ${perfMetrics.throughput.toFixed(1)} ops/s`
       });
       setProgress(100);
 
@@ -113,7 +92,7 @@ const SystemDiagnostics = () => {
 
   useEffect(() => {
     runDiagnostics();
-    const interval = setInterval(runDiagnostics, 60000); // Atualiza a cada minuto
+    const interval = setInterval(runDiagnostics, 60000);
     return () => clearInterval(interval);
   }, []);
 
