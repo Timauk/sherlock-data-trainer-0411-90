@@ -1,4 +1,3 @@
-// Split into smaller files for better maintainability
 import * as tf from '@tensorflow/tfjs';
 import { systemLogger } from '../logging/systemLogger';
 import { deepPatternAnalyzer } from '../analysis/deepPatternAnalysis';
@@ -37,13 +36,15 @@ export class LearningFeedbackLoop {
     const deepPatterns = await deepPatternAnalyzer.analyzePatterns(patterns);
     this.patternMemory.memorizePatterns(deepPatterns);
 
-    const reward = rewardSystem.calculateReward({
+    const rewardFactors: RewardFactors = {
       matches: this.calculateMatches(prediction, actual),
       consistency: this.calculateConsistency(patterns),
       novelty: this.calculateNovelty(deepPatterns),
       efficiency: this.calculateEfficiency(prediction, actual),
       patternDepth: this.patternMemory.calculatePatternDepth(deepPatterns)
-    });
+    };
+
+    const reward = rewardSystem.calculateReward(rewardFactors);
 
     await this.modelUpdater.updateModel(model, prediction, actual, deepPatterns, reward);
 
