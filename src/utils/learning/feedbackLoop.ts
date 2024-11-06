@@ -16,7 +16,7 @@ interface RewardFactors {
   consistency: number;
   novelty: number;
   efficiency: number;
-  patternDepth: number;  // Added this line to match the error
+  patternDepth: number;  // This line was added to match the error
 }
 
 export class LearningFeedbackLoop {
@@ -201,4 +201,3 @@ export class LearningFeedbackLoop {
 }
 
 export const learningFeedbackLoop = LearningFeedbackLoop.getInstance();
-
