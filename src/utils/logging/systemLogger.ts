@@ -1,6 +1,7 @@
 interface LogEntry {
   timestamp: Date;
-  type: 'action' | 'prediction' | 'performance' | 'system' | 'lunar' | 'player' | 'checkpoint' | 'learning' | 'model';
+  type: 'action' | 'prediction' | 'performance' | 'system' | 'lunar' | 
+        'player' | 'checkpoint' | 'learning' | 'model' | 'training' | 'specialist';
   message: string;
   details?: any;
   severity?: 'info' | 'warning' | 'error' | 'success';

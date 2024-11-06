@@ -11,6 +11,14 @@ interface FeedbackMetrics {
   patternDepth: number;
 }
 
+interface RewardFactors {
+  matches: number;
+  consistency: number;
+  novelty: number;
+  efficiency: number;
+  patternDepth: number;
+}
+
 export class LearningFeedbackLoop {
   private static instance: LearningFeedbackLoop;
   private metrics: FeedbackMetrics[] = [];

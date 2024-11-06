@@ -112,7 +112,7 @@ async function trainSpecialistModel(
     }
   });
 
-  systemLogger.log('specialist', `${specialist.name} completou treinamento`, {
+  systemLogger.log('model', `${specialist.name} completou treinamento`, {
     finalLoss: history.history.loss?.slice(-1)[0],
     finalAccuracy: history.history.acc?.slice(-1)[0]
   });
