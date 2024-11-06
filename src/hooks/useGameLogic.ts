@@ -6,6 +6,7 @@ import { useGameLoop } from './useGameLoop';
 import { useEvolutionLogic } from './useEvolutionLogic';
 import { ModelVisualization, Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
+import { cloneChampion } from '@/utils/playerEvolution';
 
 export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel | null) => {
   const { toast } = useToast();
@@ -143,3 +144,4 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     clonePlayer
   };
 };
+

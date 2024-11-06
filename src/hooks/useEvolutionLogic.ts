@@ -9,7 +9,7 @@ export const useEvolutionLogic = (
   players: Player[],
   setPlayers: (players: Player[]) => void,
   generation: number,
-  setGeneration: (gen: number) => void,
+  setGeneration: (gen: number | ((prev: number) => number)) => void,
   setEvolutionData: (data: any) => void,
   trainedModel: tf.LayersModel | null,
   trainingData: number[][],
