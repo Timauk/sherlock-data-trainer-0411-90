@@ -3,9 +3,7 @@ import * as tf from '@tensorflow/tfjs';
 import { useToast } from "@/components/ui/use-toast";
 import { useGameInitialization } from './useGameInitialization';
 import { useGameLoop } from './useGameLoop';
-import { updateModelWithNewData } from '@/utils/modelUtils';
-import { cloneChampion, updateModelWithChampionKnowledge } from '@/utils/playerEvolution';
-import { selectBestPlayers } from '@/utils/evolutionSystem';
+import { useEvolutionLogic } from './useEvolutionLogic';
 import { ModelVisualization, Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
 
@@ -39,7 +37,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const [trainingData, setTrainingData] = useState<number[][]>([]);
   const [boardNumbers, setBoardNumbers] = useState<number[]>([]);
   const [isManualMode, setIsManualMode] = useState(false);
-  const [cycleCompleted, setCycleCompleted] = useState(false);
 
   const addLog = useCallback((message: string, matches?: number) => {
     const logType = matches ? 'prediction' : 'action';
@@ -68,78 +65,19 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     (title, description) => toast({ title, description })
   );
 
-  const evolveGeneration = useCallback(async () => {
-    const bestPlayers = selectBestPlayers(players);
-    
-    // Atualiza a idade dos jogadores
-    const updatedPlayers = players.map(player => ({
-      ...player,
-      age: player.age + 1
-    }));
-    setPlayers(updatedPlayers);
-
-    // Verifica se completou um ciclo do CSV
-    if (concursoNumber >= csvData.length - 1) {
-      setCycleCompleted(true);
-      
-      if (bestPlayers.length > 0) {
-        const champion = bestPlayers[0];
-        const clones = cloneChampion(champion, players.length);
-        setPlayers(clones);
-        
-        systemLogger.log('player', 
-          `Ciclo completo - Clonando campeão #${champion.id} (Score: ${champion.score})`);
-        
-        if (trainedModel && championData) {
-          try {
-            const updatedModel = await updateModelWithChampionKnowledge(
-              trainedModel,
-              champion,
-              championData.trainingData
-            );
-            
-            setChampionData({
-              player: champion,
-              trainingData: trainingData
-            });
-
-          } catch (error) {
-            systemLogger.log('system', 
-              `Erro ao atualizar modelo com conhecimento do campeão: ${error}`);
-          }
-        }
-      }
-    } else if (concursoNumber === 0) {
-      // Reinicia o ciclo
-      setCycleCompleted(false);
-      systemLogger.log('system', 'Iniciando novo ciclo');
-    } else {
-      // Durante o ciclo, mantém os melhores jogadores sem clonar
-      const newGeneration = bestPlayers.map(player => ({
-        ...player,
-        generation: generation + 1
-      }));
-      
-      setPlayers(newGeneration);
-    }
-
-    setGeneration(prev => prev + 1);
-    
-    setEvolutionData(prev => [
-      ...prev,
-      ...players.map(player => ({
-        generation,
-        playerId: player.id,
-        score: player.score,
-        fitness: player.fitness
-      }))
-    ]);
-
-    if (bestPlayers.length > 0) {
-      systemLogger.log('player', 
-        `Melhor jogador da geração ${generation}: Score ${bestPlayers[0].score}`);
-    }
-  }, [players, generation, trainedModel, championData, trainingData, concursoNumber, csvData.length, toast]);
+  const evolveGeneration = useEvolutionLogic(
+    players,
+    setPlayers,
+    generation,
+    setGeneration,
+    setEvolutionData,
+    trainedModel,
+    trainingData,
+    csvData,
+    concursoNumber,
+    championData,
+    setChampionData
+  );
 
   const updateFrequencyData = useCallback((newFrequencyData: { [key: string]: number[] }) => {
     setFrequencyData(newFrequencyData);
@@ -191,9 +129,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     gameLoop,
     evolveGeneration,
     addLog,
-    toggleInfiniteMode: useCallback(() => {
-      setIsInfiniteMode(prev => !prev);
-    }, []),
+    toggleInfiniteMode: useCallback(() => setIsInfiniteMode(prev => !prev), []),
     dates,
     numbers,
     updateFrequencyData,
