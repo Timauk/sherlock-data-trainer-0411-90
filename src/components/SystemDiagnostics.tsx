@@ -50,7 +50,7 @@ const SystemDiagnostics = () => {
       setProgress(40);
 
       // Fase 3: Qualidade dos Dados
-      const dataQuality = getDataQualityDiagnostics([]);
+      const dataQuality = await getDataQualityDiagnostics([]);
       diagnosticResults.push({
         phase: "Fase 3: Qualidade dos Dados",
         status: dataQuality.completeness > 0.8 ? 'success' : 'warning',
