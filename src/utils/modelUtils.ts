@@ -1,4 +1,5 @@
 import * as tf from '@tensorflow/tfjs';
+import { systemLogger } from './logging/systemLogger';
 
 export const updateModelWithNewData = async (
   trainedModel: tf.LayersModel,
@@ -19,25 +20,41 @@ export const updateModelWithNewData = async (
     const xs = tf.tensor2d(processedData);
     const ys = tf.tensor2d(trainingData.map(row => row.slice(-15)));
 
-    await trainedModel.fit(xs, ys, {
+    systemLogger.log('training', '🔄 Iniciando retreino do modelo...', {
+      amostras: trainingData.length
+    });
+
+    const result = await trainedModel.fit(xs, ys, {
       epochs: 1,
       batchSize: 32,
-      validationSplit: 0.1
+      validationSplit: 0.1,
+      callbacks: {
+        onEpochEnd: (epoch, logs) => {
+          if (logs) {
+            systemLogger.log('training', `📊 Retreino - Época ${epoch + 1}`, {
+              loss: logs.loss.toFixed(4),
+              accuracy: logs.acc ? logs.acc.toFixed(4) : 'N/A'
+            });
+          }
+        }
+      }
     });
 
     xs.dispose();
     ys.dispose();
 
-    const message = `Modelo atualizado com ${trainingData.length} novos registros.`;
+    const message = `✅ Modelo retreinado com ${trainingData.length} novos registros. Loss: ${result.history.loss[0].toFixed(4)}`;
+    systemLogger.log('training', message, { history: result.history });
     addLog(message);
     
     if (showToast) {
-      showToast("Modelo Atualizado", "O modelo foi atualizado com sucesso com os novos dados.");
+      showToast("Modelo Atualizado", "O modelo foi retreinado com sucesso com os novos dados.");
     }
 
     return trainedModel;
   } catch (error) {
-    const errorMessage = `Erro ao atualizar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`;
+    const errorMessage = `❌ Erro ao atualizar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`;
+    systemLogger.log('training', errorMessage, { error }, 'error');
     addLog(errorMessage);
     console.error("Detalhes do erro:", error);
     return trainedModel;
