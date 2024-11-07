@@ -1,6 +1,10 @@
 import { Player } from '../types/gameTypes';
 
 export const calculateFitness = (player: Player, boardNumbers: number[]): number => {
+  if (!Array.isArray(player.predictions) || !Array.isArray(boardNumbers)) {
+    return 0;
+  }
+
   const matches = player.predictions.filter(num => boardNumbers.includes(num)).length;
   const consistencyBonus = calculateConsistencyBonus(player);
   const adaptabilityScore = calculateAdaptabilityScore(player);
@@ -91,7 +95,6 @@ export const createMutatedClone = (player: Player, mutationRate: number = 0.1): 
     fitness: 0,
     generation: player.generation + 1,
     age: 0,
-    // Mantém o nicho na maioria das vezes
     niche: Math.random() < 0.9 ? player.niche : Math.floor(Math.random() * 4)
   };
 };
@@ -115,7 +118,6 @@ export const crossoverPlayers = (parent1: Player, parent2: Player): Player => {
     fitness: 0,
     generation: Math.max(parent1.generation, parent2.generation) + 1,
     age: 0,
-    // Alta chance de manter o nicho do pai mais forte
     niche: Math.random() < 0.8 ? preferredNiche : Math.floor(Math.random() * 4)
   };
 };

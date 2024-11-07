@@ -46,7 +46,7 @@ export const periodicModelRetraining = async (
             if (logs) {
               const message = `Retreinamento - Época ${epoch + 1}: Loss = ${logs.loss.toFixed(4)}, Val Loss = ${logs.val_loss?.toFixed(4)}`;
               addLog(message);
-              systemLogger.log('training', message);
+              systemLogger.log('model', message);
             }
           }
         }
@@ -61,7 +61,7 @@ export const periodicModelRetraining = async (
     return model;
   } catch (error) {
     const errorMessage = `Erro no retreinamento: ${error instanceof Error ? error.message : 'Erro desconhecido'}`;
-    systemLogger.log('error', errorMessage);
+    systemLogger.log('system', errorMessage);
     throw error;
   }
 };
@@ -84,11 +84,11 @@ export const setupPeriodicRetraining = (
       
       const improvementMessage = `Melhoria no modelo: Loss antes = ${beforeLoss.toFixed(4)}, Loss depois = ${afterLoss.toFixed(4)}`;
       addLog(improvementMessage);
-      systemLogger.log('training', improvementMessage);
+      systemLogger.log('model', improvementMessage);
     } catch (error) {
       const errorMessage = `Erro no retreinamento periódico: ${error instanceof Error ? error.message : 'Erro desconhecido'}`;
       addLog(errorMessage);
-      systemLogger.log('error', errorMessage);
+      systemLogger.log('system', errorMessage);
     }
   }, interval);
 };
