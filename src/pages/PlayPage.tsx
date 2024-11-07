@@ -11,19 +11,16 @@ import { loadModelWithWeights, saveModelWithWeights } from '@/utils/modelUtils';
 import { Player } from '@/types/gameTypes';
 
 const PlayPage: React.FC = () => {
-  const gameLogic = useGameLogic([], null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [gameSpeed, setGameSpeed] = useState(1000);
+  const [csvData, setCsvData] = useState<number[][]>([]);
+  const [csvDates, setCsvDates] = useState<Date[]>([]);
+  const [trainedModel, setTrainedModel] = useState<tf.LayersModel | null>(null);
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
-  
-  const [state, setState] = useState({
-    isPlaying: false,
-    progress: 0,
-    gameSpeed: 1000,
-    csvData: [] as number[][],
-    csvDates: [] as Date[],
-    trainedModel: null as tf.LayersModel | null,
-    lastCloneCycle: 0
-  });
+  const gameLogic = useGameLogic(csvData, trainedModel);
+  const [lastCloneCycle, setLastCloneCycle] = useState(0);
 
   const loadCSV = useCallback(async (file: File) => {
     try {
@@ -37,11 +34,8 @@ const PlayPage: React.FC = () => {
           bolas: values.slice(2).map(Number)
         };
       });
-      setState(prev => ({
-        ...prev,
-        csvData: data.map(d => d.bolas),
-        csvDates: data.map(d => d.data)
-      }));
+      setCsvData(data.map(d => d.bolas));
+      setCsvDates(data.map(d => d.data));
       gameLogic.addLog("CSV carregado e processado com sucesso!");
       gameLogic.addLog(`Número de registros carregados: ${data.length}`);
     } catch (error) {
@@ -52,7 +46,7 @@ const PlayPage: React.FC = () => {
   const loadModel = useCallback(async (jsonFile: File, weightsFile: File, metadataFile: File) => {
     try {
       const { model, metadata } = await loadModelFiles(jsonFile, weightsFile, metadataFile);
-      setState(prev => ({ ...prev, trainedModel: model }));
+      setTrainedModel(model);
       
       await saveModelWithWeights(model);
       
@@ -77,10 +71,38 @@ const PlayPage: React.FC = () => {
     }
   }, [gameLogic, toast]);
 
+  const saveModel = useCallback(async () => {
+    if (trainedModel) {
+      try {
+        await saveModelWithWeights(trainedModel);
+        gameLogic.addLog("Modelo salvo com sucesso!");
+        toast({
+          title: "Modelo Salvo",
+          description: "O modelo atual foi salvo com sucesso.",
+        });
+      } catch (error) {
+        gameLogic.addLog(`Erro ao salvar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+        console.error("Detalhes do erro:", error);
+        toast({
+          title: "Erro ao Salvar Modelo",
+          description: "Ocorreu um erro ao salvar o modelo. Verifique o console para mais detalhes.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      gameLogic.addLog("Nenhum modelo para salvar.");
+      toast({
+        title: "Nenhum Modelo",
+        description: "Não há nenhum modelo carregado para salvar.",
+        variant: "destructive",
+      });
+    }
+  }, [trainedModel, gameLogic, toast]);
+
   const handleClonePlayer = useCallback((player: Player) => {
-    const currentCycle = Math.floor(gameLogic.gameCount / state.csvData.length);
+    const currentCycle = Math.floor(gameLogic.gameCount / csvData.length);
     
-    if (currentCycle <= state.lastCloneCycle) {
+    if (currentCycle <= lastCloneCycle) {
       toast({
         title: "Clonagem não permitida",
         description: "Você só pode clonar uma vez por ciclo completo do CSV.",
@@ -91,58 +113,71 @@ const PlayPage: React.FC = () => {
 
     if (gameLogic.clonePlayer) {
       gameLogic.clonePlayer(player);
-      setState(prev => ({ ...prev, lastCloneCycle: currentCycle }));
+      setLastCloneCycle(currentCycle);
     }
-  }, [gameLogic, state.csvData.length, state.lastCloneCycle, toast]);
+  }, [gameLogic, csvData.length, lastCloneCycle, toast]);
+
+  const playGame = useCallback(() => {
+    if (!trainedModel || csvData.length === 0) {
+      gameLogic.addLog("Não é possível iniciar o jogo. Verifique se o modelo e os dados CSV foram carregados.");
+      return;
+    }
+    setIsPlaying(true);
+    gameLogic.addLog("Jogo iniciado.");
+    gameLogic.gameLoop();
+  }, [trainedModel, csvData, gameLogic]);
+
+  const pauseGame = useCallback(() => {
+    setIsPlaying(false);
+    gameLogic.addLog("Jogo pausado.");
+  }, [gameLogic]);
+
+  const resetGame = useCallback(() => {
+    setIsPlaying(false);
+    setProgress(0);
+    gameLogic.initializePlayers();
+    gameLogic.addLog("Jogo reiniciado.");
+  }, [gameLogic]);
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
-    if (state.isPlaying) {
+    if (isPlaying) {
       intervalId = setInterval(() => {
         gameLogic.gameLoop();
-        setState(prev => {
-          const newProgress = prev.progress + (100 / state.csvData.length);
+        setProgress((prevProgress) => {
+          const newProgress = prevProgress + (100 / csvData.length);
           
           if (newProgress >= 100) {
             if (!gameLogic.isManualMode) {
               gameLogic.evolveGeneration();
             }
-            return {
-              ...prev,
-              progress: gameLogic.isInfiniteMode ? 0 : 100
-            };
+            return gameLogic.isInfiniteMode ? 0 : 100;
           }
-          return {
-            ...prev,
-            progress: newProgress
-          };
+          return newProgress;
         });
-      }, state.gameSpeed);
+      }, gameSpeed);
     }
     return () => clearInterval(intervalId);
-  }, [state.isPlaying, state.csvData, gameLogic, state.gameSpeed]);
+  }, [isPlaying, csvData, gameLogic, gameSpeed]);
 
   return (
     <div className="p-6">
       <PlayPageHeader />
-      <SpeedControl onSpeedChange={(speed) => setState(prev => ({ ...prev, gameSpeed: speed }))} />
+      <SpeedControl onSpeedChange={setGameSpeed} />
       <PlayPageContent
-        isPlaying={state.isPlaying}
-        onPlay={() => setState(prev => ({ ...prev, isPlaying: true }))}
-        onPause={() => setState(prev => ({ ...prev, isPlaying: false }))}
-        onReset={() => {
-          setState(prev => ({ ...prev, isPlaying: false, progress: 0 }));
-          gameLogic.initializePlayers();
-        }}
+        isPlaying={isPlaying}
+        onPlay={playGame}
+        onPause={pauseGame}
+        onReset={resetGame}
         onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         onCsvUpload={loadCSV}
         onModelUpload={loadModel}
-        onSaveModel={() => saveModelWithWeights(state.trainedModel!)}
-        progress={state.progress}
+        onSaveModel={saveModel}
+        progress={progress}
         generation={gameLogic.generation}
         gameLogic={gameLogic}
-        currentCycle={Math.floor(gameLogic.gameCount / state.csvData.length)}
-        lastCloneCycle={state.lastCloneCycle}
+        currentCycle={Math.floor(gameLogic.gameCount / csvData.length)}
+        lastCloneCycle={lastCloneCycle}
         onClonePlayer={handleClonePlayer}
       />
     </div>
@@ -150,3 +185,4 @@ const PlayPage: React.FC = () => {
 };
 
 export default PlayPage;
+
