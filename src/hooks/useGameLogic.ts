@@ -14,7 +14,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const [generation, setGeneration] = useState(1);
   const [gameCount, setGameCount] = useState(0);
   const [cycleCount, setCycleCount] = useState(0);
-  const [lastCloneGameCount, setLastCloneGameCount] = useState(0);
+  const [lastCloneGameCount, setLastCloneGameCount] = useState(-1); // Inicializado como -1
   const [championData, setChampionData] = useState<{
     player: Player;
     trainingData: number[][];
@@ -33,8 +33,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   });
   const [dates, setDates] = useState<Date[]>([]);
   const [numbers, setNumbers] = useState<number[][]>([]);
-  const [frequencyData, setFrequencyData] = useState<{ [key: string]: number[] }>({});
-  const [updateInterval, setUpdateInterval] = useState(10);
   const [isInfiniteMode, setIsInfiniteMode] = useState(false);
   const [concursoNumber, setConcursoNumber] = useState(0);
   const [trainingData, setTrainingData] = useState<number[][]>([]);
@@ -50,24 +48,38 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   useEffect(() => {
     if (gameCount > 0 && concursoNumber === 0) {
       setCycleCount(prev => prev + 1);
+      systemLogger.log('system', `Novo ciclo iniciado: ${cycleCount + 1}`);
     }
   }, [gameCount, concursoNumber]);
 
-  // Controle de clonagem baseado em ciclos completos
+  // Função melhorada para verificar se pode clonar
   const canClonePlayer = useCallback((currentGameCount: number) => {
+    if (currentGameCount === lastCloneGameCount) {
+      return false;
+    }
+
     const currentCycle = Math.floor(currentGameCount / csvData.length);
     const gamesInCurrentCycle = currentGameCount % csvData.length;
     const isNewCycle = currentCycle > Math.floor(lastCloneGameCount / csvData.length);
     const isEndOfCycle = gamesInCurrentCycle === csvData.length - 1;
 
-    return isNewCycle && isEndOfCycle;
+    const canClone = isNewCycle && isEndOfCycle;
+    
+    if (canClone) {
+      systemLogger.log('system', `Clonagem permitida no ciclo ${currentCycle}`);
+    }
+
+    return canClone;
   }, [csvData.length, lastCloneGameCount]);
 
   const clonePlayer = useCallback((player: Player) => {
     if (!canClonePlayer(gameCount)) {
+      const currentCycle = Math.floor(gameCount / csvData.length);
+      const lastCloneCycle = Math.floor(lastCloneGameCount / csvData.length);
+      
       toast({
         title: "Clonagem não permitida",
-        description: "Você só pode clonar uma vez por ciclo completo do CSV.",
+        description: `Você só pode clonar uma vez por ciclo completo do CSV. Último clone: Ciclo ${lastCloneCycle}, Atual: Ciclo ${currentCycle}`,
         variant: "destructive"
       });
       return;
@@ -76,8 +88,14 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     const clones = cloneChampion(player, 1);
     setPlayers(prevPlayers => [...prevPlayers, ...clones]);
     setLastCloneGameCount(gameCount);
+    
+    toast({
+      title: "Clonagem bem-sucedida",
+      description: `Clone do Jogador #${player.id} criado no ciclo ${cycleCount}`,
+    });
+    
     systemLogger.log('player', `Novo clone do Jogador #${player.id} criado no ciclo ${cycleCount}`);
-  }, [gameCount, cycleCount, canClonePlayer, toast]);
+  }, [gameCount, cycleCount, canClonePlayer, toast, lastCloneGameCount]);
 
   const gameLoop = useGameLoop(
     players,
@@ -88,7 +106,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     setEvolutionData,
     generation,
     addLog,
-    updateInterval,
+    10,
     trainingData,
     setTrainingData,
     setNumbers,
@@ -115,40 +133,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     setChampionData
   );
 
-  const updateFrequencyData = useCallback((newFrequencyData: { [key: string]: number[] }) => {
-    setFrequencyData(newFrequencyData);
-    
-    if (trainedModel && players.length > 0) {
-      const frequencyFeatures = Object.values(newFrequencyData).flat();
-      setTrainingData(prev => {
-        const lastEntry = prev[prev.length - 1];
-        if (lastEntry) {
-          return [...prev.slice(0, -1), [...lastEntry, ...frequencyFeatures]];
-        }
-        return prev;
-      });
-    }
-  }, [trainedModel, players]);
-
-  const toggleManualMode = useCallback(() => {
-    setIsManualMode(prev => {
-      const newMode = !prev;
-      systemLogger.log('action', newMode ? 
-        "Modo Manual Ativado - Clonagem automática desativada" : 
-        "Modo Manual Desativado - Clonagem automática reativada"
-      );
-      return newMode;
-    });
-  }, []);
-
-  useEffect(() => {
-    initializePlayers();
-  }, [initializePlayers]);
-
-  useEffect(() => {
-    setUpdateInterval(Math.max(10, Math.floor(csvData.length / 10)));
-  }, [csvData]);
-
   return {
     players,
     generation,
@@ -162,7 +146,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     toggleInfiniteMode: useCallback(() => setIsInfiniteMode(prev => !prev), []),
     dates,
     numbers,
-    updateFrequencyData,
     isInfiniteMode,
     boardNumbers,
     concursoNumber,
@@ -170,7 +153,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     gameCount,
     cycleCount,
     isManualMode,
-    toggleManualMode,
+    toggleManualMode: useCallback(() => setIsManualMode(prev => !prev), []),
     clonePlayer,
     lastCloneGameCount
   };

@@ -93,11 +93,12 @@ const PlayerList: React.FC<PlayerListProps> = ({
   const handleClonePlayer = (player: Player, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     
-    // Verifica se já houve clonagem neste ciclo
     if (currentCycle <= lastCloneCycle) {
+      const remainingGames = Math.ceil(((lastCloneCycle + 1) * players.length) - (currentCycle * players.length));
+      
       toast({
         title: "Clonagem não permitida",
-        description: "Você só pode clonar uma vez por ciclo completo do CSV.",
+        description: `Aguarde ${remainingGames} jogos para poder clonar novamente (próximo ciclo).`,
         variant: "destructive"
       });
       return;
@@ -105,10 +106,6 @@ const PlayerList: React.FC<PlayerListProps> = ({
     
     if (onClonePlayer) {
       onClonePlayer(player);
-      toast({
-        title: "Jogador Clonado",
-        description: `Um clone do Jogador #${player.id} foi criado com sucesso.`
-      });
     }
   };
 
@@ -121,6 +118,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
           isTopPlayer={player.score === maxScore}
           onPlayerClick={handlePlayerClick}
           onClonePlayer={handleClonePlayer}
+          canClone={currentCycle > lastCloneCycle}
         />
       ))}
       
