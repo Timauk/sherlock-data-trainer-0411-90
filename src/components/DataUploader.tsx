@@ -7,7 +7,7 @@ import CheckpointControls from './CheckpointControls';
 
 interface DataUploaderProps {
   onCsvUpload: (file: File) => void;
-  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile: File) => void;
+  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile?: File) => void;
   onSaveModel: () => void;
 }
 
@@ -93,7 +93,7 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
             />
           </div>
           <div>
-            <label htmlFor="modelMetadataInput" className="block mb-2">Carregar Metadata (JSON):</label>
+            <label htmlFor="modelMetadataInput" className="block mb-2">Carregar Metadata (JSON - Opcional):</label>
             <input
               type="file"
               id="modelMetadataInput"
@@ -106,12 +106,13 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
             const jsonFile = jsonFileRef.current?.files?.[0];
             const weightsFile = weightsFileRef.current?.files?.[0];
             const metadataFile = metadataFileRef.current?.files?.[0];
-            if (jsonFile && weightsFile && metadataFile) {
+            
+            if (jsonFile && weightsFile) {
               onModelUpload(jsonFile, weightsFile, metadataFile);
             } else {
               toast({
                 title: "Arquivos Faltando",
-                description: "Por favor, selecione todos os três arquivos: model.json, weights.bin e metadata.json",
+                description: "Por favor, selecione os arquivos model.json e weights.bin",
                 variant: "destructive"
               });
             }

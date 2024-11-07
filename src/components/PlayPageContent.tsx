@@ -12,7 +12,7 @@ interface PlayPageContentProps {
   onReset: () => void;
   onThemeToggle: () => void;
   onCsvUpload: (file: File) => void;
-  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile: File) => void;
+  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile?: File) => void;
   onSaveModel: () => void;
   progress: number;
   generation: number;
