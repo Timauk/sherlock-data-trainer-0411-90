@@ -47,7 +47,8 @@ export const useGameLoop = ({
       await updateModelWithNewData(trainedModel, trainingData);
       setTrainingData([]);
       systemLogger.log('system', 'Model retraining completed', {
-        gameCount: nextConcurso
+        gameCount: nextConcurso,
+        timestamp: new Date().toISOString()
       });
     }
 
@@ -137,7 +138,8 @@ export const useGameLoop = ({
       setTrainingData([]);
       systemLogger.log('system', 'Periodic model update completed', {
         gameCount: nextConcurso,
-        updateInterval: Math.min(updateInterval, 50)
+        updateInterval: Math.min(updateInterval, 50),
+        timestamp: new Date().toISOString()
       });
     }
   }, [

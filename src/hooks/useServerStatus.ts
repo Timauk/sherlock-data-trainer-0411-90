@@ -14,7 +14,7 @@ export const useServerStatus = () => {
           'Accept': 'application/json'
         },
         mode: 'cors',
-        credentials: 'include'
+        credentials: 'omit'
       });
       
       if (response.ok) {
@@ -42,14 +42,15 @@ export const useServerStatus = () => {
           variant: "destructive",
         });
       }
+      console.error('Server connection error:', error);
     }
   };
 
   useEffect(() => {
     checkServerStatus();
-    const interval = setInterval(checkServerStatus, 5000); // Verifica a cada 5 segundos
+    const interval = setInterval(checkServerStatus, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [status]); // Added status as dependency to properly handle toast notifications
 
   return { status, checkServerStatus };
 };
