@@ -7,6 +7,9 @@ export const useServerStatus = () => {
 
   const checkServerStatus = async () => {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
       const response = await fetch('http://localhost:3001/api/status', {
         method: 'GET',
         headers: {
@@ -14,19 +17,22 @@ export const useServerStatus = () => {
           'Accept': 'application/json'
         },
         mode: 'cors',
-        credentials: 'include'
+        credentials: 'include',
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       if (response.ok) {
         const data = await response.json();
         if (data.status === 'online') {
-          setStatus('online');
           if (status === 'offline') {
             toast({
               title: "Servidor Conectado",
               description: "Conexão estabelecida com sucesso.",
             });
           }
+          setStatus('online');
         } else {
           throw new Error('Status do servidor não é online');
         }
@@ -34,7 +40,6 @@ export const useServerStatus = () => {
         throw new Error('Resposta do servidor não ok');
       }
     } catch (error) {
-      setStatus('offline');
       if (status === 'online') {
         toast({
           title: "Servidor Desconectado",
@@ -42,14 +47,15 @@ export const useServerStatus = () => {
           variant: "destructive",
         });
       }
+      setStatus('offline');
     }
   };
 
   useEffect(() => {
     checkServerStatus();
-    const interval = setInterval(checkServerStatus, 5000); // Verifica a cada 5 segundos
+    const interval = setInterval(checkServerStatus, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [status]); // Added status as dependency to properly trigger toast notifications
 
   return { status, checkServerStatus };
 };
