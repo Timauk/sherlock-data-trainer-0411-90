@@ -13,9 +13,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const DEFAULT_PORT = 3001;
+const PORT = 3001;
 
-// Configuração básica do Express
+// Configuração CORS atualizada
 app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:8080'],
   credentials: true,
@@ -26,26 +26,24 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(compression());
 
-// Criação de diretórios
-const dirs = {
-  checkpoints: path.join(__dirname, 'checkpoints'),
-  logs: path.join(__dirname, 'logs'),
-  savedModels: path.join(__dirname, 'saved-models')
-};
+// Cria as pastas necessárias se não existirem
+const checkpointsDir = path.join(__dirname, 'checkpoints');
+const logsDir = path.join(__dirname, 'logs');
+const savedModelsDir = path.join(__dirname, 'saved-models');
 
-Object.entries(dirs).forEach(([key, dir]) => {
+[checkpointsDir, logsDir, savedModelsDir].forEach(dir => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
     logger.info(`Diretório criado: ${dir}`);
   }
 });
 
-// Configuração de rotas estáticas
-app.use('/saved-models', express.static(dirs.savedModels));
+// Configurar rota estática para saved-models
+app.use('/saved-models', express.static(path.join(__dirname, 'saved-models')));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cacheMiddleware);
 
-// Importação e uso das rotas
+// Rotas
 import { modelRouter } from './routes/model.js';
 import { checkpointRouter } from './routes/checkpoint.js';
 import { statusRouter } from './routes/status.js';
@@ -54,76 +52,53 @@ app.use('/api/model', modelRouter);
 app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
 
-// Rota de status
+// Rota de status atualizada
 app.get('/api/status', (req, res) => {
   try {
-    res.json({
+    const healthInfo = {
       status: 'online',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       memory: process.memoryUsage(),
       version: '1.0.0',
-      directories: Object.fromEntries(
-        Object.entries(dirs).map(([key, dir]) => [key, fs.existsSync(dir)])
-      )
-    });
+      directories: {
+        checkpoints: fs.existsSync(checkpointsDir),
+        logs: fs.existsSync(logsDir),
+        savedModels: fs.existsSync(savedModelsDir)
+      }
+    };
+    logger.info(healthInfo, 'Health check');
+    res.json(healthInfo);
   } catch (error) {
     logger.error(error, 'Error in health check');
     res.status(500).json({ status: 'error', message: error.message });
   }
 });
 
-// Middleware de erro
 app.use((err, req, res, next) => {
-  logger.error({ err, method: req.method, url: req.url, body: req.body }, 'Error occurred');
-  res.status(500).json({ error: 'Erro interno do servidor', message: err.message });
+  logger.error({
+    err,
+    method: req.method,
+    url: req.url,
+    body: req.body
+  }, 'Error occurred');
+  
+  res.status(500).json({
+    error: 'Erro interno do servidor',
+    message: err.message
+  });
 });
 
-// Função para tentar portas alternativas
-const findAvailablePort = async (startPort) => {
-  return new Promise((resolve) => {
-    const server = app.listen(startPort)
-      .on('listening', () => {
-        const port = server.address().port;
-        logger.info(`Servidor iniciado na porta ${port}`);
-        resolve(server);
-      })
-      .on('error', (err) => {
-        if (err.code === 'EADDRINUSE') {
-          logger.warn(`Porta ${startPort} em uso, tentando próxima porta...`);
-          server.close();
-          findAvailablePort(startPort + 1).then(resolve);
-        } else {
-          logger.error('Erro ao iniciar servidor:', err);
-          process.exit(1);
-        }
-      });
-  });
-};
-
-// Inicialização do servidor
-const startServer = async () => {
-  try {
-    process.on('SIGTERM', () => {
-      logger.info('Recebido sinal SIGTERM, encerrando...');
-      process.exit(0);
-    });
-
-    const server = await findAvailablePort(DEFAULT_PORT);
-    const port = server.address().port;
-    
-    logger.info(`Servidor rodando em http://localhost:${port}`);
-    logger.info('Diretórios:', dirs);
-    
-    // Limpeza de memória periódica
-    setInterval(() => {
-      if (global.gc) global.gc();
-    }, 300000);
-    
-  } catch (error) {
-    logger.error('Falha ao iniciar o servidor:', error);
-    process.exit(1);
+// Gerenciamento de memória
+setInterval(() => {
+  if (global.gc) {
+    global.gc();
   }
-};
+}, 300000); // Limpa a cada 5 minutos
 
-startServer();
+app.listen(PORT, () => {
+  logger.info(`Servidor rodando em http://localhost:${PORT}`);
+  logger.info(`Diretório de checkpoints: ${checkpointsDir}`);
+  logger.info(`Diretório de logs: ${logsDir}`);
+  logger.info(`Diretório de modelos salvos: ${savedModelsDir}`);
+});

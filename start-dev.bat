@@ -9,12 +9,6 @@ if %ERRORLEVEL% NEQ 0 (
     exit
 )
 
-:: Mata qualquer processo que esteja usando a porta 3001
-echo Verificando e liberando porta 3001...
-for /f "tokens=5" %%a in ('netstat -aon ^| find ":3001" ^| find "LISTENING"') do (
-    taskkill /F /PID %%a >nul 2>nul
-)
-
 :: Verifica se as dependências estão instaladas
 if not exist "node_modules" (
     echo Instalando dependencias...
@@ -36,8 +30,8 @@ if not exist "checkpoints" (
 echo Iniciando servidor Node.js...
 start cmd /k "node --watch server.js"
 
-:: Aguarda 3 segundos
-timeout /t 3 /nobreak
+:: Aguarda 2 segundos
+timeout /t 2 /nobreak
 
 :: Inicia a aplicação React
 echo Iniciando aplicacao React...

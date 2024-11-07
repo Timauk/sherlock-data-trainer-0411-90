@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useServerStatus } from '@/hooks/useServerStatus';
 import ProcessingPanel from './PlayPageContent/ProcessingPanel';
 import AnalysisPanel from './PlayPageContent/AnalysisPanel';
@@ -45,25 +45,46 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
   const { status: serverStatus } = useServerStatus();
   const { toast } = useToast();
   
-  useEffect(() => {
-    // Verificar se temos dados e modelo antes de permitir o início
-    const canStart = gameLogic.csvData?.length > 0 && gameLogic.trainedModel;
-    
-    if (!canStart && isPlaying) {
-      onPause();
-      toast({
-        title: "Não é possível iniciar",
-        description: "Carregue um arquivo CSV e um modelo treinado primeiro.",
-        variant: "destructive"
-      });
-    }
-  }, [isPlaying, gameLogic.csvData, gameLogic.trainedModel]);
-
+  // Usar o cycleCount do gameLogic para mostrar a contagem correta
   const cycleCount = gameLogic.cycleCount;
   const gamesUntilNextCycle = gameLogic.csvData?.length 
     ? gameLogic.csvData.length - (gameLogic.gameCount % gameLogic.csvData.length)
     : 0;
 
+  const saveFullModel = async () => {
+    try {
+      // Implementação do salvamento do modelo completo
+      await gameLogic.saveModel();
+      toast({
+        title: "Modelo Salvo",
+        description: "O modelo completo foi salvo com sucesso"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar o modelo completo",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const loadFullModel = async () => {
+    try {
+      // Implementação do carregamento do modelo completo
+      await gameLogic.loadModel();
+      toast({
+        title: "Modelo Carregado",
+        description: "O modelo completo foi carregado com sucesso"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar o modelo completo",
+        variant: "destructive"
+      });
+    }
+  };
+  
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between mb-4">
@@ -93,8 +114,8 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         isServerProcessing={isServerProcessing}
         serverStatus={serverStatus}
         onToggleProcessing={() => setIsServerProcessing(prev => !prev)}
-        saveFullModel={gameLogic.saveModel}
-        loadFullModel={gameLogic.loadModel}
+        saveFullModel={saveFullModel}
+        loadFullModel={loadFullModel}
       />
       
       <TotalFitnessChart fitnessData={gameLogic.fitnessData} />
