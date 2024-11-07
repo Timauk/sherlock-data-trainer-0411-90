@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import * as tf from '@tensorflow/tfjs';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useGameInitialization } from './useGameInitialization';
 import { useGameLoop } from './useGameLoop';
 import { useEvolutionLogic } from './useEvolutionLogic';
@@ -14,7 +14,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const [generation, setGeneration] = useState(1);
   const [gameCount, setGameCount] = useState(0);
   const [cycleCount, setCycleCount] = useState(0);
-  const [lastCloneGameCount, setLastCloneGameCount] = useState(-1); // Inicializado como -1
+  const [lastCloneGameCount, setLastCloneGameCount] = useState(-1);
   const [championData, setChampionData] = useState<{
     player: Player;
     trainingData: number[][];
@@ -39,43 +39,34 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const [boardNumbers, setBoardNumbers] = useState<number[]>([]);
   const [isManualMode, setIsManualMode] = useState(false);
 
-  const addLog = useCallback((message: string, matches?: number) => {
-    const logType = matches ? 'prediction' : 'action';
-    systemLogger.log(logType, message, { matches });
+  const addLog = useCallback((message: string) => {
+    systemLogger.log('action', message);
   }, []);
 
-  // Atualiza a contagem de ciclos quando o CSV reinicia
   useEffect(() => {
     if (gameCount > 0 && concursoNumber === 0) {
       setCycleCount(prev => prev + 1);
       systemLogger.log('system', `Novo ciclo iniciado: ${cycleCount + 1}`);
     }
-  }, [gameCount, concursoNumber]);
+  }, [gameCount, concursoNumber, cycleCount]);
 
-  // Função melhorada para verificar se pode clonar
   const canClonePlayer = useCallback((currentGameCount: number) => {
     if (currentGameCount === lastCloneGameCount) {
       return false;
     }
 
-    const currentCycle = Math.floor(currentGameCount / csvData.length);
-    const gamesInCurrentCycle = currentGameCount % csvData.length;
-    const isNewCycle = currentCycle > Math.floor(lastCloneGameCount / csvData.length);
-    const isEndOfCycle = gamesInCurrentCycle === csvData.length - 1;
+    const currentCycle = Math.floor(currentGameCount / (csvData?.length || 1));
+    const gamesInCurrentCycle = currentGameCount % (csvData?.length || 1);
+    const isNewCycle = currentCycle > Math.floor(lastCloneGameCount / (csvData?.length || 1));
+    const isEndOfCycle = gamesInCurrentCycle === (csvData?.length || 1) - 1;
 
-    const canClone = isNewCycle && isEndOfCycle;
-    
-    if (canClone) {
-      systemLogger.log('system', `Clonagem permitida no ciclo ${currentCycle}`);
-    }
-
-    return canClone;
-  }, [csvData.length, lastCloneGameCount]);
+    return isNewCycle && isEndOfCycle;
+  }, [csvData?.length, lastCloneGameCount]);
 
   const clonePlayer = useCallback((player: Player) => {
     if (!canClonePlayer(gameCount)) {
-      const currentCycle = Math.floor(gameCount / csvData.length);
-      const lastCloneCycle = Math.floor(lastCloneGameCount / csvData.length);
+      const currentCycle = Math.floor(gameCount / (csvData?.length || 1));
+      const lastCloneCycle = Math.floor(lastCloneGameCount / (csvData?.length || 1));
       
       toast({
         title: "Clonagem não permitida",
@@ -93,20 +84,18 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       title: "Clonagem bem-sucedida",
       description: `Clone do Jogador #${player.id} criado no ciclo ${cycleCount}`,
     });
-    
-    systemLogger.log('player', `Novo clone do Jogador #${player.id} criado no ciclo ${cycleCount}`);
-  }, [gameCount, cycleCount, canClonePlayer, toast, lastCloneGameCount]);
+  }, [gameCount, cycleCount, canClonePlayer, toast, lastCloneGameCount, csvData?.length, setPlayers]);
 
-  const gameLoop = useGameLoop(
+  const gameLoop = useGameLoop({
     players,
     setPlayers,
-    csvData,
+    csvData: csvData || [],
     trainedModel,
     concursoNumber,
     setEvolutionData,
     generation,
     addLog,
-    10,
+    updateInterval: 10,
     trainingData,
     setTrainingData,
     setNumbers,
@@ -116,22 +105,8 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     setModelMetrics,
     setConcursoNumber,
     setGameCount,
-    (title, description) => toast({ title, description })
-  );
-
-  const evolveGeneration = useEvolutionLogic(
-    players,
-    setPlayers,
-    generation,
-    setGeneration,
-    setEvolutionData,
-    trainedModel,
-    trainingData,
-    csvData,
-    concursoNumber,
-    championData,
-    setChampionData
-  );
+    showToast: (title: string, description: string) => toast({ title, description })
+  });
 
   return {
     players,
@@ -141,7 +116,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     modelMetrics,
     initializePlayers,
     gameLoop,
-    evolveGeneration,
     addLog,
     toggleInfiniteMode: useCallback(() => setIsInfiniteMode(prev => !prev), []),
     dates,

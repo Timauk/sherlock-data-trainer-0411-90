@@ -8,6 +8,8 @@ import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
 import { processPredictions } from '@/utils/gameLoop/predictionProcessor';
 import { GameLoopDependencies } from '@/utils/gameLoop/types';
 
+type LogFunction = (message: string) => void;
+
 export const useGameLoop = ({
   players,
   setPlayers,
@@ -44,9 +46,9 @@ export const useGameLoop = ({
     setGameCount(prev => prev + 1);
 
     if (nextConcurso % 200 === 0 && trainingData.length > 0) {
-      await updateModelWithNewData(trainedModel, trainingData, addLog, showToast);
+      await updateModelWithNewData(trainedModel, trainingData);
       setTrainingData([]);
-      addLog("system", "Retreino programado executado após 200 jogos");
+      addLog("Retreino programado executado após 200 jogos");
     }
 
     const currentBoardNumbers = csvData[nextConcurso];
@@ -78,8 +80,7 @@ export const useGameLoop = ({
           player.weights, 
           nextConcurso,
           setNeuralNetworkVisualization,
-          { lunarPhase, lunarPatterns },
-          { numbers: [[...currentBoardNumbers]], dates: [currentDate] }
+          { lunarPhase, lunarPatterns }
         );
 
         const timeSeriesAnalyzer = new TimeSeriesAnalysis([[...currentBoardNumbers]]);
@@ -94,8 +95,7 @@ export const useGameLoop = ({
       players,
       playerPredictions,
       currentBoardNumbers,
-      addLog,
-      showToast
+      (message: string) => addLog(message)
     );
 
     const totalPredictions = players.length * (nextConcurso + 1);
@@ -131,7 +131,7 @@ export const useGameLoop = ({
       [...currentTrainingData, enhancedTrainingData]);
 
     if (nextConcurso % Math.min(updateInterval, 50) === 0 && trainingData.length > 0) {
-      await updateModelWithNewData(trainedModel, trainingData, addLog, showToast);
+      await updateModelWithNewData(trainedModel, trainingData);
       setTrainingData([]);
     }
   }, [
@@ -152,8 +152,7 @@ export const useGameLoop = ({
     setNeuralNetworkVisualization,
     setModelMetrics,
     setConcursoNumber,
-    setGameCount,
-    showToast
+    setGameCount
   ]);
 
   return gameLoop;

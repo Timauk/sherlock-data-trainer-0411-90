@@ -13,15 +13,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
-// Configuração CORS atualizada
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:8080'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// Updated CORS configuration
+app.use(cors());
 
 app.use(express.json({ limit: '50mb' }));
 app.use(compression());
@@ -52,7 +47,7 @@ app.use('/api/model', modelRouter);
 app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
 
-// Rota de status atualizada
+// Updated status route
 app.get('/api/status', (req, res) => {
   try {
     const healthInfo = {
@@ -60,17 +55,10 @@ app.get('/api/status', (req, res) => {
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       memory: process.memoryUsage(),
-      version: '1.0.0',
-      directories: {
-        checkpoints: fs.existsSync(checkpointsDir),
-        logs: fs.existsSync(logsDir),
-        savedModels: fs.existsSync(savedModelsDir)
-      }
+      version: '1.0.0'
     };
-    logger.info(healthInfo, 'Health check');
     res.json(healthInfo);
   } catch (error) {
-    logger.error(error, 'Error in health check');
     res.status(500).json({ status: 'error', message: error.message });
   }
 });
