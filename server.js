@@ -13,9 +13,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3001;
+const DEFAULT_PORT = 3001;
 
-// Configuração CORS atualizada
 app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:8080'],
   credentials: true,
@@ -52,7 +51,6 @@ app.use('/api/model', modelRouter);
 app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
 
-// Rota de status atualizada
 app.get('/api/status', (req, res) => {
   try {
     const healthInfo = {
@@ -89,16 +87,36 @@ app.use((err, req, res, next) => {
   });
 });
 
+const startServer = (port) => {
+  return new Promise((resolve, reject) => {
+    const server = app.listen(port)
+      .once('listening', () => {
+        logger.info(`Servidor rodando em http://localhost:${port}`);
+        logger.info(`Diretório de checkpoints: ${checkpointsDir}`);
+        logger.info(`Diretório de logs: ${logsDir}`);
+        logger.info(`Diretório de modelos salvos: ${savedModelsDir}`);
+        resolve(server);
+      })
+      .once('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+          logger.warn(`Porta ${port} em uso, tentando próxima porta...`);
+          server.close();
+          resolve(startServer(port + 1));
+        } else {
+          reject(err);
+        }
+      });
+  });
+};
+
 // Gerenciamento de memória
 setInterval(() => {
   if (global.gc) {
     global.gc();
   }
-}, 300000); // Limpa a cada 5 minutos
+}, 300000);
 
-app.listen(PORT, () => {
-  logger.info(`Servidor rodando em http://localhost:${PORT}`);
-  logger.info(`Diretório de checkpoints: ${checkpointsDir}`);
-  logger.info(`Diretório de logs: ${logsDir}`);
-  logger.info(`Diretório de modelos salvos: ${savedModelsDir}`);
+startServer(DEFAULT_PORT).catch(err => {
+  logger.error('Falha ao iniciar o servidor:', err);
+  process.exit(1);
 });
