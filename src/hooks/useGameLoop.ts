@@ -49,7 +49,7 @@ export const useGameLoop = ({
       systemLogger.log('system', 'Model retraining completed', {
         gameCount: nextConcurso,
         timestamp: new Date().toISOString()
-      });
+      }, 'info');
     }
 
     const currentBoardNumbers = csvData[nextConcurso];
@@ -140,7 +140,7 @@ export const useGameLoop = ({
         gameCount: nextConcurso,
         updateInterval: Math.min(updateInterval, 50),
         timestamp: new Date().toISOString()
-      });
+      }, 'info');
     }
   }, [
     players,

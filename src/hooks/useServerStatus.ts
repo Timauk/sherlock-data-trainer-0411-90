@@ -47,10 +47,18 @@ export const useServerStatus = () => {
   };
 
   useEffect(() => {
-    checkServerStatus();
+    const checkAndRetry = async () => {
+      await checkServerStatus();
+      if (status === 'offline') {
+        // Try again after a short delay if offline
+        setTimeout(checkServerStatus, 2000);
+      }
+    };
+
+    checkAndRetry();
     const interval = setInterval(checkServerStatus, 5000);
     return () => clearInterval(interval);
-  }, [status]); // Added status as dependency to properly handle toast notifications
+  }, [status]);
 
   return { status, checkServerStatus };
 };
