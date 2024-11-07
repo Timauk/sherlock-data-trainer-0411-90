@@ -22,7 +22,10 @@ router.post('/save-full-model', async (req, res) => {
       scores,
       trainingData,
       predictionsCache,
-      championData
+      championData,
+      lastCloneGameCount,
+      cycleCount,
+      gameCount
     } = req.body;
     
     if (!playersData || !evolutionHistory) {
@@ -49,11 +52,8 @@ router.post('/save-full-model', async (req, res) => {
       logger.info(`Created model directory: ${modelPath}`);
     }
 
-    // Salvar modelo com pesos
-    const saveResult = await model.save(`file://${modelPath}`);
-    
-    // Salvar estado completo do jogo
-    const metadata = {
+    // Save complete game state
+    const completeState = {
       timestamp,
       totalSamples: global.totalSamples || 0,
       playersData,
@@ -65,44 +65,39 @@ router.post('/save-full-model', async (req, res) => {
       trainingData,
       predictionsCache,
       championData,
+      lastCloneGameCount,
+      cycleCount,
+      gameCount,
       modelInfo: {
         layers: model.layers.length,
         totalParams: model.countParams()
       }
     };
 
+    // Save model with weights
+    await model.save(`file://${modelPath}`);
+    
+    // Save complete state
     fs.writeFileSync(
-      path.join(modelPath, 'metadata.json'),
-      JSON.stringify(metadata, null, 2)
-    );
-
-    // Salvar dados adicionais em arquivos separados para melhor organização
-    fs.writeFileSync(
-      path.join(modelPath, 'game_state.json'),
-      JSON.stringify(gameState, null, 2)
-    );
-
-    fs.writeFileSync(
-      path.join(modelPath, 'training_data.json'),
-      JSON.stringify(trainingData, null, 2)
+      path.join(modelPath, 'complete_state.json'),
+      JSON.stringify(completeState, null, 2)
     );
 
     logger.info({
       modelPath,
-      metadata,
-      saveResult
-    }, 'Model and game state saved successfully');
+      completeState,
+    }, 'Complete game state saved successfully');
     
     res.json({
       success: true,
       savedAt: timestamp,
       modelPath,
-      modelInfo: metadata.modelInfo
+      modelInfo: completeState.modelInfo
     });
   } catch (error) {
-    logger.error('Error saving full model:', error);
+    logger.error('Error saving complete game state:', error);
     res.status(500).json({ 
-      error: 'Failed to save model',
+      error: 'Failed to save game state',
       details: error.message
     });
   }
@@ -123,25 +118,18 @@ router.get('/load-latest-model', async (req, res) => {
     }
 
     const latestModelPath = path.join(baseModelDir, models[0]);
-    const metadata = JSON.parse(
-      fs.readFileSync(path.join(latestModelPath, 'metadata.json'), 'utf8')
+    
+    // Load complete state
+    const completeState = JSON.parse(
+      fs.readFileSync(path.join(latestModelPath, 'complete_state.json'), 'utf8')
     );
 
-    const gameState = JSON.parse(
-      fs.readFileSync(path.join(latestModelPath, 'game_state.json'), 'utf8')
-    );
-
-    const trainingData = JSON.parse(
-      fs.readFileSync(path.join(latestModelPath, 'training_data.json'), 'utf8')
-    );
-
+    // Load model
     const model = await tf.loadLayersModel(`file://${latestModelPath}/model.json`);
 
     res.json({
       success: true,
-      metadata,
-      gameState,
-      trainingData,
+      ...completeState,
       modelPath: latestModelPath
     });
 

@@ -51,13 +51,13 @@ const ProcessingPanel: React.FC<ProcessingPanelProps> = ({
     try {
       await saveFullModel();
       toast({
-        title: "Modelo Salvo",
+        title: "Estado Completo Salvo",
         description: "O modelo e o estado do jogo foram salvos com sucesso"
       });
     } catch (error) {
       toast({
         title: "Erro ao Salvar",
-        description: error instanceof Error ? error.message : "Erro ao salvar o modelo",
+        description: error instanceof Error ? error.message : "Erro ao salvar o estado completo",
         variant: "destructive"
       });
     }
@@ -67,13 +67,16 @@ const ProcessingPanel: React.FC<ProcessingPanelProps> = ({
     try {
       await loadFullModel();
       toast({
-        title: "Modelo Carregado",
-        description: "O modelo e o estado do jogo foram restaurados com sucesso"
+        title: "Estado Completo Carregado",
+        description: "O modelo e o estado do jogo foram restaurados com sucesso. A página será recarregada.",
       });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (error) {
       toast({
         title: "Erro ao Carregar",
-        description: error instanceof Error ? error.message : "Erro ao carregar o modelo",
+        description: error instanceof Error ? error.message : "Erro ao carregar o estado completo",
         variant: "destructive"
       });
     }
@@ -109,23 +112,25 @@ const ProcessingPanel: React.FC<ProcessingPanelProps> = ({
         disabled={serverStatus === 'checking' || (isServerProcessing && serverStatus === 'offline')}
       />
 
-      <Button
-        onClick={handleSaveFullModel}
-        className="w-full bg-green-600 hover:bg-green-700"
-        variant="secondary"
-      >
-        <Save className="inline-block mr-2" />
-        Salvar Estado Completo do Jogo
-      </Button>
+      <div className="flex flex-col gap-2">
+        <Button
+          onClick={handleSaveFullModel}
+          className="w-full bg-green-600 hover:bg-green-700"
+          variant="secondary"
+        >
+          <Save className="inline-block mr-2" />
+          Salvar Estado Completo do Jogo
+        </Button>
 
-      <Button
-        onClick={handleLoadFullModel}
-        className="w-full"
-        variant="outline"
-      >
-        <Download className="inline-block mr-2" />
-        Carregar Último Estado Salvo
-      </Button>
+        <Button
+          onClick={handleLoadFullModel}
+          className="w-full"
+          variant="outline"
+        >
+          <Download className="inline-block mr-2" />
+          Carregar Último Estado Salvo
+        </Button>
+      </div>
     </div>
   );
 };
