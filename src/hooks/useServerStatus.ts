@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 export const useServerStatus = () => {
   const [status, setStatus] = useState<'online' | 'offline' | 'checking'>('checking');
   const { toast } = useToast();
-
+  
   const checkServerStatus = async () => {
     try {
       const controller = new AbortController();
@@ -16,9 +16,8 @@ export const useServerStatus = () => {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        mode: 'cors',
-        credentials: 'include',
-        signal: controller.signal
+        signal: controller.signal,
+        cache: 'no-store'
       });
       
       clearTimeout(timeoutId);
@@ -40,22 +39,38 @@ export const useServerStatus = () => {
         throw new Error('Resposta do servidor não ok');
       }
     } catch (error) {
-      if (status === 'online') {
+      if (status !== 'offline') {
         toast({
           title: "Servidor Desconectado",
-          description: "Verifique se o servidor está rodando em localhost:3001",
+          description: "Execute o arquivo start-dev.bat para iniciar o servidor",
           variant: "destructive",
         });
+        setStatus('offline');
       }
-      setStatus('offline');
     }
   };
 
   useEffect(() => {
+    // Verificação inicial
     checkServerStatus();
+
+    // Verificações periódicas
     const interval = setInterval(checkServerStatus, 5000);
-    return () => clearInterval(interval);
-  }, [status]); // Added status as dependency to properly trigger toast notifications
+
+    // Adiciona listener para reconexão após foco na janela
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkServerStatus();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [status]); 
 
   return { status, checkServerStatus };
 };
