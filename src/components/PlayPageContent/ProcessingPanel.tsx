@@ -49,12 +49,19 @@ const ProcessingPanel: React.FC<ProcessingPanelProps> = ({
 
   const handleSaveFullModel = async () => {
     try {
+      // Pausar o jogo antes de salvar
+      if (isPlaying) {
+        onPause();
+      }
+
       await saveFullModel();
+      
       toast({
         title: "Estado Completo Salvo",
-        description: "O modelo e o estado do jogo foram salvos com sucesso"
+        description: "O modelo e o estado do jogo foram salvos com sucesso. Você pode continuar jogando ou fechar o jogo com segurança.",
       });
     } catch (error) {
+      console.error("Detalhes do erro ao salvar:", error);
       toast({
         title: "Erro ao Salvar",
         description: error instanceof Error ? error.message : "Erro ao salvar o estado completo",
@@ -65,15 +72,24 @@ const ProcessingPanel: React.FC<ProcessingPanelProps> = ({
 
   const handleLoadFullModel = async () => {
     try {
+      // Pausar o jogo antes de carregar
+      if (isPlaying) {
+        onPause();
+      }
+
       await loadFullModel();
+      
       toast({
         title: "Estado Completo Carregado",
-        description: "O modelo e o estado do jogo foram restaurados com sucesso. A página será recarregada.",
+        description: "O modelo e o estado do jogo foram restaurados com sucesso. A página será recarregada para aplicar as mudanças.",
       });
+
+      // Aguardar um pouco para o usuário ver a mensagem
       setTimeout(() => {
         window.location.reload();
       }, 1500);
     } catch (error) {
+      console.error("Detalhes do erro ao carregar:", error);
       toast({
         title: "Erro ao Carregar",
         description: error instanceof Error ? error.message : "Erro ao carregar o estado completo",
@@ -117,6 +133,7 @@ const ProcessingPanel: React.FC<ProcessingPanelProps> = ({
           onClick={handleSaveFullModel}
           className="w-full bg-green-600 hover:bg-green-700"
           variant="secondary"
+          disabled={serverStatus !== 'online'}
         >
           <Save className="inline-block mr-2" />
           Salvar Estado Completo do Jogo
@@ -126,6 +143,7 @@ const ProcessingPanel: React.FC<ProcessingPanelProps> = ({
           onClick={handleLoadFullModel}
           className="w-full"
           variant="outline"
+          disabled={serverStatus !== 'online'}
         >
           <Download className="inline-block mr-2" />
           Carregar Último Estado Salvo
