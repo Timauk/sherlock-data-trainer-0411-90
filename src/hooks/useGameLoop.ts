@@ -7,8 +7,7 @@ import { TimeSeriesAnalysis } from '@/utils/analysis/timeSeriesAnalysis';
 import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
 import { processPredictions } from '@/utils/gameLoop/predictionProcessor';
 import { GameLoopDependencies } from '@/utils/gameLoop/types';
-
-type LogFunction = (message: string) => void;
+import { systemLogger } from '@/utils/logging/systemLogger';
 
 export const useGameLoop = ({
   players,
@@ -33,7 +32,7 @@ export const useGameLoop = ({
 }: GameLoopDependencies) => {
   const gameLoop = useCallback(async () => {
     if (!csvData.length || !trainedModel || !players.length) {
-      console.warn('Game loop called without required data:', {
+      systemLogger.log('error', 'Game loop called without required data', {
         hasCsvData: Boolean(csvData.length),
         hasTrainedModel: Boolean(trainedModel),
         hasPlayers: Boolean(players.length)
@@ -48,7 +47,7 @@ export const useGameLoop = ({
     if (nextConcurso % 200 === 0 && trainingData.length > 0) {
       await updateModelWithNewData(trainedModel, trainingData);
       setTrainingData([]);
-      addLog("Retreino programado executado após 200 jogos");
+      systemLogger.log('info', 'Scheduled retraining executed after 200 games');
     }
 
     const currentBoardNumbers = csvData[nextConcurso];
@@ -95,7 +94,7 @@ export const useGameLoop = ({
       players,
       playerPredictions,
       currentBoardNumbers,
-      (message: string) => addLog(message)
+      (message: string) => systemLogger.log('info', message)
     );
 
     const totalPredictions = players.length * (nextConcurso + 1);
@@ -142,7 +141,6 @@ export const useGameLoop = ({
     concursoNumber,
     setEvolutionData,
     generation,
-    addLog,
     updateInterval,
     trainingData,
     setTrainingData,

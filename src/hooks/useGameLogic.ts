@@ -108,6 +108,17 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     showToast: (title: string, description: string) => toast({ title, description })
   });
 
+  const evolveGeneration = useCallback(() => {
+    setGeneration(prev => prev + 1);
+    const evolvedPlayers = players.map(player => ({
+      ...player,
+      generation: generation + 1,
+      age: player.age + 1
+    }));
+    setPlayers(evolvedPlayers);
+    systemLogger.log('system', `Generation evolved to ${generation + 1}`);
+  }, [players, generation]);
+
   return {
     players,
     generation,
@@ -129,6 +140,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     isManualMode,
     toggleManualMode: useCallback(() => setIsManualMode(prev => !prev), []),
     clonePlayer,
-    lastCloneGameCount
+    lastCloneGameCount,
+    evolveGeneration
   };
 };
