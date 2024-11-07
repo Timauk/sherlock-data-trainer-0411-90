@@ -2,8 +2,8 @@ import { useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
-import { selectBestPlayers, updatePlayerGenerations } from '@/utils/evolutionSystem';
-import { cloneChampion, updateModelWithChampionKnowledge } from '@/utils/playerEvolution';
+import { selectBestPlayers } from '@/utils/evolutionSystem';
+import { createMutatedClone, crossoverPlayers } from '@/utils/enhancedEvolution';
 
 export const useEvolutionLogic = (
   players: Player[],
@@ -19,47 +19,63 @@ export const useEvolutionLogic = (
   setChampionData: (data: { player: Player; trainingData: number[][] }) => void,
 ) => {
   return useCallback(async () => {
-    // Atualiza a idade e geração dos jogadores
-    const updatedPlayers = updatePlayerGenerations(players, generation);
-    const bestPlayers = selectBestPlayers(updatedPlayers);
+    // Seleciona os melhores jogadores mantendo diversidade
+    const bestPlayers = selectBestPlayers(players);
     
-    // Verifica se completou um ciclo do CSV
+    // Mantém registro do melhor jogador
+    const champion = bestPlayers[0];
+    
     if (concursoNumber >= csvData.length - 1) {
-      if (bestPlayers.length > 0) {
-        const champion = bestPlayers[0];
-        const clones = cloneChampion(champion, players.length);
-        setPlayers(clones);
+      // Fim do ciclo - Evolução mais conservadora
+      const newPopulation: Player[] = [];
+      
+      // Mantém os 20% melhores jogadores
+      const eliteCount = Math.max(1, Math.floor(players.length * 0.2));
+      const elite = bestPlayers.slice(0, eliteCount);
+      newPopulation.push(...elite);
+      
+      // Cria novos jogadores através de crossover e mutação
+      while (newPopulation.length < players.length) {
+        const parent1 = elite[Math.floor(Math.random() * elite.length)];
+        const parent2 = elite[Math.floor(Math.random() * elite.length)];
         
-        systemLogger.log('player', 
-          `Ciclo completo - Clonando campeão #${champion.id} (Score: ${champion.score})`);
-        
-        if (trainedModel && championData) {
-          try {
-            await updateModelWithChampionKnowledge(
-              trainedModel,
-              champion,
-              championData.trainingData
-            );
-            
-            setChampionData({
-              player: champion,
-              trainingData: trainingData
-            });
-
-          } catch (error) {
-            systemLogger.log('system', 
-              `Erro ao atualizar modelo com conhecimento do campeão: ${error}`);
-          }
+        if (Math.random() < 0.7) {
+          // 70% chance de crossover
+          const child = crossoverPlayers(parent1, parent2);
+          newPopulation.push(child);
+        } else {
+          // 30% chance de mutação
+          const clone = createMutatedClone(parent1, 0.2);
+          newPopulation.push(clone);
+        }
+      }
+      
+      setPlayers(newPopulation);
+      
+      systemLogger.log('player', 
+        `Ciclo completo - Nova geração criada com ${newPopulation.length} jogadores`);
+      
+      if (trainedModel && championData) {
+        try {
+          // Atualiza dados do campeão
+          setChampionData({
+            player: champion,
+            trainingData: trainingData
+          });
+          
+        } catch (error) {
+          systemLogger.log('system', 
+            `Erro ao atualizar dados do campeão: ${error}`);
         }
       }
     } else {
-      // Durante o ciclo, mantém os melhores jogadores sem clonar
-      const newGeneration = bestPlayers.map(player => ({
+      // Durante o ciclo - Evolução mais gradual
+      const updatedPlayers = bestPlayers.map(player => ({
         ...player,
         generation: generation + 1
       }));
       
-      setPlayers(newGeneration);
+      setPlayers(updatedPlayers);
     }
 
     setGeneration(generation + 1);
