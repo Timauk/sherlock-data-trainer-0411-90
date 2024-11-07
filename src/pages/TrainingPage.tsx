@@ -66,12 +66,31 @@ const TrainingPage: React.FC = () => {
   const saveModel = async () => {
     if (model) {
       try {
-        // Salva o modelo completo (arquitetura + pesos)
-        await model.save('downloads://modelo-aprendiz');
+        // Primeiro salva o modelo no formato que pode ser carregado depois
+        const saveResult = await model.save('downloads://model');
+        
+        // Cria um arquivo de metadados separado
+        const metadata = {
+          timestamp: new Date().toISOString(),
+          architecture: model.layers.map(layer => layer.getConfig()),
+          metrics: {
+            loss: logs[logs.length - 1]?.loss,
+            val_loss: logs[logs.length - 1]?.val_loss
+          }
+        };
+        
+        const metadataBlob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
+        const metadataUrl = URL.createObjectURL(metadataBlob);
+        
+        // Cria um link para download do metadata
+        const metadataLink = document.createElement('a');
+        metadataLink.href = metadataUrl;
+        metadataLink.download = 'metadata.json';
+        metadataLink.click();
         
         toast({
-          title: "Modelo Base Salvo",
-          description: "O modelo base e seus pesos foram salvos com sucesso.",
+          title: "Modelo Salvo",
+          description: "O modelo e seus metadados foram salvos. Você receberá dois arquivos: model.json e model.weights.bin",
         });
       } catch (error) {
         toast({
@@ -119,7 +138,7 @@ const TrainingPage: React.FC = () => {
           className="w-full"
         >
           <Save className="inline-block mr-2" />
-          Salvar Modelo Base
+          Salvar Modelo Treinado
         </Button>
       </div>
 
