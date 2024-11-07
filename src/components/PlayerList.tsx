@@ -34,16 +34,12 @@ interface PlayerListProps {
   players: Player[];
   onUpdatePlayer?: (playerId: number, newWeights: number[]) => void;
   onClonePlayer?: (player: Player) => void;
-  currentCycle: number;
-  lastCloneCycle: number;
 }
 
 const PlayerList: React.FC<PlayerListProps> = ({ 
   players, 
   onUpdatePlayer,
-  onClonePlayer,
-  currentCycle,
-  lastCloneCycle
+  onClonePlayer 
 }) => {
   const { toast } = useToast();
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -92,20 +88,12 @@ const PlayerList: React.FC<PlayerListProps> = ({
 
   const handleClonePlayer = (player: Player, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    
-    if (currentCycle <= lastCloneCycle) {
-      const remainingGames = Math.ceil(((lastCloneCycle + 1) * players.length) - (currentCycle * players.length));
-      
-      toast({
-        title: "Clonagem não permitida",
-        description: `Aguarde ${remainingGames} jogos para poder clonar novamente (próximo ciclo).`,
-        variant: "destructive"
-      });
-      return;
-    }
-    
     if (onClonePlayer) {
       onClonePlayer(player);
+      toast({
+        title: "Jogador Clonado",
+        description: `Um clone do Jogador #${player.id} foi criado com sucesso.`
+      });
     }
   };
 
@@ -118,7 +106,6 @@ const PlayerList: React.FC<PlayerListProps> = ({
           isTopPlayer={player.score === maxScore}
           onPlayerClick={handlePlayerClick}
           onClonePlayer={handleClonePlayer}
-          canClone={currentCycle > lastCloneCycle}
         />
       ))}
       

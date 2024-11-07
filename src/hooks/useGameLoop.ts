@@ -1,62 +1,55 @@
 import { useCallback } from 'react';
+import * as tf from '@tensorflow/tfjs';
+import { Player, ModelVisualization } from '@/types/gameTypes';
 import { makePrediction } from '@/utils/predictionUtils';
 import { updateModelWithNewData } from '@/utils/modelUtils';
+import { calculateReward, logReward } from '@/utils/rewardSystem';
 import { getLunarPhase, analyzeLunarPatterns } from '@/utils/lunarCalculations';
 import { performCrossValidation } from '@/utils/validation/crossValidation';
-import { TimeSeriesAnalysis } from '@/utils/analysis/timeSeriesAnalysis';
+import { calculateConfidenceScore } from '@/utils/prediction/confidenceScoring';
 import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
-import { processPredictions } from '@/utils/gameLoop/predictionProcessor';
-import { GameLoopDependencies } from '@/utils/gameLoop/types';
-import { systemLogger } from '@/utils/logging/systemLogger';
+import { temporalAccuracyTracker } from '@/utils/prediction/temporalAccuracy';
+import { TimeSeriesAnalysis } from '@/utils/analysis/timeSeriesAnalysis';
 
-export const useGameLoop = ({
-  players,
-  setPlayers,
-  csvData,
-  trainedModel,
-  concursoNumber,
-  setEvolutionData,
-  generation,
-  updateInterval,
-  trainingData,
-  setTrainingData,
-  setNumbers,
-  setDates,
-  setNeuralNetworkVisualization,
-  setBoardNumbers,
-  setModelMetrics,
-  setConcursoNumber,
-  setGameCount,
-  showToast
-}: GameLoopDependencies) => {
+export const useGameLoop = (
+  players: Player[],
+  setPlayers: (players: Player[]) => void,
+  csvData: number[][],
+  trainedModel: tf.LayersModel | null,
+  concursoNumber: number,
+  setEvolutionData: (data: any) => void,
+  generation: number,
+  addLog: (message: string, matches?: number) => void,
+  updateInterval: number,
+  trainingData: number[][],
+  setTrainingData: React.Dispatch<React.SetStateAction<number[][]>>,
+  setNumbers: React.Dispatch<React.SetStateAction<number[][]>>,
+  setDates: React.Dispatch<React.SetStateAction<Date[]>>,
+  setNeuralNetworkVisualization: (vis: ModelVisualization | null) => void,
+  setBoardNumbers: (numbers: number[]) => void,
+  setModelMetrics: (metrics: { 
+    accuracy: number; 
+    randomAccuracy: number; 
+    totalPredictions: number;
+    perGameAccuracy: number;
+    perGameRandomAccuracy: number;
+  }) => void,
+  setConcursoNumber: (num: number) => void,
+  setGameCount: React.Dispatch<React.SetStateAction<number>>,
+  showToast?: (title: string, description: string) => void
+) => {
   const gameLoop = useCallback(async () => {
-    if (!csvData.length || !trainedModel || !players.length) {
-      systemLogger.log('system', 'Game loop initialization failed', {
-        hasCsvData: Boolean(csvData.length),
-        hasTrainedModel: Boolean(trainedModel),
-        hasPlayers: Boolean(players.length)
-      }, 'error');
-      return;
-    }
+    if (csvData.length === 0 || !trainedModel) return;
 
     const nextConcurso = (concursoNumber + 1) % csvData.length;
     setConcursoNumber(nextConcurso);
     setGameCount(prev => prev + 1);
 
-    if (nextConcurso % 200 === 0 && trainingData.length > 0) {
-      await updateModelWithNewData(trainedModel, trainingData);
-      setTrainingData([]);
-      systemLogger.log('system', 'Model retraining completed', {
-        gameCount: nextConcurso,
-        timestamp: new Date().toISOString()
-      }, 'info');
-    }
-
     const currentBoardNumbers = csvData[nextConcurso];
     setBoardNumbers(currentBoardNumbers);
     
     const validationMetrics = performCrossValidation(
-      players[0]?.predictions ? [players[0].predictions] : [],
+      [players[0].predictions],
       csvData.slice(Math.max(0, nextConcurso - 10), nextConcurso)
     );
 
@@ -73,17 +66,17 @@ export const useGameLoop = ({
 
     const playerPredictions = await Promise.all(
       players.map(async player => {
-        if (!player) return [];
-        
         const prediction = await makePrediction(
           trainedModel, 
           currentBoardNumbers, 
           player.weights, 
           nextConcurso,
           setNeuralNetworkVisualization,
-          { lunarPhase, lunarPatterns }
+          { lunarPhase, lunarPatterns },
+          { numbers: [[...currentBoardNumbers]], dates: [currentDate] }
         );
 
+        // Monitorar previsões
         const timeSeriesAnalyzer = new TimeSeriesAnalysis([[...currentBoardNumbers]]);
         const arimaPredictor = timeSeriesAnalyzer.analyzeNumbers();
         predictionMonitor.recordPrediction(prediction, currentBoardNumbers, arimaPredictor);
@@ -92,23 +85,58 @@ export const useGameLoop = ({
       })
     );
 
-    const { updatedPlayers, metrics } = processPredictions(
-      players,
-      playerPredictions,
-      currentBoardNumbers,
-      (message: string) => systemLogger.log('system', message, {
-        timestamp: new Date().toISOString()
-      }, 'info')
-    );
-
+    let totalMatches = 0;
+    let randomMatches = 0;
+    let currentGameMatches = 0;
+    let currentGameRandomMatches = 0;
     const totalPredictions = players.length * (nextConcurso + 1);
 
+    const updatedPlayers = players.map((player, index) => {
+      const predictions = playerPredictions[index];
+      const matches = predictions.filter(num => currentBoardNumbers.includes(num)).length;
+      totalMatches += matches;
+      currentGameMatches += matches;
+
+      // Apenas notifica acertos excepcionais, sem parar o jogo
+      if (matches >= 15) {
+        showToast?.("Resultado Excepcional!", 
+          `Jogador ${player.id} acertou ${matches} números!`);
+      }
+
+      const randomPrediction = Array.from({ length: 15 }, () => Math.floor(Math.random() * 25) + 1);
+      const randomMatch = randomPrediction.filter(num => currentBoardNumbers.includes(num)).length;
+      randomMatches += randomMatch;
+      currentGameRandomMatches += randomMatch;
+
+      // Record temporal accuracy
+      temporalAccuracyTracker.recordAccuracy(matches, 15);
+
+      const reward = calculateReward(matches);
+      
+      if (matches >= 11) {
+        const logMessage = logReward(matches, player.id);
+        addLog(logMessage, matches);
+        
+        if (matches >= 13) {
+          showToast?.("Desempenho Excepcional!", 
+            `Jogador ${player.id} acertou ${matches} números!`);
+        }
+      }
+
+      return {
+        ...player,
+        score: player.score + reward,
+        predictions,
+        fitness: matches
+      };
+    });
+
     setModelMetrics({
-      accuracy: metrics.totalMatches / (players.length * 15),
-      randomAccuracy: metrics.randomMatches / (players.length * 15),
-      totalPredictions,
-      perGameAccuracy: metrics.currentGameMatches / (players.length * 15),
-      perGameRandomAccuracy: metrics.currentGameRandomMatches / (players.length * 15)
+      accuracy: totalMatches / (players.length * 15),
+      randomAccuracy: randomMatches / (players.length * 15),
+      totalPredictions: totalPredictions,
+      perGameAccuracy: currentGameMatches / (players.length * 15),
+      perGameRandomAccuracy: currentGameRandomMatches / (players.length * 15)
     });
 
     setPlayers(updatedPlayers);
@@ -134,14 +162,10 @@ export const useGameLoop = ({
       [...currentTrainingData, enhancedTrainingData]);
 
     if (nextConcurso % Math.min(updateInterval, 50) === 0 && trainingData.length > 0) {
-      await updateModelWithNewData(trainedModel, trainingData);
+      await updateModelWithNewData(trainedModel, trainingData, addLog, showToast);
       setTrainingData([]);
-      systemLogger.log('system', 'Periodic model update completed', {
-        gameCount: nextConcurso,
-        updateInterval: Math.min(updateInterval, 50),
-        timestamp: new Date().toISOString()
-      }, 'info');
     }
+    
   }, [
     players,
     setPlayers,
@@ -150,6 +174,7 @@ export const useGameLoop = ({
     concursoNumber,
     setEvolutionData,
     generation,
+    addLog,
     updateInterval,
     trainingData,
     setTrainingData,
@@ -159,7 +184,8 @@ export const useGameLoop = ({
     setNeuralNetworkVisualization,
     setModelMetrics,
     setConcursoNumber,
-    setGameCount
+    setGameCount,
+    showToast
   ]);
 
   return gameLoop;

@@ -2,22 +2,20 @@ import * as tf from '@tensorflow/tfjs';
 import { systemLogger } from '../logging/systemLogger';
 import { deepPatternAnalyzer } from '../analysis/deepPatternAnalysis';
 import { rewardSystem } from '../enhancedRewardSystem';
-import { FeedbackMetrics, RewardFactors } from './types';
-import { MetricsManager } from './metricsManager';
-import { PatternMemoryManager } from './patternMemoryManager';
-import { ModelUpdater } from './modelUpdater';
+
+interface FeedbackMetrics {
+  accuracy: number;
+  loss: number;
+  patterns: number;
+  reward: number;
+}
 
 export class LearningFeedbackLoop {
   private static instance: LearningFeedbackLoop;
-  private metricsManager: MetricsManager;
-  private patternMemory: PatternMemoryManager;
-  private modelUpdater: ModelUpdater;
+  private metrics: FeedbackMetrics[] = [];
+  private readonly maxMetrics = 1000;
 
-  private constructor() {
-    this.metricsManager = new MetricsManager();
-    this.patternMemory = new PatternMemoryManager();
-    this.modelUpdater = new ModelUpdater();
-  }
+  private constructor() {}
 
   static getInstance(): LearningFeedbackLoop {
     if (!LearningFeedbackLoop.instance) {
@@ -30,35 +28,30 @@ export class LearningFeedbackLoop {
     model: tf.LayersModel,
     prediction: number[],
     actual: number[],
-    patterns: number[][],
-    specialistId?: number
+    patterns: number[][]
   ): Promise<void> {
     const deepPatterns = await deepPatternAnalyzer.analyzePatterns(patterns);
-    this.patternMemory.memorizePatterns(deepPatterns);
-
-    const rewardFactors: RewardFactors = {
+    
+    const reward = rewardSystem.calculateReward({
       matches: this.calculateMatches(prediction, actual),
       consistency: this.calculateConsistency(patterns),
       novelty: this.calculateNovelty(deepPatterns),
-      efficiency: this.calculateEfficiency(prediction, actual),
-      patternDepth: this.patternMemory.calculatePatternDepth(deepPatterns)
-    };
+      efficiency: this.calculateEfficiency(prediction, actual)
+    });
 
-    const reward = rewardSystem.calculateReward(rewardFactors);
+    await this.updateModel(model, prediction, actual, reward);
 
-    await this.modelUpdater.updateModel(model, prediction, actual, deepPatterns, reward);
-
-    this.metricsManager.recordMetrics({
+    this.recordMetrics({
       accuracy: this.calculateAccuracy(prediction, actual),
       loss: await this.calculateLoss(model, prediction, actual),
       patterns: deepPatterns.length,
-      reward,
-      patternDepth: this.patternMemory.calculatePatternDepth(deepPatterns)
+      reward
     });
 
-    if (specialistId) {
-      this.logSpecialistFeedback(specialistId, deepPatterns, reward);
-    }
+    systemLogger.log('learning', 'Feedback processado', {
+      reward,
+      patternsFound: deepPatterns.length
+    });
   }
 
   private calculateMatches(prediction: number[], actual: number[]): number {
@@ -100,16 +93,61 @@ export class LearningFeedbackLoop {
     return matches / actual.length;
   }
 
-  private logSpecialistFeedback(specialistId: number, patterns: any[], reward: number): void {
-    systemLogger.log('specialist', `Especialista #${specialistId} identificou ${patterns.length} padrões profundos`, {
-      patternTypes: patterns.map(p => p.type),
-      confidence: patterns.map(p => p.confidence),
-      reward
+  private async updateModel(
+    model: tf.LayersModel,
+    prediction: number[],
+    actual: number[],
+    reward: number
+  ): Promise<void> {
+    const learningRate = 0.001 * Math.abs(reward);
+    const optimizer = tf.train.adam(learningRate);
+    
+    model.compile({
+      optimizer,
+      loss: 'meanSquaredError',
+      metrics: ['accuracy']
     });
+
+    const xs = tf.tensor2d([prediction]);
+    const ys = tf.tensor2d([actual]);
+
+    await model.trainOnBatch(xs, ys);
+
+    xs.dispose();
+    ys.dispose();
   }
 
-  getMetricsSummary() {
-    return this.metricsManager.getMetricsSummary();
+  private recordMetrics(metrics: FeedbackMetrics): void {
+    this.metrics.push(metrics);
+    if (this.metrics.length > this.maxMetrics) {
+      this.metrics = this.metrics.slice(-this.maxMetrics);
+    }
+  }
+
+  getMetricsSummary(): {
+    averageAccuracy: number;
+    averageLoss: number;
+    totalPatterns: number;
+    totalReward: number;
+  } {
+    const sum = this.metrics.reduce(
+      (acc, curr) => ({
+        accuracy: acc.accuracy + curr.accuracy,
+        loss: acc.loss + curr.loss,
+        patterns: acc.patterns + curr.patterns,
+        reward: acc.reward + curr.reward
+      }),
+      { accuracy: 0, loss: 0, patterns: 0, reward: 0 }
+    );
+
+    const count = this.metrics.length || 1;
+
+    return {
+      averageAccuracy: sum.accuracy / count,
+      averageLoss: sum.loss / count,
+      totalPatterns: sum.patterns,
+      totalReward: sum.reward
+    };
   }
 }
 

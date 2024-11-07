@@ -14,7 +14,7 @@ export const useServerStatus = () => {
           'Accept': 'application/json'
         },
         mode: 'cors',
-        credentials: 'omit'
+        credentials: 'include'
       });
       
       if (response.ok) {
@@ -42,23 +42,14 @@ export const useServerStatus = () => {
           variant: "destructive",
         });
       }
-      console.error('Server connection error:', error);
     }
   };
 
   useEffect(() => {
-    const checkAndRetry = async () => {
-      await checkServerStatus();
-      if (status === 'offline') {
-        // Try again after a short delay if offline
-        setTimeout(checkServerStatus, 2000);
-      }
-    };
-
-    checkAndRetry();
-    const interval = setInterval(checkServerStatus, 5000);
+    checkServerStatus();
+    const interval = setInterval(checkServerStatus, 5000); // Verifica a cada 5 segundos
     return () => clearInterval(interval);
-  }, [status]);
+  }, []);
 
   return { status, checkServerStatus };
 };

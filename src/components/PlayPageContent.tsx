@@ -4,9 +4,6 @@ import ProcessingPanel from './PlayPageContent/ProcessingPanel';
 import AnalysisPanel from './PlayPageContent/AnalysisPanel';
 import { useToast } from "@/hooks/use-toast";
 import * as tf from '@tensorflow/tfjs';
-import { Badge } from "@/components/ui/badge";
-import TotalFitnessChart from './TotalFitnessChart';
-import { Player } from '@/types/gameTypes';
 
 interface PlayPageContentProps {
   isPlaying: boolean;
@@ -20,9 +17,6 @@ interface PlayPageContentProps {
   progress: number;
   generation: number;
   gameLogic: any;
-  currentCycle: number;
-  lastCloneCycle: number;
-  onClonePlayer: (player: Player) => void;
 }
 
 const PlayPageContent: React.FC<PlayPageContentProps> = ({
@@ -36,33 +30,46 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
   onSaveModel,
   progress,
   generation,
-  gameLogic,
-  currentCycle,
-  lastCloneCycle,
-  onClonePlayer
+  gameLogic
 }) => {
   const [isServerProcessing, setIsServerProcessing] = useState(false);
   const { status: serverStatus } = useServerStatus();
   const { toast } = useToast();
   
-  // Usar o cycleCount do gameLogic para mostrar a contagem correta
-  const cycleCount = gameLogic.cycleCount;
-  const gamesUntilNextCycle = gameLogic.csvData?.length 
-    ? gameLogic.csvData.length - (gameLogic.gameCount % gameLogic.csvData.length)
-    : 0;
+  const champion = gameLogic.players && gameLogic.players.length > 0 
+    ? gameLogic.players.reduce((prev, current) => 
+        (current.fitness > (prev?.fitness || 0)) ? current : prev, 
+        gameLogic.players[0])
+    : null;
 
   const saveFullModel = async () => {
     try {
-      // Implementação do salvamento do modelo completo
-      await gameLogic.saveModel();
-      toast({
-        title: "Modelo Salvo",
-        description: "O modelo completo foi salvo com sucesso"
+      const playersData = JSON.parse(localStorage.getItem('playersData') || '[]');
+      const evolutionHistory = JSON.parse(localStorage.getItem('evolutionHistory') || '[]');
+      
+      const response = await fetch('http://localhost:3001/api/model/save-full-model', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          playersData,
+          evolutionHistory
+        })
       });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "Modelo Completo Salvo",
+          description: `Modelo salvo com ${result.totalSamples} amostras totais.`,
+        });
+      }
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Erro ao salvar o modelo completo",
+        title: "Erro ao Salvar Modelo Completo",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
         variant: "destructive"
       });
     }
@@ -70,34 +77,55 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
 
   const loadFullModel = async () => {
     try {
-      // Implementação do carregamento do modelo completo
-      await gameLogic.loadModel();
+      const [modelJson, modelWeights, metadataFile] = await Promise.all([
+        new Promise<File>((resolve) => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.json';
+          input.onchange = (e) => {
+            const files = (e.target as HTMLInputElement).files;
+            if (files) resolve(files[0]);
+          };
+          input.click();
+        }),
+        new Promise<File>((resolve) => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.bin';
+          input.onchange = (e) => {
+            const files = (e.target as HTMLInputElement).files;
+            if (files) resolve(files[0]);
+          };
+          input.click();
+        }),
+        new Promise<File>((resolve) => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.json';
+          input.onchange = (e) => {
+            const files = (e.target as HTMLInputElement).files;
+            if (files) resolve(files[0]);
+          };
+          input.click();
+        })
+      ]);
+
+      onModelUpload(modelJson, modelWeights, metadataFile);
       toast({
         title: "Modelo Carregado",
-        description: "O modelo completo foi carregado com sucesso"
+        description: "O modelo treinado foi carregado com sucesso.",
       });
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Erro ao carregar o modelo completo",
+        title: "Erro ao Carregar Modelo",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
         variant: "destructive"
       });
     }
   };
-  
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between mb-4">
-        <Badge variant="outline" className="text-lg p-2">
-          Ciclos Completos: {cycleCount}
-        </Badge>
-        {cycleCount > 0 && (
-          <Badge variant="secondary" className="text-lg p-2">
-            Próxima Clonagem em: {gamesUntilNextCycle} jogos
-          </Badge>
-        )}
-      </div>
-
       <ProcessingPanel
         isPlaying={isPlaying}
         onPlay={onPlay}
@@ -108,7 +136,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         onModelUpload={onModelUpload}
         onSaveModel={onSaveModel}
         progress={progress}
-        champion={gameLogic.champion}
+        champion={champion}
         modelMetrics={gameLogic.modelMetrics}
         gameLogic={gameLogic}
         isServerProcessing={isServerProcessing}
@@ -118,10 +146,8 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         loadFullModel={loadFullModel}
       />
       
-      <TotalFitnessChart fitnessData={gameLogic.fitnessData} />
-      
       <AnalysisPanel
-        champion={gameLogic.champion}
+        champion={champion}
         trainedModel={gameLogic.trainedModel}
         boardNumbers={gameLogic.boardNumbers}
         isServerProcessing={isServerProcessing}
@@ -133,9 +159,6 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         modelMetrics={gameLogic.modelMetrics}
         neuralNetworkVisualization={gameLogic.neuralNetworkVisualization}
         concursoNumber={gameLogic.concursoNumber}
-        currentCycle={currentCycle}
-        lastCloneCycle={lastCloneCycle}
-        onClonePlayer={onClonePlayer}
       />
     </div>
   );

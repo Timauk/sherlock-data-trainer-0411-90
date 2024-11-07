@@ -1,5 +1,4 @@
 import * as tf from '@tensorflow/tfjs';
-import { systemLogger } from './logging/systemLogger';
 
 export const updateModelWithNewData = async (
   trainedModel: tf.LayersModel,
@@ -20,46 +19,25 @@ export const updateModelWithNewData = async (
     const xs = tf.tensor2d(processedData);
     const ys = tf.tensor2d(trainingData.map(row => row.slice(-15)));
 
-    systemLogger.log('training', '🔄 Iniciando retreino do modelo...', {
-      amostras: trainingData.length
-    });
-
-    const result = await trainedModel.fit(xs, ys, {
-      epochs: 50,  // Alterado de 1 para 50 épocas
+    await trainedModel.fit(xs, ys, {
+      epochs: 1,
       batchSize: 32,
-      validationSplit: 0.1,
-      callbacks: {
-        onEpochEnd: (epoch, logs) => {
-          if (logs) {
-            const lossValue = typeof logs.loss === 'number' ? logs.loss : (logs.loss as tf.Tensor).dataSync()[0];
-            systemLogger.log('training', `📊 Retreino - Época ${epoch + 1}`, {
-              loss: lossValue.toFixed(4),
-              accuracy: logs.acc ? (typeof logs.acc === 'number' ? logs.acc.toFixed(4) : 'N/A') : 'N/A'
-            });
-          }
-        }
-      }
+      validationSplit: 0.1
     });
 
     xs.dispose();
     ys.dispose();
 
-    const finalLoss = typeof result.history.loss[0] === 'number' 
-      ? result.history.loss[0] 
-      : (result.history.loss[0] as tf.Tensor).dataSync()[0];
-
-    const message = `✅ Modelo retreinado com ${trainingData.length} novos registros. Loss: ${finalLoss.toFixed(4)}`;
-    systemLogger.log('training', message, { history: result.history });
+    const message = `Modelo atualizado com ${trainingData.length} novos registros.`;
     addLog(message);
     
     if (showToast) {
-      showToast("Modelo Atualizado", "O modelo foi retreinado com sucesso com os novos dados.");
+      showToast("Modelo Atualizado", "O modelo foi atualizado com sucesso com os novos dados.");
     }
 
     return trainedModel;
   } catch (error) {
-    const errorMessage = `❌ Erro ao atualizar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`;
-    systemLogger.log('training', errorMessage, { error }, 'error');
+    const errorMessage = `Erro ao atualizar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`;
     addLog(errorMessage);
     console.error("Detalhes do erro:", error);
     return trainedModel;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Copy, Lock } from 'lucide-react';
+import { Copy } from 'lucide-react';
 import { Player } from '@/types/gameTypes';
 
 interface PlayerCardProps {
@@ -9,16 +9,20 @@ interface PlayerCardProps {
   isTopPlayer: boolean;
   onPlayerClick: (player: Player) => void;
   onClonePlayer: (player: Player, e: React.MouseEvent) => void;
-  canClone: boolean;
 }
 
 const getNicheColor = (niche: number) => {
   switch (niche) {
-    case 0: return 'bg-blue-100 dark:bg-blue-900';
-    case 1: return 'bg-green-100 dark:bg-green-900';
-    case 2: return 'bg-purple-100 dark:bg-purple-900';
-    case 3: return 'bg-orange-100 dark:bg-orange-900';
-    default: return 'bg-card';
+    case 0: // Pares
+      return 'bg-blue-100 dark:bg-blue-900';
+    case 1: // Ímpares
+      return 'bg-green-100 dark:bg-green-900';
+    case 2: // Sequências
+      return 'bg-purple-100 dark:bg-purple-900';
+    case 3: // Geral
+      return 'bg-orange-100 dark:bg-orange-900';
+    default:
+      return 'bg-card';
   }
 };
 
@@ -37,7 +41,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   isTopPlayer,
   onPlayerClick,
   onClonePlayer,
-  canClone
 }) => {
   const formatPredictions = (predictions: number[]) => {
     return predictions.length > 0 
@@ -78,16 +81,11 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         </p>
         <Button 
           onClick={(e) => onClonePlayer(player, e)}
-          className={`w-full mt-2 ${canClone ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400'}`}
+          className="w-full mt-2 bg-blue-600 hover:bg-blue-700"
           variant="default"
-          disabled={!canClone}
         >
-          {canClone ? (
-            <Copy className="mr-2 h-4 w-4" />
-          ) : (
-            <Lock className="mr-2 h-4 w-4" />
-          )}
-          {canClone ? 'Clonar Jogador' : 'Aguarde próximo ciclo'}
+          <Copy className="mr-2 h-4 w-4" />
+          Clonar Jogador
         </Button>
       </div>
     </div>

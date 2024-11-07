@@ -7,34 +7,23 @@ import NodeCache from 'node-cache';
 import * as tf from '@tensorflow/tfjs';
 import { logger } from './src/utils/logging/logger.js';
 import { cacheMiddleware } from './src/utils/performance/serverCache.js';
-import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = 3001;
 
-// Updated CORS configuration
-app.use(cors());
+// Configuração CORS atualizada
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:8080'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(compression());
-
-// Cria as pastas necessárias se não existirem
-const checkpointsDir = path.join(__dirname, 'checkpoints');
-const logsDir = path.join(__dirname, 'logs');
-const savedModelsDir = path.join(__dirname, 'saved-models');
-
-[checkpointsDir, logsDir, savedModelsDir].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-    logger.info(`Diretório criado: ${dir}`);
-  }
-});
-
-// Configurar rota estática para saved-models
-app.use('/saved-models', express.static(path.join(__dirname, 'saved-models')));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cacheMiddleware);
 
@@ -47,7 +36,7 @@ app.use('/api/model', modelRouter);
 app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
 
-// Updated status route
+// Rota de status atualizada
 app.get('/api/status', (req, res) => {
   try {
     const healthInfo = {
@@ -57,8 +46,10 @@ app.get('/api/status', (req, res) => {
       memory: process.memoryUsage(),
       version: '1.0.0'
     };
+    logger.info(healthInfo, 'Health check');
     res.json(healthInfo);
   } catch (error) {
+    logger.error(error, 'Error in health check');
     res.status(500).json({ status: 'error', message: error.message });
   }
 });
@@ -75,6 +66,18 @@ app.use((err, req, res, next) => {
     error: 'Erro interno do servidor',
     message: err.message
   });
+});
+
+// Cria as pastas necessárias se não existirem
+import fs from 'fs';
+const checkpointsDir = path.join(__dirname, 'checkpoints');
+const logsDir = path.join(__dirname, 'logs');
+const savedModelsDir = path.join(__dirname, 'saved-models');
+
+[checkpointsDir, logsDir, savedModelsDir].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
 });
 
 // Gerenciamento de memória

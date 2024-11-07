@@ -29,9 +29,6 @@ interface AnalysisTabsProps {
     input?: number[];
     output?: number[];
   };
-  currentCycle: number;
-  lastCloneCycle: number;
-  onClonePlayer?: (player: Player) => void;
 }
 
 const LoadingFallback = () => (
@@ -53,10 +50,7 @@ const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
   numbers,
   updateFrequencyData,
   modelMetrics,
-  neuralNetworkVisualization,
-  currentCycle,
-  lastCloneCycle,
-  onClonePlayer
+  neuralNetworkVisualization
 }) => {
   return (
     <Tabs defaultValue="game" className="w-full">
@@ -75,9 +69,6 @@ const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
               concursoNumber={concursoNumber}
               players={players}
               evolutionData={evolutionData}
-              currentCycle={currentCycle}
-              lastCloneCycle={lastCloneCycle}
-              onClonePlayer={onClonePlayer}
             />
             <EnhancedLogDisplay />
           </div>

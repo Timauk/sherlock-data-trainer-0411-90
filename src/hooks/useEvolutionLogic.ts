@@ -23,34 +23,33 @@ export const useEvolutionLogic = (
     const updatedPlayers = updatePlayerGenerations(players, generation);
     const bestPlayers = selectBestPlayers(updatedPlayers);
     
-    // Verifica se completou um ciclo do CSV e se ainda não clonou neste ciclo
-    const isEndOfCycle = concursoNumber >= csvData.length - 1;
-    const shouldClone = isEndOfCycle && bestPlayers.some(player => player.generation === generation);
-    
-    if (shouldClone && bestPlayers.length > 0) {
-      const champion = bestPlayers[0];
-      const clones = cloneChampion(champion, players.length);
-      setPlayers(clones);
-      
-      systemLogger.log('player', 
-        `Ciclo completo - Clonando campeão #${champion.id} (Score: ${champion.score})`);
-      
-      if (trainedModel && championData) {
-        try {
-          await updateModelWithChampionKnowledge(
-            trainedModel,
-            champion,
-            championData.trainingData
-          );
-          
-          setChampionData({
-            player: champion,
-            trainingData: trainingData
-          });
+    // Verifica se completou um ciclo do CSV
+    if (concursoNumber >= csvData.length - 1) {
+      if (bestPlayers.length > 0) {
+        const champion = bestPlayers[0];
+        const clones = cloneChampion(champion, players.length);
+        setPlayers(clones);
+        
+        systemLogger.log('player', 
+          `Ciclo completo - Clonando campeão #${champion.id} (Score: ${champion.score})`);
+        
+        if (trainedModel && championData) {
+          try {
+            await updateModelWithChampionKnowledge(
+              trainedModel,
+              champion,
+              championData.trainingData
+            );
+            
+            setChampionData({
+              player: champion,
+              trainingData: trainingData
+            });
 
-        } catch (error) {
-          systemLogger.log('system', 
-            `Erro ao atualizar modelo com conhecimento do campeão: ${error}`);
+          } catch (error) {
+            systemLogger.log('system', 
+              `Erro ao atualizar modelo com conhecimento do campeão: ${error}`);
+          }
         }
       }
     } else {

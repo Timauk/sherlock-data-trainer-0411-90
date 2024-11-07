@@ -1,7 +1,5 @@
 import * as tf from '@tensorflow/tfjs';
 import { DataSummary } from '../dataManagement/dataSummarization';
-import { learningFeedbackLoop } from '../learning/feedbackLoop';
-import { systemLogger } from '../logging/systemLogger';
 
 interface EnsembleModel {
   seasonal: tf.LayersModel;
@@ -11,6 +9,7 @@ interface EnsembleModel {
 }
 
 export const createEnsembleModels = async (): Promise<EnsembleModel> => {
+  // Modelo para padrões sazonais
   const seasonal = tf.sequential();
   seasonal.add(tf.layers.dense({ units: 64, activation: 'relu', inputShape: [19] }));
   seasonal.add(tf.layers.dense({ units: 32, activation: 'relu' }));
@@ -46,77 +45,36 @@ export const trainEnsemble = async (
   summaries: DataSummary[],
   lunarData: any[]
 ) => {
-  const specialistModels = {
-    seasonal: { id: 1, name: 'Especialista Sazonal' },
-    frequency: { id: 2, name: 'Especialista em Frequência' },
-    lunar: { id: 3, name: 'Especialista Lunar' },
-    sequential: { id: 4, name: 'Especialista Sequencial' }
-  };
-
-  // Preparação dos dados
+  // Training data preparation
   const seasonalData = prepareSeassonalData(summaries);
   const frequencyData = prepareFrequencyData(historicalData);
   const lunarFeatures = prepareLunarData(lunarData);
   const sequentialData = prepareSequentialData(historicalData);
 
-  // Treinamento paralelo com feedback especializado
+  // Parallel training using Web Workers
   await Promise.all([
-    trainSpecialistModel(
-      models.seasonal,
-      seasonalData,
-      specialistModels.seasonal
-    ),
-    trainSpecialistModel(
-      models.frequency,
-      frequencyData,
-      specialistModels.frequency
-    ),
-    trainSpecialistModel(
-      models.lunar,
-      lunarFeatures,
-      specialistModels.lunar
-    ),
-    trainSpecialistModel(
-      models.sequential,
-      sequentialData,
-      specialistModels.sequential
-    )
+    models.seasonal.fit(seasonalData.inputs, seasonalData.targets, {
+      epochs: 50,
+      batchSize: 32,
+      validationSplit: 0.2
+    }),
+    models.frequency.fit(frequencyData.inputs, frequencyData.targets, {
+      epochs: 50,
+      batchSize: 32,
+      validationSplit: 0.2
+    }),
+    models.lunar.fit(lunarFeatures.inputs, lunarFeatures.targets, {
+      epochs: 50,
+      batchSize: 32,
+      validationSplit: 0.2
+    }),
+    models.sequential.fit(sequentialData.inputs, sequentialData.targets, {
+      epochs: 50,
+      batchSize: 32,
+      validationSplit: 0.2
+    })
   ]);
-
-  systemLogger.log('training', 'Ensemble training completed', {
-    metrics: learningFeedbackLoop.getMetricsSummary()
-  });
 };
-
-async function trainSpecialistModel(
-  model: tf.LayersModel,
-  data: { inputs: tf.Tensor; targets: tf.Tensor },
-  specialist: { id: number; name: string }
-) {
-  const history = await model.fit(data.inputs, data.targets, {
-    epochs: 50,
-    batchSize: 32,
-    validationSplit: 0.2,
-    callbacks: {
-      onEpochEnd: async (epoch, logs) => {
-        if (logs) {
-          await learningFeedbackLoop.processFeedback(
-            model,
-            await data.inputs.array() as number[],
-            await data.targets.array() as number[],
-            [], // patterns will be analyzed inside processFeedback
-            specialist.id
-          );
-        }
-      }
-    }
-  });
-
-  systemLogger.log('model', `${specialist.name} completou treinamento`, {
-    finalLoss: history.history.loss?.slice(-1)[0],
-    finalAccuracy: history.history.acc?.slice(-1)[0]
-  });
-}
 
 const prepareSeassonalData = (summaries: DataSummary[]) => {
   // Implementação da preparação de dados sazonais

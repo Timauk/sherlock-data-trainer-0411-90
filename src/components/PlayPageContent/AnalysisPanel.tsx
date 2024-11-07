@@ -2,7 +2,6 @@ import React from 'react';
 import ChampionPredictions from '../ChampionPredictions';
 import GeneticTreeVisualization from '../GeneticTreeVisualization';
 import AnalysisTabs from '../GameAnalysis/AnalysisTabs';
-import { Player } from '@/types/gameTypes';
 
 interface AnalysisPanelProps {
   champion: any;
@@ -17,9 +16,6 @@ interface AnalysisPanelProps {
   modelMetrics: any;
   neuralNetworkVisualization: any;
   concursoNumber: number;
-  currentCycle: number;
-  lastCloneCycle: number;
-  onClonePlayer: (player: Player) => void;
 }
 
 const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
@@ -34,10 +30,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   numbers,
   modelMetrics,
   neuralNetworkVisualization,
-  concursoNumber,
-  currentCycle,
-  lastCloneCycle,
-  onClonePlayer
+  concursoNumber
 }) => {
   return (
     <div className="space-y-4">
@@ -65,9 +58,6 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
         updateFrequencyData={function(){}}
         modelMetrics={modelMetrics}
         neuralNetworkVisualization={neuralNetworkVisualization}
-        currentCycle={currentCycle}
-        lastCloneCycle={lastCloneCycle}
-        onClonePlayer={onClonePlayer}
       />
     </div>
   );
