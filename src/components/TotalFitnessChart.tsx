@@ -10,15 +10,22 @@ interface TotalFitnessChartProps {
 }
 
 const TotalFitnessChart: React.FC<TotalFitnessChartProps> = ({ fitnessData }) => {
+  // Mantém histórico completo sem sobrescrever dados anteriores
+  const historicalData = fitnessData.map((data, index) => ({
+    gameNumber: data.gameNumber,
+    totalFitness: data.totalFitness,
+    cycleNumber: Math.floor(index / 15) + 1 // Assumindo que cada ciclo tem 15 jogos
+  }));
+
   return (
     <Card className="w-full mt-4">
       <CardHeader>
-        <CardTitle>Fitness Total por Jogo</CardTitle>
+        <CardTitle>Histórico de Fitness por Jogo</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={fitnessData}>
+            <LineChart data={historicalData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
                 dataKey="gameNumber" 
@@ -27,7 +34,13 @@ const TotalFitnessChart: React.FC<TotalFitnessChartProps> = ({ fitnessData }) =>
               <YAxis 
                 label={{ value: 'Fitness Total', angle: -90, position: 'insideLeft' }}
               />
-              <Tooltip />
+              <Tooltip 
+                formatter={(value: number, name: string) => [
+                  `${value.toFixed(2)}`, 
+                  'Fitness Total'
+                ]}
+                labelFormatter={(label) => `Jogo ${label} (Ciclo ${historicalData[label-1]?.cycleNumber})`}
+              />
               <Legend />
               <Line 
                 type="monotone" 
@@ -35,6 +48,7 @@ const TotalFitnessChart: React.FC<TotalFitnessChartProps> = ({ fitnessData }) =>
                 stroke="#10b981" 
                 name="Fitness Total" 
                 strokeWidth={2}
+                dot={false}
               />
             </LineChart>
           </ResponsiveContainer>

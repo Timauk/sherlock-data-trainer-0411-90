@@ -45,15 +45,11 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
   const { status: serverStatus } = useServerStatus();
   const { toast } = useToast();
   
-  // Calcular dados de fitness total
-  const fitnessData = gameLogic.players && gameLogic.players.length > 0 
-    ? Array.from({ length: gameLogic.gameCount }, (_, index) => ({
-        gameNumber: index + 1,
-        totalFitness: gameLogic.players.reduce((sum: number, player: any) => sum + player.fitness, 0)
-      }))
-    : [];
-
-  const cycleCount = Math.floor(gameLogic.gameCount / gameLogic.csvData?.length) || 0;
+  // Usar o cycleCount do gameLogic para mostrar a contagem correta
+  const cycleCount = gameLogic.cycleCount;
+  const gamesUntilNextCycle = gameLogic.csvData?.length 
+    ? gameLogic.csvData.length - (gameLogic.gameCount % gameLogic.csvData.length)
+    : 0;
 
   const saveFullModel = async () => {
     try {
@@ -97,7 +93,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         </Badge>
         {cycleCount > 0 && (
           <Badge variant="secondary" className="text-lg p-2">
-            Próxima Clonagem em: {gameLogic.csvData?.length - (gameLogic.gameCount % gameLogic.csvData?.length)} jogos
+            Próxima Clonagem em: {gamesUntilNextCycle} jogos
           </Badge>
         )}
       </div>
@@ -122,7 +118,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         loadFullModel={loadFullModel}
       />
       
-      <TotalFitnessChart fitnessData={fitnessData} />
+      <TotalFitnessChart fitnessData={gameLogic.fitnessData} />
       
       <AnalysisPanel
         champion={gameLogic.champion}
