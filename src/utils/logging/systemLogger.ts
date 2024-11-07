@@ -7,6 +7,8 @@ interface LogEntry {
   severity?: 'info' | 'warning' | 'error' | 'success';
 }
 
+import { logger } from './logger';
+
 class SystemLogger {
   private static instance: SystemLogger;
   private logs: LogEntry[] = [];
@@ -47,39 +49,35 @@ class SystemLogger {
       severity
     };
 
+    // Adiciona ao array de logs em memória
     this.logs.push(entry);
     if (this.logs.length > this.maxLogs) {
       this.logs = this.logs.slice(-this.maxLogs);
     }
 
+    // Grava no arquivo usando o logger Pino
+    switch (severity) {
+      case 'error':
+        logger.error({ type, ...entry }, message);
+        break;
+      case 'warning':
+        logger.warn({ type, ...entry }, message);
+        break;
+      case 'success':
+        logger.info({ type, success: true, ...entry }, message);
+        break;
+      default:
+        logger.info({ type, ...entry }, message);
+    }
+
     // Dispara evento para atualização da UI
     const event = new CustomEvent('systemLog', { detail: entry });
-    window.dispatchEvent(event);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(event);
+    }
 
     // Notifica subscribers
     this.notify(entry);
-
-    // Console logging com cores
-    const styles = this.getConsoleStyles(severity);
-    console.log(
-      `%c[${type.toUpperCase()}] ${message}`,
-      styles,
-      details || ''
-    );
-  }
-
-  private getConsoleStyles(severity: LogEntry['severity'] = 'info'): string {
-    const baseStyle = 'padding: 2px 5px; border-radius: 3px; color: white;';
-    switch (severity) {
-      case 'error':
-        return `${baseStyle} background-color: #ef4444;`;
-      case 'warning':
-        return `${baseStyle} background-color: #f97316;`;
-      case 'success':
-        return `${baseStyle} background-color: #10b981;`;
-      default:
-        return `${baseStyle} background-color: #6366f1;`;
-    }
   }
 
   getLogs(): LogEntry[] {
@@ -96,6 +94,7 @@ class SystemLogger {
 
   clearLogs() {
     this.logs = [];
+    logger.info('Logs limpos pelo usuário');
     this.notify({ 
       timestamp: new Date(), 
       type: 'system', 
