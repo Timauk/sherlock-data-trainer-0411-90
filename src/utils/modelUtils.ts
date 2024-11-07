@@ -25,7 +25,7 @@ export const updateModelWithNewData = async (
     });
 
     const result = await trainedModel.fit(xs, ys, {
-      epochs: 1,
+      epochs: 50,  // Alterado de 1 para 50 épocas
       batchSize: 32,
       validationSplit: 0.1,
       callbacks: {
