@@ -39,24 +39,30 @@ export const useGameLoop = (
   showToast?: (title: string, description: string) => void
 ) => {
   const gameLoop = useCallback(async () => {
-    if (csvData.length === 0 || !trainedModel) return;
+    if (!csvData.length || !trainedModel || !players.length) {
+      console.warn('Game loop called without required data:', {
+        hasCsvData: Boolean(csvData.length),
+        hasTrainedModel: Boolean(trainedModel),
+        hasPlayers: Boolean(players.length)
+      });
+      return;
+    }
 
     const nextConcurso = (concursoNumber + 1) % csvData.length;
     setConcursoNumber(nextConcurso);
     setGameCount(prev => prev + 1);
 
-    // Verifica se é hora de retreinar (a cada 200 jogos)
     if (nextConcurso % 200 === 0 && trainingData.length > 0) {
       await updateModelWithNewData(trainedModel, trainingData, addLog, showToast);
       setTrainingData([]);
-      addLog("Retreino programado executado após 200 jogos");
+      addLog("system", "Retreino programado executado após 200 jogos");
     }
 
     const currentBoardNumbers = csvData[nextConcurso];
     setBoardNumbers(currentBoardNumbers);
     
     const validationMetrics = performCrossValidation(
-      [players[0].predictions],
+      players[0]?.predictions ? [players[0].predictions] : [],
       csvData.slice(Math.max(0, nextConcurso - 10), nextConcurso)
     );
 
@@ -73,6 +79,8 @@ export const useGameLoop = (
 
     const playerPredictions = await Promise.all(
       players.map(async player => {
+        if (!player) return [];
+        
         const prediction = await makePrediction(
           trainedModel, 
           currentBoardNumbers, 
@@ -83,7 +91,6 @@ export const useGameLoop = (
           { numbers: [[...currentBoardNumbers]], dates: [currentDate] }
         );
 
-        // Monitorar previsões
         const timeSeriesAnalyzer = new TimeSeriesAnalysis([[...currentBoardNumbers]]);
         const arimaPredictor = timeSeriesAnalyzer.analyzeNumbers();
         predictionMonitor.recordPrediction(prediction, currentBoardNumbers, arimaPredictor);
@@ -99,12 +106,13 @@ export const useGameLoop = (
     const totalPredictions = players.length * (nextConcurso + 1);
 
     const updatedPlayers = players.map((player, index) => {
-      const predictions = playerPredictions[index];
+      if (!player) return player;
+      
+      const predictions = playerPredictions[index] || [];
       const matches = predictions.filter(num => currentBoardNumbers.includes(num)).length;
       totalMatches += matches;
       currentGameMatches += matches;
 
-      // Apenas notifica acertos excepcionais, sem parar o jogo
       if (matches >= 15) {
         showToast?.("Resultado Excepcional!", 
           `Jogador ${player.id} acertou ${matches} números!`);
@@ -115,14 +123,13 @@ export const useGameLoop = (
       randomMatches += randomMatch;
       currentGameRandomMatches += randomMatch;
 
-      // Record temporal accuracy
       temporalAccuracyTracker.recordAccuracy(matches, 15);
 
       const reward = calculateReward(matches);
       
       if (matches >= 11) {
         const logMessage = logReward(matches, player.id);
-        addLog(logMessage, matches);
+        addLog("prediction", logMessage, matches);
         
         if (matches >= 13) {
           showToast?.("Desempenho Excepcional!", 
