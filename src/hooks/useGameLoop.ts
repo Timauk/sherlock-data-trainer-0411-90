@@ -17,7 +17,6 @@ export const useGameLoop = ({
   concursoNumber,
   setEvolutionData,
   generation,
-  addLog,
   updateInterval,
   trainingData,
   setTrainingData,
@@ -32,7 +31,7 @@ export const useGameLoop = ({
 }: GameLoopDependencies) => {
   const gameLoop = useCallback(async () => {
     if (!csvData.length || !trainedModel || !players.length) {
-      systemLogger.log('error', 'Game loop called without required data', {
+      systemLogger.log('system', 'Game loop initialization failed', {
         hasCsvData: Boolean(csvData.length),
         hasTrainedModel: Boolean(trainedModel),
         hasPlayers: Boolean(players.length)
@@ -47,7 +46,9 @@ export const useGameLoop = ({
     if (nextConcurso % 200 === 0 && trainingData.length > 0) {
       await updateModelWithNewData(trainedModel, trainingData);
       setTrainingData([]);
-      systemLogger.log('info', 'Scheduled retraining executed after 200 games');
+      systemLogger.log('system', 'Model retraining completed', {
+        gameCount: nextConcurso
+      });
     }
 
     const currentBoardNumbers = csvData[nextConcurso];
@@ -94,7 +95,9 @@ export const useGameLoop = ({
       players,
       playerPredictions,
       currentBoardNumbers,
-      (message: string) => systemLogger.log('info', message)
+      (message: string) => systemLogger.log('system', message, {
+        timestamp: new Date().toISOString()
+      })
     );
 
     const totalPredictions = players.length * (nextConcurso + 1);
@@ -132,6 +135,10 @@ export const useGameLoop = ({
     if (nextConcurso % Math.min(updateInterval, 50) === 0 && trainingData.length > 0) {
       await updateModelWithNewData(trainedModel, trainingData);
       setTrainingData([]);
+      systemLogger.log('system', 'Periodic model update completed', {
+        gameCount: nextConcurso,
+        updateInterval: Math.min(updateInterval, 50)
+      });
     }
   }, [
     players,
