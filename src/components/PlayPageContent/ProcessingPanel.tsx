@@ -47,6 +47,38 @@ const ProcessingPanel: React.FC<ProcessingPanelProps> = ({
 }) => {
   const { toast } = useToast();
 
+  const handleSaveFullModel = async () => {
+    try {
+      await saveFullModel();
+      toast({
+        title: "Modelo Salvo",
+        description: "O modelo e o estado do jogo foram salvos com sucesso"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao Salvar",
+        description: error instanceof Error ? error.message : "Erro ao salvar o modelo",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleLoadFullModel = async () => {
+    try {
+      await loadFullModel();
+      toast({
+        title: "Modelo Carregado",
+        description: "O modelo e o estado do jogo foram restaurados com sucesso"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao Carregar",
+        description: error instanceof Error ? error.message : "Erro ao carregar o modelo",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <ProcessingSelector
@@ -78,21 +110,21 @@ const ProcessingPanel: React.FC<ProcessingPanelProps> = ({
       />
 
       <Button
-        onClick={saveFullModel}
-        className="w-full"
+        onClick={handleSaveFullModel}
+        className="w-full bg-green-600 hover:bg-green-700"
         variant="secondary"
       >
         <Save className="inline-block mr-2" />
-        Salvar Modelo Completo
+        Salvar Estado Completo do Jogo
       </Button>
 
       <Button
-        onClick={loadFullModel}
+        onClick={handleLoadFullModel}
         className="w-full"
         variant="outline"
       >
         <Download className="inline-block mr-2" />
-        Carregar Modelo Treinado
+        Carregar Último Estado Salvo
       </Button>
     </div>
   );
