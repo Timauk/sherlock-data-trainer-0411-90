@@ -22,6 +22,26 @@ const GameControls: React.FC<GameControlsProps> = ({
   const [gpuEnabled, setGpuEnabled] = useState(false);
   const { toast } = useToast();
 
+  const handlePlay = () => {
+    if (!isPlaying) {
+      onPlay();
+      toast({
+        title: "Jogo Iniciado",
+        description: "O jogo foi iniciado com sucesso!",
+      });
+    }
+  };
+
+  const handlePause = () => {
+    if (isPlaying) {
+      onPause();
+      toast({
+        title: "Jogo Pausado",
+        description: "O jogo foi pausado.",
+      });
+    }
+  };
+
   const toggleGPU = async () => {
     try {
       if (!gpuEnabled) {
@@ -61,7 +81,7 @@ const GameControls: React.FC<GameControlsProps> = ({
   useEffect(() => {
     // Verifica se GPU está disponível ao iniciar
     const checkGPU = async () => {
-      const backend = await tf.ready();
+      await tf.ready();
       setGpuEnabled(tf.getBackend() === 'webgl');
     };
     checkGPU();
@@ -69,10 +89,20 @@ const GameControls: React.FC<GameControlsProps> = ({
 
   return (
     <div className="flex space-x-2 mb-4">
-      <Button onClick={onPlay} disabled={isPlaying}>
+      <Button 
+        onClick={handlePlay} 
+        disabled={isPlaying}
+        variant="default"
+        size="default"
+        className="hover:bg-primary/90"
+      >
         <Play className="mr-2 h-4 w-4" /> Iniciar
       </Button>
-      <Button onClick={onPause} disabled={!isPlaying}>
+      <Button 
+        onClick={handlePause} 
+        disabled={!isPlaying}
+        variant="secondary"
+      >
         <Pause className="mr-2 h-4 w-4" /> Pausar
       </Button>
       <Button onClick={onReset}>
