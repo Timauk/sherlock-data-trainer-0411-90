@@ -24,6 +24,21 @@ app.use(cors({
 
 app.use(express.json({ limit: '50mb' }));
 app.use(compression());
+
+// Cria as pastas necessárias se não existirem
+const checkpointsDir = path.join(__dirname, 'checkpoints');
+const logsDir = path.join(__dirname, 'logs');
+const savedModelsDir = path.join(__dirname, 'saved-models');
+
+[checkpointsDir, logsDir, savedModelsDir].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+    logger.info(`Diretório criado: ${dir}`);
+  }
+});
+
+// Configurar rota estática para saved-models
+app.use('/saved-models', express.static(path.join(__dirname, 'saved-models')));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cacheMiddleware);
 
@@ -44,7 +59,12 @@ app.get('/api/status', (req, res) => {
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       memory: process.memoryUsage(),
-      version: '1.0.0'
+      version: '1.0.0',
+      directories: {
+        checkpoints: fs.existsSync(checkpointsDir),
+        logs: fs.existsSync(logsDir),
+        savedModels: fs.existsSync(savedModelsDir)
+      }
     };
     logger.info(healthInfo, 'Health check');
     res.json(healthInfo);
@@ -66,18 +86,6 @@ app.use((err, req, res, next) => {
     error: 'Erro interno do servidor',
     message: err.message
   });
-});
-
-// Cria as pastas necessárias se não existirem
-import fs from 'fs';
-const checkpointsDir = path.join(__dirname, 'checkpoints');
-const logsDir = path.join(__dirname, 'logs');
-const savedModelsDir = path.join(__dirname, 'saved-models');
-
-[checkpointsDir, logsDir, savedModelsDir].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
 });
 
 // Gerenciamento de memória

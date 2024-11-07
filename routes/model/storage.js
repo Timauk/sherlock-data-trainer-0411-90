@@ -25,76 +25,52 @@ router.post('/save-full-model', async (req, res) => {
 
     const model = await getOrCreateModel();
     
-    // Get model weights and topology
-    const saveResult = await model.save(tf.io.withSaveHandler(async (artifacts) => {
-      // Create base directory if it doesn't exist
-      const baseModelDir = path.join(__dirname, '..', '..', 'saved-models');
-      if (!fs.existsSync(baseModelDir)) {
-        fs.mkdirSync(baseModelDir, { recursive: true });
-      }
-      
-      const modelPath = path.join(baseModelDir, 'full-model');
-      if (!fs.existsSync(modelPath)) {
-        fs.mkdirSync(modelPath, { recursive: true });
-      }
+    // Criar diretório base se não existir
+    const baseModelDir = path.join(__dirname, '..', '..', 'saved-models');
+    if (!fs.existsSync(baseModelDir)) {
+      fs.mkdirSync(baseModelDir, { recursive: true });
+      logger.info(`Created directory: ${baseModelDir}`);
+    }
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const modelPath = path.join(baseModelDir, `model-${timestamp}`);
+    
+    if (!fs.existsSync(modelPath)) {
+      fs.mkdirSync(modelPath, { recursive: true });
+      logger.info(`Created model directory: ${modelPath}`);
+    }
 
-      // Save model topology with weights manifest
-      const modelJson = {
-        modelTopology: artifacts.modelTopology,
-        weightsManifest: [{
-          paths: ['weights.bin'],
-          weights: artifacts.weightSpecs
-        }],
-        format: 'layers-model',
-        generatedBy: 'TensorFlow.js tfjs-layers v4.21.0',
-        convertedBy: null
-      };
-      
-      fs.writeFileSync(
-        path.join(modelPath, 'model.json'),
-        JSON.stringify(modelJson, null, 2)
-      );
-      
-      // Save weights binary data
-      fs.writeFileSync(
-        path.join(modelPath, 'weights.bin'),
-        Buffer.from(artifacts.weightData)
-      );
-
-      return {
-        modelArtifactsInfo: {
-          dateSaved: new Date(),
-          modelTopologyType: 'JSON',
-        }
-      };
-    }));
-
-    const fullModelData = {
+    // Salvar modelo com pesos
+    const saveResult = await model.save(`file://${modelPath}`);
+    
+    // Salvar metadados
+    const metadata = {
+      timestamp,
       totalSamples: global.totalSamples || 0,
       playersData,
       evolutionHistory,
-      timestamp: new Date().toISOString()
-    };
-
-    // Save metadata
-    fs.writeFileSync(
-      path.join(path.dirname(saveResult.modelArtifactsInfo.path), 'metadata.json'),
-      JSON.stringify(fullModelData, null, 2)
-    );
-
-    logger.info({
-      timestamp: fullModelData.timestamp,
-      modelArtifacts: saveResult
-    }, 'Model saved successfully');
-    
-    res.json({
-      success: true,
-      savedAt: fullModelData.timestamp,
-      totalSamples: fullModelData.totalSamples,
       modelInfo: {
         layers: model.layers.length,
         totalParams: model.countParams()
       }
+    };
+
+    fs.writeFileSync(
+      path.join(modelPath, 'metadata.json'),
+      JSON.stringify(metadata, null, 2)
+    );
+
+    logger.info({
+      modelPath,
+      metadata,
+      saveResult
+    }, 'Model saved successfully');
+    
+    res.json({
+      success: true,
+      savedAt: timestamp,
+      modelPath,
+      modelInfo: metadata.modelInfo
     });
   } catch (error) {
     logger.error('Error saving full model:', error);
