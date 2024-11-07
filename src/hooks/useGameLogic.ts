@@ -1,12 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import * as tf from '@tensorflow/tfjs';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useGameInitialization } from './useGameInitialization';
 import { useGameLoop } from './useGameLoop';
 import { useEvolutionLogic } from './useEvolutionLogic';
 import { ModelVisualization, Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
-import { cloneChampion } from '@/utils/playerEvolution';
 
 export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel | null) => {
   const { toast } = useToast();
@@ -38,6 +37,11 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const [trainingData, setTrainingData] = useState<number[][]>([]);
   const [boardNumbers, setBoardNumbers] = useState<number[]>([]);
   const [isManualMode, setIsManualMode] = useState(false);
+
+  const addLog = useCallback((message: string, matches?: number) => {
+    const logType = matches ? 'prediction' : 'action';
+    systemLogger.log(logType, message, { matches });
+  }, []);
 
   // Atualiza a contagem de ciclos quando o CSV reinicia
   useEffect(() => {
