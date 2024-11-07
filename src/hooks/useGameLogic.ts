@@ -38,6 +38,13 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const [trainingData, setTrainingData] = useState<number[][]>([]);
   const [boardNumbers, setBoardNumbers] = useState<number[]>([]);
   const [isManualMode, setIsManualMode] = useState(false);
+  const [logs, setLogs] = useState<string[]>([]);
+
+  const addLog = useCallback((message: string, matches?: number) => {
+    const logMessage = matches ? `${message} (Matches: ${matches})` : message;
+    setLogs(prevLogs => [...prevLogs, logMessage]);
+    systemLogger.log('game', logMessage);
+  }, []);
 
   // Atualiza a contagem de ciclos quando o CSV reinicia
   useEffect(() => {
@@ -45,16 +52,14 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       setCycleCount(prev => prev + 1);
       systemLogger.log('system', `Novo ciclo iniciado: ${cycleCount + 1}`);
     }
-  }, [gameCount, concursoNumber]);
+  }, [gameCount, concursoNumber, cycleCount]);
 
   // Função melhorada para verificar se pode clonar
   const canClonePlayer = useCallback((currentGameCount: number) => {
-    // Não permite clonagem se não houver dados carregados
     if (!csvData.length) {
       return false;
     }
 
-    // Verifica se já houve clonagem neste ciclo
     if (currentGameCount === lastCloneGameCount) {
       return false;
     }
@@ -63,9 +68,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     const gamesInCurrentCycle = currentGameCount % csvData.length;
     const lastCloneCycle = Math.floor(lastCloneGameCount / csvData.length);
     
-    // Só permite clonagem em um novo ciclo
     const isNewCycle = currentCycle > lastCloneCycle;
-    // E apenas no final do ciclo
     const isEndOfCycle = gamesInCurrentCycle === csvData.length - 1;
 
     const canClone = isNewCycle && isEndOfCycle;
@@ -150,6 +153,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     gameLoop,
     evolveGeneration,
     addLog,
+    logs,
     toggleInfiniteMode: useCallback(() => setIsInfiniteMode(prev => !prev), []),
     dates,
     numbers,
