@@ -35,7 +35,7 @@ export const useGameLoop = ({
         hasCsvData: Boolean(csvData.length),
         hasTrainedModel: Boolean(trainedModel),
         hasPlayers: Boolean(players.length)
-      });
+      }, 'error');
       return;
     }
 
@@ -98,7 +98,7 @@ export const useGameLoop = ({
       currentBoardNumbers,
       (message: string) => systemLogger.log('system', message, {
         timestamp: new Date().toISOString()
-      })
+      }, 'info')
     );
 
     const totalPredictions = players.length * (nextConcurso + 1);
