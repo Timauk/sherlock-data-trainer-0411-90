@@ -11,7 +11,6 @@ const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
-// Handle POST request for saving the full model
 router.post('/', async (req, res) => {
   try {
     const { playersData, evolutionHistory } = req.body;
@@ -38,21 +37,32 @@ router.post('/', async (req, res) => {
     if (!fs.existsSync(baseModelDir)) {
       fs.mkdirSync(baseModelDir, { recursive: true });
     }
-    fs.mkdirSync(modelDir, { recursive: true });
+    fs.mkdirSync(modelDir);
 
-    // Save model files
     try {
-      // First, save model architecture
-      const modelConfig = model.toJSON();
-      fs.writeFileSync(
-        path.join(modelDir, 'model-architecture.json'),
-        JSON.stringify(modelConfig, null, 2)
-      );
-      logger.info('Model architecture saved');
+      // Save model weights as buffer
+      const weightData = await model.save(tf.io.withSaveHandler(async (artifacts) => {
+        // Save model topology
+        fs.writeFileSync(
+          path.join(modelDir, 'model.json'),
+          JSON.stringify(artifacts.modelTopology)
+        );
 
-      // Then save weights
-      await model.save(`file://${modelDir}`);
-      logger.info('Model weights saved');
+        // Save weights
+        const weightsBinary = Buffer.from(artifacts.weightData.buffer);
+        fs.writeFileSync(
+          path.join(modelDir, 'weights.bin'),
+          weightsBinary
+        );
+
+        // Save weight specs
+        fs.writeFileSync(
+          path.join(modelDir, 'weight-specs.json'),
+          JSON.stringify(artifacts.weightSpecs)
+        );
+
+        return { modelArtifactsInfo: { dateSaved: new Date() } };
+      }));
 
       // Save metadata
       const metadata = {
@@ -70,15 +80,15 @@ router.post('/', async (req, res) => {
         path.join(modelDir, 'metadata.json'),
         JSON.stringify(metadata, null, 2)
       );
-      logger.info('Metadata saved');
 
       // Verify files exist
       const savedFiles = fs.readdirSync(modelDir);
-      logger.info('Files saved:', savedFiles);
-
+      
       if (savedFiles.length === 0) {
         throw new Error('No files were created in the model directory');
       }
+
+      logger.info('Model saved successfully. Files:', savedFiles);
 
       res.json({
         success: true,
