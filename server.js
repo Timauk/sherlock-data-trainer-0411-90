@@ -17,8 +17,8 @@ const PORT = 3001;
 
 // Cache configuration
 const gameCache = new NodeCache({ 
-  stdTTL: 0, // Infinite TTL
-  checkperiod: 0, // Disable periodic checks
+  stdTTL: 0,
+  checkperiod: 0,
   useClones: false
 });
 
@@ -46,14 +46,21 @@ dirs.forEach(dir => {
   }
 });
 
-// Game routes
+// Game routes - Define before other routes
 const gameRouter = express.Router();
 
-gameRouter.post('/store', (req, res) => {
+// Store game endpoint
+gameRouter.post('/store', async (req, res) => {
   try {
     const { concurso, predictions, players } = req.body;
+    if (!concurso || !predictions || !players) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields'
+      });
+    }
+
     const currentGames = gameCache.get('games') || [];
-    
     currentGames.push({
       concurso,
       predictions,
@@ -76,7 +83,8 @@ gameRouter.post('/store', (req, res) => {
   }
 });
 
-gameRouter.get('/all', (req, res) => {
+// Get all games endpoint
+gameRouter.get('/all', async (req, res) => {
   try {
     const games = gameCache.get('games') || [];
     res.json(games);
@@ -89,15 +97,14 @@ gameRouter.get('/all', (req, res) => {
   }
 });
 
-// Mount game routes
+// Mount game routes BEFORE other routes
 app.use('/api/game', gameRouter);
 
-// Import other routes
+// Import and mount other routes after game routes
 import { modelRouter } from './routes/model.js';
 import { checkpointRouter } from './routes/checkpoint.js';
 import { statusRouter } from './routes/status.js';
 
-// Mount other routes
 app.use('/api/model', modelRouter);
 app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
