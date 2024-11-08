@@ -14,10 +14,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3001;
 
-// Configuração CORS atualizada
+// Updated CORS configuration to be more permissive during development
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:8080'],
-  credentials: true,
+  origin: '*', // Allow all origins in development
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -27,33 +26,28 @@ app.use(compression());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cacheMiddleware);
 
-// Rotas
+// Create necessary directories
+const dirs = ['checkpoints', 'logs', 'saved-models'].map(dir => 
+  path.join(__dirname, dir)
+);
+
+dirs.forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
+
+// Import routes
 import { modelRouter } from './routes/model.js';
 import { checkpointRouter } from './routes/checkpoint.js';
 import { statusRouter } from './routes/status.js';
 
+// Mount routes
 app.use('/api/model', modelRouter);
 app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
 
-// Rota de status atualizada
-app.get('/api/status', (req, res) => {
-  try {
-    const healthInfo = {
-      status: 'online',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      version: '1.0.0'
-    };
-    logger.info(healthInfo, 'Health check');
-    res.json(healthInfo);
-  } catch (error) {
-    logger.error(error, 'Error in health check');
-    res.status(500).json({ status: 'error', message: error.message });
-  }
-});
-
+// Basic error handler
 app.use((err, req, res, next) => {
   logger.error({
     err,
@@ -63,33 +57,12 @@ app.use((err, req, res, next) => {
   }, 'Error occurred');
   
   res.status(500).json({
-    error: 'Erro interno do servidor',
+    error: 'Internal Server Error',
     message: err.message
   });
 });
 
-// Cria as pastas necessárias se não existirem
-import fs from 'fs';
-const checkpointsDir = path.join(__dirname, 'checkpoints');
-const logsDir = path.join(__dirname, 'logs');
-const savedModelsDir = path.join(__dirname, 'saved-models');
-
-[checkpointsDir, logsDir, savedModelsDir].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-});
-
-// Gerenciamento de memória
-setInterval(() => {
-  if (global.gc) {
-    global.gc();
-  }
-}, 300000); // Limpa a cada 5 minutos
-
 app.listen(PORT, () => {
-  logger.info(`Servidor rodando em http://localhost:${PORT}`);
-  logger.info(`Diretório de checkpoints: ${checkpointsDir}`);
-  logger.info(`Diretório de logs: ${logsDir}`);
-  logger.info(`Diretório de modelos salvos: ${savedModelsDir}`);
+  logger.info(`Server running at http://localhost:${PORT}`);
+  dirs.forEach(dir => logger.info(`Directory created/verified: ${dir}`));
 });

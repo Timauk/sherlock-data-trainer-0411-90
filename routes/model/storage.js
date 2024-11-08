@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
+// Handle POST request for saving the full model
 router.post('/', async (req, res) => {
   try {
     const { playersData, evolutionHistory } = req.body;
@@ -25,20 +26,16 @@ router.post('/', async (req, res) => {
 
     const model = await getOrCreateModel();
     
-    // Create base directory if it doesn't exist
+    // Ensure base directories exist
     const baseModelDir = path.join(__dirname, '..', '..', 'saved-models');
-    if (!fs.existsSync(baseModelDir)) {
-      fs.mkdirSync(baseModelDir, { recursive: true });
-    }
-    
     const modelPath = path.join(baseModelDir, 'full-model');
-    if (!fs.existsSync(modelPath)) {
-      fs.mkdirSync(modelPath, { recursive: true });
-    }
+    
+    fs.mkdirSync(modelPath, { recursive: true });
 
     // Save model topology and weights
-    const saveResult = await model.save(`file://${modelPath}`);
+    await model.save(`file://${modelPath}`);
 
+    // Save metadata
     const fullModelData = {
       totalSamples: global.totalSamples || 0,
       playersData,
@@ -46,7 +43,6 @@ router.post('/', async (req, res) => {
       timestamp: new Date().toISOString()
     };
 
-    // Save metadata
     fs.writeFileSync(
       path.join(modelPath, 'metadata.json'),
       JSON.stringify(fullModelData, null, 2)
