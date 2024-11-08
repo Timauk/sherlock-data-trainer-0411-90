@@ -40,31 +40,35 @@ router.post('/', async (req, res) => {
     fs.mkdirSync(modelDir);
 
     try {
-      // Save model weights as buffer
-      const weightData = await model.save(tf.io.withSaveHandler(async (artifacts) => {
-        // Save model topology
-        fs.writeFileSync(
-          path.join(modelDir, 'model.json'),
-          JSON.stringify(artifacts.modelTopology)
-        );
-
-        // Save weights
-        const weightsBinary = Buffer.from(artifacts.weightData.buffer);
-        fs.writeFileSync(
-          path.join(modelDir, 'weights.bin'),
-          weightsBinary
-        );
-
-        // Save weight specs
-        fs.writeFileSync(
-          path.join(modelDir, 'weight-specs.json'),
-          JSON.stringify(artifacts.weightSpecs)
-        );
-
-        return { modelArtifactsInfo: { dateSaved: new Date() } };
+      // Get model artifacts
+      const artifacts = await model.save(tf.io.withSaveHandler(async (modelArtifacts) => {
+        return modelArtifacts;
       }));
 
+      // Save model topology
+      logger.info('Saving model topology...');
+      fs.writeFileSync(
+        path.join(modelDir, 'model.json'),
+        JSON.stringify(artifacts.modelTopology)
+      );
+
+      // Save weights as binary file
+      logger.info('Saving weights binary...');
+      const weightsData = Buffer.from(artifacts.weightData);
+      fs.writeFileSync(
+        path.join(modelDir, 'weights.bin'),
+        weightsData
+      );
+
+      // Save weight specs
+      logger.info('Saving weight specs...');
+      fs.writeFileSync(
+        path.join(modelDir, 'weight-specs.json'),
+        JSON.stringify(artifacts.weightSpecs)
+      );
+
       // Save metadata
+      logger.info('Saving metadata...');
       const metadata = {
         timestamp: new Date().toISOString(),
         totalSamples: global.totalSamples || 0,
@@ -81,19 +85,32 @@ router.post('/', async (req, res) => {
         JSON.stringify(metadata, null, 2)
       );
 
-      // Verify files exist
+      // Verify files exist and have content
       const savedFiles = fs.readdirSync(modelDir);
+      const filesWithSizes = savedFiles.map(file => ({
+        name: file,
+        size: fs.statSync(path.join(modelDir, file)).size
+      }));
       
+      logger.info('Files saved:', filesWithSizes);
+
       if (savedFiles.length === 0) {
         throw new Error('No files were created in the model directory');
       }
 
-      logger.info('Model saved successfully. Files:', savedFiles);
+      // Verify each required file exists and has content
+      const requiredFiles = ['model.json', 'weights.bin', 'weight-specs.json', 'metadata.json'];
+      for (const file of requiredFiles) {
+        const filePath = path.join(modelDir, file);
+        if (!fs.existsSync(filePath) || fs.statSync(filePath).size === 0) {
+          throw new Error(`File ${file} is missing or empty`);
+        }
+      }
 
       res.json({
         success: true,
         modelPath: modelDir,
-        savedFiles,
+        savedFiles: filesWithSizes,
         timestamp: metadata.timestamp,
         modelInfo: {
           layers: model.layers.length,
