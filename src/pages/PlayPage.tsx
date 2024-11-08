@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useTheme } from 'next-themes';
 import * as tf from '@tensorflow/tfjs';
 import { useToast } from "@/hooks/use-toast";
@@ -6,6 +6,7 @@ import { useGameLogic } from '@/hooks/useGameLogic';
 import { PlayPageHeader } from '@/components/PlayPageHeader';
 import PlayPageContent from '@/components/PlayPageContent';
 import SpeedControl from '@/components/SpeedControl';
+import { useGameInterval } from '@/hooks/useGameInterval';
 import { loadModelFiles } from '@/utils/modelLoader';
 import { loadModelWithWeights, saveModelWithWeights } from '@/utils/modelUtils';
 import { setupPeriodicRetraining } from '@/utils/dataManagement/weightedTraining';
@@ -23,20 +24,20 @@ const PlayPage: React.FC = () => {
   const gameLogic = useGameLogic(csvData, trainedModel);
   const [isRetraining, setIsRetraining] = useState(false);
   const [retrainingProgress, setRetrainingProgress] = useState(0);
-  const [gameInterval, setGameInterval] = useState<NodeJS.Timeout | null>(null);
 
-  // Função para limpar o intervalo existente
-  const clearGameInterval = useCallback(() => {
-    if (gameInterval) {
-      clearInterval(gameInterval);
-      setGameInterval(null);
+  // Usa o novo hook useGameInterval
+  useGameInterval(
+    isPlaying && !isRetraining,
+    gameSpeed,
+    gameLogic.gameLoop,
+    () => {
+      setIsPlaying(false);
+      toast({
+        title: "Fim do Jogo",
+        description: "Todos os concursos foram processados",
+      });
     }
-  }, [gameInterval]);
-
-  useEffect(() => {
-    // Limpa o intervalo quando o componente é desmontado
-    return () => clearGameInterval();
-  }, [clearGameInterval]);
+  );
 
   const loadCSV = useCallback(async (file: File) => {
     try {
@@ -111,94 +112,6 @@ const PlayPage: React.FC = () => {
     }
   }, [trainedModel, gameLogic, toast]);
 
-  const playGame = useCallback(() => {
-    if (!trainedModel || csvData.length === 0) {
-      gameLogic.addLog("Não é possível iniciar o jogo. Verifique se o modelo e os dados CSV foram carregados.");
-      return;
-    }
-    setIsPlaying(true);
-    gameLogic.addLog("Jogo iniciado - Processamento automático ativado");
-    
-    // Inicia o loop contínuo com setInterval
-    clearGameInterval(); // Limpa qualquer intervalo existente
-    const interval = setInterval(() => {
-      gameLogic.gameLoop();
-    }, gameSpeed);
-    setGameInterval(interval);
-  }, [trainedModel, csvData, gameLogic, gameSpeed, clearGameInterval]);
-
-  const pauseGame = useCallback(() => {
-    setIsPlaying(false);
-    clearGameInterval();
-    gameLogic.addLog("Jogo pausado pelo usuário");
-  }, [gameLogic, clearGameInterval]);
-
-  const resetGame = useCallback(() => {
-    setIsPlaying(false);
-    clearGameInterval();
-    setProgress(0);
-    gameLogic.initializePlayers();
-    gameLogic.addLog("Jogo reiniciado - Estado inicial restaurado");
-  }, [gameLogic, clearGameInterval]);
-
-  // Atualiza o intervalo quando a velocidade do jogo muda
-  useEffect(() => {
-    if (isPlaying) {
-      clearGameInterval();
-      const interval = setInterval(() => {
-        gameLogic.gameLoop();
-      }, gameSpeed);
-      setGameInterval(interval);
-    }
-  }, [gameSpeed, isPlaying, gameLogic, clearGameInterval]);
-
-  useEffect(() => {
-    let retrainingInterval: NodeJS.Timeout;
-    
-    if (trainedModel && csvData.length > 0) {
-      retrainingInterval = setupPeriodicRetraining(
-        trainedModel,
-        csvData,
-        csvDates,
-        gameLogic.addLog,
-        () => {
-          setIsPlaying(false);
-          clearGameInterval();
-          setIsRetraining(true);
-          setRetrainingProgress(0);
-          toast({
-            title: "Iniciando Retreinamento",
-            description: "O jogo será pausado para retreinar o modelo.",
-            variant: "default"
-          });
-        },
-        (improved) => {
-          setIsRetraining(false);
-          setRetrainingProgress(0);
-          toast({
-            title: improved ? "Retreinamento Concluído!" : "Retreinamento Finalizado",
-            description: improved 
-              ? "O modelo melhorou com o novo conhecimento!" 
-              : "Nenhuma melhoria significativa detectada.",
-            variant: "default"
-          });
-          if (isPlaying) {
-            playGame();
-          }
-        },
-        (progress) => {
-          setRetrainingProgress(progress);
-        }
-      );
-    }
-
-    return () => {
-      if (retrainingInterval) {
-        clearInterval(retrainingInterval);
-      }
-    };
-  }, [trainedModel, csvData, csvDates, gameLogic, toast, isPlaying, playGame, clearGameInterval]);
-
   return (
     <div className="p-6">
       <PlayPageHeader />
@@ -214,9 +127,13 @@ const PlayPage: React.FC = () => {
       )}
       <PlayPageContent
         isPlaying={isPlaying && !isRetraining}
-        onPlay={playGame}
-        onPause={pauseGame}
-        onReset={resetGame}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onReset={() => {
+          setIsPlaying(false);
+          gameLogic.initializePlayers();
+          gameLogic.addLog("Jogo reiniciado - Estado inicial restaurado");
+        }}
         onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         onCsvUpload={loadCSV}
         onModelUpload={loadModel}

@@ -33,7 +33,7 @@ export const useGameLoop = (
   return useCallback(async () => {
     if (!csvData || csvData.length === 0 || !trainedModel || concursoNumber >= csvData.length) {
       addLog("Fim dos concursos disponíveis no CSV");
-      return;
+      return false;
     }
 
     // Obtém os números do concurso atual do CSV
@@ -112,6 +112,8 @@ export const useGameLoop = (
     console.log('Avançando concurso de', concursoNumber, 'para', concursoNumber + 1);
     setConcursoNumber(concursoNumber + 1);
     setGameCount(prev => prev + 1);
+
+    return true;
 
   }, [
     players,
