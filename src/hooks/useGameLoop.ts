@@ -38,22 +38,24 @@ export const useGameLoop = (
       showToast?.("Fim dos Dados", "Todos os jogos foram processados!");
       return;
     }
-    
-    // Atualiza o número do concurso antes de processar
+
+    // Atualiza o número do concurso
     setConcursoNumber(nextConcurso);
     setGameCount(prev => prev + 1);
-    
-    // Atualizar números da banca
+
+    // Atualiza números da banca para o concurso atual
     const currentBoardNumbers = csvData[nextConcurso];
     if (!currentBoardNumbers || currentBoardNumbers.length !== 15) {
       systemLogger.log('system', `Erro: Dados inválidos no concurso ${nextConcurso}`);
       return;
     }
-    
+
+    // Atualiza o display com os novos números
     setBoardNumbers(currentBoardNumbers);
     systemLogger.log('system', `Processando concurso #${nextConcurso} - Números: ${currentBoardNumbers.join(',')}`);
 
     try {
+      // Processa a iteração do jogo com os novos números
       const { updatedPlayers, metrics } = await processGameIteration({
         players,
         csvData,
@@ -65,8 +67,11 @@ export const useGameLoop = (
         showToast
       });
 
+      // Atualiza os jogadores e métricas
       setPlayers(updatedPlayers);
       setModelMetrics(metrics);
+      
+      // Atualiza dados de evolução
       setEvolutionData(prev => [
         ...prev,
         ...updatedPlayers.map(player => ({
@@ -77,6 +82,7 @@ export const useGameLoop = (
         }))
       ]);
 
+      // Atualiza o modelo se necessário
       await handleModelUpdate({
         nextConcurso,
         updateInterval,
@@ -87,14 +93,16 @@ export const useGameLoop = (
         showToast
       });
 
-      // Chama o próximo loop automaticamente após um pequeno delay
-      setTimeout(gameLoop, 100);
-      
+      // Aguarda um pequeno intervalo antes da próxima iteração
+      // O intervalo é ajustado com base na velocidade definida
+      const processingDelay = Math.max(50, Math.min(1000, updateInterval));
+      setTimeout(gameLoop, processingDelay);
+
     } catch (error) {
       systemLogger.log('system', 'Erro durante processamento do concurso', { error });
       console.error('Erro no loop do jogo:', error);
+      showToast?.("Erro no Processamento", "Ocorreu um erro durante o processamento do jogo");
     }
-    
   }, [
     players,
     setPlayers,
