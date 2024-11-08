@@ -12,7 +12,11 @@ const BoardDisplay: React.FC<BoardDisplayProps> = ({ numbers, concursoNumber }) 
 
   useEffect(() => {
     console.log('BoardDisplay received new numbers:', numbers, 'for concurso:', concursoNumber);
-    setDisplayNumbers([...numbers]); // Create new array to force update
+    if (numbers && numbers.length > 0) {
+      setDisplayNumbers([...numbers]);
+    } else {
+      setDisplayNumbers([]);
+    }
   }, [numbers, concursoNumber]);
 
   return (
