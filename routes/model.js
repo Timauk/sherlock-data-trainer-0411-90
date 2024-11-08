@@ -5,9 +5,9 @@ import { storageRouter } from './model/storage.js';
 
 const router = express.Router();
 
-// Mount all model-related routes
+// Mount storage routes first to ensure they take precedence
+router.use('/save-full-model', storageRouter);
 router.use('/training', trainingRouter);
 router.use('/prediction', predictionRouter);
-router.use('/', storageRouter); // This ensures /api/model/save-full-model works
 
 export { router as modelRouter };

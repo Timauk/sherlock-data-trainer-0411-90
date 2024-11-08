@@ -11,8 +11,7 @@ const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
-// Explicitly define the route
-router.post('/save-full-model', async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { playersData, evolutionHistory } = req.body;
     
