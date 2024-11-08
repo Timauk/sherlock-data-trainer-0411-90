@@ -46,7 +46,8 @@ export const useGameLoop = (
     setConcursoNumber(nextConcurso);
     setGameCount(prev => prev + 1);
 
-    const currentBoardNumbers = csvData[nextConcurso % csvData.length];
+    // Agora pegamos diretamente o próximo jogo sem usar módulo
+    const currentBoardNumbers = csvData[nextConcurso];
     setBoardNumbers(currentBoardNumbers);
 
     const currentDate = new Date();
