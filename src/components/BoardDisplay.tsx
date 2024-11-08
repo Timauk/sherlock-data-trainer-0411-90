@@ -11,8 +11,9 @@ const BoardDisplay: React.FC<BoardDisplayProps> = ({ numbers, concursoNumber }) 
   const [displayNumbers, setDisplayNumbers] = useState<number[]>([]);
 
   useEffect(() => {
-    setDisplayNumbers(numbers);
-  }, [numbers, concursoNumber]); // Added concursoNumber as dependency
+    console.log('BoardDisplay received new numbers:', numbers, 'for concurso:', concursoNumber);
+    setDisplayNumbers([...numbers]); // Create new array to force update
+  }, [numbers, concursoNumber]);
 
   return (
     <Card className="mb-4 p-4 bg-card">
@@ -29,7 +30,7 @@ const BoardDisplay: React.FC<BoardDisplayProps> = ({ numbers, concursoNumber }) 
         {displayNumbers && displayNumbers.length > 0 ? (
           displayNumbers.map((number, index) => (
             <span 
-              key={`${concursoNumber}-${index}`} // Updated key to include concursoNumber
+              key={`board-${concursoNumber}-${number}-${index}`}
               className="inline-flex items-center justify-center w-8 h-8 bg-primary text-primary-foreground rounded-full text-sm font-semibold"
             >
               {number}

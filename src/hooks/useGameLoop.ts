@@ -36,8 +36,9 @@ export const useGameLoop = (
       return;
     }
 
-    // Obtém os números do concurso atual do CSV
-    const currentBoardNumbers = csvData[concursoNumber];
+    // Obtém os números do concurso atual do CSV e força atualização do estado
+    const currentBoardNumbers = [...csvData[concursoNumber]];
+    console.log('Game Loop - Setting board numbers:', currentBoardNumbers, 'for concurso:', concursoNumber);
     setBoardNumbers(currentBoardNumbers);
     
     const currentDate = new Date();
@@ -106,11 +107,11 @@ export const useGameLoop = (
     });
 
     // Avança para o próximo concurso
-    setConcursoNumber(concursoNumber + 1);
+    setConcursoNumber(prev => {
+      console.log('Advancing concurso from', prev, 'to', prev + 1);
+      return prev + 1;
+    });
     setGameCount(prev => prev + 1);
-
-    // Agenda o próximo loop com um intervalo fixo
-    setTimeout(gameLoop, updateInterval);
 
   }, [
     players,
