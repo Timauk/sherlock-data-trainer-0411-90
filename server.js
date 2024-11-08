@@ -22,9 +22,10 @@ const gameCache = new NodeCache({
   useClones: false
 });
 
+// Configure middleware
 app.use(cors({
-  origin: true, // Allow requests from any origin
-  credentials: true, // Allow credentials (cookies, authorization headers, etc)
+  origin: true,
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
@@ -45,38 +46,58 @@ dirs.forEach(dir => {
   }
 });
 
-// New endpoint to store game predictions
-app.post('/api/game/store', (req, res) => {
-  const { concurso, predictions, players } = req.body;
-  const currentGames = gameCache.get('games') || [];
-  
-  currentGames.push({
-    concurso,
-    predictions,
-    players,
-    timestamp: new Date().toISOString()
-  });
-  
-  gameCache.set('games', currentGames);
-  
-  res.json({ 
-    success: true, 
-    gamesStored: currentGames.length 
-  });
+// Game routes
+const gameRouter = express.Router();
+
+gameRouter.post('/store', (req, res) => {
+  try {
+    const { concurso, predictions, players } = req.body;
+    const currentGames = gameCache.get('games') || [];
+    
+    currentGames.push({
+      concurso,
+      predictions,
+      players,
+      timestamp: new Date().toISOString()
+    });
+    
+    gameCache.set('games', currentGames);
+    
+    res.json({ 
+      success: true, 
+      gamesStored: currentGames.length 
+    });
+  } catch (error) {
+    logger.error('Error storing game:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
 });
 
-// Endpoint to retrieve all stored games
-app.get('/api/game/all', (req, res) => {
-  const games = gameCache.get('games') || [];
-  res.json(games);
+gameRouter.get('/all', (req, res) => {
+  try {
+    const games = gameCache.get('games') || [];
+    res.json(games);
+  } catch (error) {
+    logger.error('Error retrieving games:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
 });
 
-// Import routes
+// Mount game routes
+app.use('/api/game', gameRouter);
+
+// Import other routes
 import { modelRouter } from './routes/model.js';
 import { checkpointRouter } from './routes/checkpoint.js';
 import { statusRouter } from './routes/status.js';
 
-// Mount routes
+// Mount other routes
 app.use('/api/model', modelRouter);
 app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
