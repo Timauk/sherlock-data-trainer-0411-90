@@ -135,6 +135,7 @@ const PlayPage: React.FC = () => {
           toast({
             title: "Iniciando Retreinamento",
             description: "O jogo será pausado para retreinar o modelo.",
+            variant: "default"
           });
         },
         (improved) => {
@@ -145,7 +146,7 @@ const PlayPage: React.FC = () => {
             description: improved 
               ? "O modelo melhorou com o novo conhecimento!" 
               : "Nenhuma melhoria significativa detectada.",
-            variant: improved ? "default" : "secondary",
+            variant: "default"
           });
           setIsPlaying(true);
         },

@@ -5,7 +5,10 @@ export const calculateFitness = (player: Player, boardNumbers: number[]): number
     return 0;
   }
 
-  const matches = player.predictions.filter(num => boardNumbers.includes(num)).length;
+  const matches = player.predictions.filter(prediction => 
+    Array.isArray(prediction) && prediction.some(num => boardNumbers.includes(num))
+  ).length;
+  
   const consistencyBonus = calculateConsistencyBonus(player);
   const adaptabilityScore = calculateAdaptabilityScore(player);
   const nicheBonus = calculateNicheBonus(player, boardNumbers);
