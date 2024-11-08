@@ -109,7 +109,7 @@ export const useGameLoop = (
     // Avança para o próximo concurso
     console.log('Advancing concurso from', concursoNumber, 'to', concursoNumber + 1);
     setConcursoNumber(concursoNumber + 1);
-    setGameCount(prev => prev + 1);
+    const newGameCount = setGameCount(prev => prev + 1);
 
   }, [
     players,
