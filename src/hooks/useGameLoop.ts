@@ -159,6 +159,8 @@ export const useGameLoop = (
       setTrainingData([]);
     }
 
+    setTimeout(gameLoop, updateInterval);
+
   }, [
     players,
     setPlayers,
