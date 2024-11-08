@@ -39,29 +39,29 @@ export const useGameLoop = (
       return;
     }
 
-    // Atualiza o número do concurso e os números da banca de forma síncrona
-    await Promise.all([
-      new Promise<void>(resolve => {
-        setConcursoNumber(nextConcurso);
-        resolve();
-      }),
-      new Promise<void>(resolve => {
-        setGameCount(prev => prev + 1);
-        resolve();
-      })
-    ]);
+    // Primeiro, atualiza o número do concurso e aguarda a atualização
+    await new Promise<void>(resolve => {
+      setConcursoNumber(nextConcurso);
+      setTimeout(resolve, 100); // Pequeno delay para garantir a atualização
+    });
 
-    // Obtém os números atuais da banca
+    // Atualiza o contador de jogos
+    await new Promise<void>(resolve => {
+      setGameCount(prev => prev + 1);
+      setTimeout(resolve, 50);
+    });
+
+    // Obtém e valida os números atuais da banca
     const currentBoardNumbers = csvData[nextConcurso];
     if (!currentBoardNumbers || currentBoardNumbers.length !== 15) {
       systemLogger.log('system', `Erro: Dados inválidos no concurso ${nextConcurso}`);
       return;
     }
 
-    // Atualiza os números da banca de forma síncrona
+    // Atualiza os números da banca e aguarda
     await new Promise<void>(resolve => {
       setBoardNumbers(currentBoardNumbers);
-      resolve();
+      setTimeout(resolve, 100);
     });
 
     systemLogger.log('system', `Processando concurso #${nextConcurso} - Números: ${currentBoardNumbers.join(',')}`);
@@ -78,29 +78,29 @@ export const useGameLoop = (
         showToast
       });
 
-      // Atualiza os estados de forma síncrona
-      await Promise.all([
-        new Promise<void>(resolve => {
-          setPlayers(updatedPlayers);
-          resolve();
-        }),
-        new Promise<void>(resolve => {
-          setModelMetrics(metrics);
-          resolve();
-        }),
-        new Promise<void>(resolve => {
-          setEvolutionData(prev => [
-            ...prev,
-            ...updatedPlayers.map(player => ({
-              generation,
-              playerId: player.id,
-              score: player.score,
-              fitness: player.fitness
-            }))
-          ]);
-          resolve();
-        })
-      ]);
+      // Atualiza os estados com delays entre cada atualização
+      await new Promise<void>(resolve => {
+        setPlayers(updatedPlayers);
+        setTimeout(resolve, 50);
+      });
+
+      await new Promise<void>(resolve => {
+        setModelMetrics(metrics);
+        setTimeout(resolve, 50);
+      });
+
+      await new Promise<void>(resolve => {
+        setEvolutionData(prev => [
+          ...prev,
+          ...updatedPlayers.map(player => ({
+            generation,
+            playerId: player.id,
+            score: player.score,
+            fitness: player.fitness
+          }))
+        ]);
+        setTimeout(resolve, 50);
+      });
 
       await handleModelUpdate({
         nextConcurso,
@@ -112,11 +112,12 @@ export const useGameLoop = (
         showToast
       });
 
-      // Aguarda um pequeno intervalo para garantir que todas as atualizações foram processadas
-      await new Promise(resolve => setTimeout(resolve, Math.max(50, Math.min(500, updateInterval / 2))));
+      // Aguarda um intervalo maior antes de agendar o próximo loop
+      const baseDelay = Math.max(200, Math.min(1000, updateInterval));
+      await new Promise(resolve => setTimeout(resolve, baseDelay));
 
-      // Agenda o próximo loop com um intervalo baseado na velocidade
-      setTimeout(gameLoop, Math.max(50, Math.min(1000, updateInterval)));
+      // Agenda o próximo loop com um intervalo maior
+      setTimeout(gameLoop, baseDelay * 1.5);
 
     } catch (error) {
       systemLogger.log('system', 'Erro durante processamento do concurso', { error });
