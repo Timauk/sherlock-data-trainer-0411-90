@@ -4,10 +4,22 @@ export interface SystemStatus {
   alerts: number;
 }
 
+export interface ModelMetrics {
+  accuracy: number;
+  confidence: number;
+  samples: number;
+}
+
 export interface SpecializedModelsStatus {
   active: boolean;
   activeCount: number;
   totalCount: number;
+  performance?: {
+    seasonal: ModelMetrics;
+    frequency: ModelMetrics;
+    lunar: ModelMetrics;
+    sequential: ModelMetrics;
+  };
 }
 
 export interface DataQualityMetrics {
