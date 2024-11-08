@@ -23,6 +23,20 @@ const PlayPage: React.FC = () => {
   const gameLogic = useGameLogic(csvData, trainedModel);
   const [isRetraining, setIsRetraining] = useState(false);
   const [retrainingProgress, setRetrainingProgress] = useState(0);
+  const [gameInterval, setGameInterval] = useState<NodeJS.Timeout | null>(null);
+
+  // Função para limpar o intervalo existente
+  const clearGameInterval = useCallback(() => {
+    if (gameInterval) {
+      clearInterval(gameInterval);
+      setGameInterval(null);
+    }
+  }, [gameInterval]);
+
+  useEffect(() => {
+    // Limpa o intervalo quando o componente é desmontado
+    return () => clearGameInterval();
+  }, [clearGameInterval]);
 
   const loadCSV = useCallback(async (file: File) => {
     try {
@@ -104,20 +118,39 @@ const PlayPage: React.FC = () => {
     }
     setIsPlaying(true);
     gameLogic.addLog("Jogo iniciado - Processamento automático ativado");
-    gameLogic.gameLoop(); // Inicia o loop contínuo
-  }, [trainedModel, csvData, gameLogic]);
+    
+    // Inicia o loop contínuo com setInterval
+    clearGameInterval(); // Limpa qualquer intervalo existente
+    const interval = setInterval(() => {
+      gameLogic.gameLoop();
+    }, gameSpeed);
+    setGameInterval(interval);
+  }, [trainedModel, csvData, gameLogic, gameSpeed, clearGameInterval]);
 
   const pauseGame = useCallback(() => {
     setIsPlaying(false);
+    clearGameInterval();
     gameLogic.addLog("Jogo pausado pelo usuário");
-  }, [gameLogic]);
+  }, [gameLogic, clearGameInterval]);
 
   const resetGame = useCallback(() => {
     setIsPlaying(false);
+    clearGameInterval();
     setProgress(0);
     gameLogic.initializePlayers();
     gameLogic.addLog("Jogo reiniciado - Estado inicial restaurado");
-  }, [gameLogic]);
+  }, [gameLogic, clearGameInterval]);
+
+  // Atualiza o intervalo quando a velocidade do jogo muda
+  useEffect(() => {
+    if (isPlaying) {
+      clearGameInterval();
+      const interval = setInterval(() => {
+        gameLogic.gameLoop();
+      }, gameSpeed);
+      setGameInterval(interval);
+    }
+  }, [gameSpeed, isPlaying, gameLogic, clearGameInterval]);
 
   useEffect(() => {
     let retrainingInterval: NodeJS.Timeout;
@@ -130,6 +163,7 @@ const PlayPage: React.FC = () => {
         gameLogic.addLog,
         () => {
           setIsPlaying(false);
+          clearGameInterval();
           setIsRetraining(true);
           setRetrainingProgress(0);
           toast({
@@ -148,7 +182,9 @@ const PlayPage: React.FC = () => {
               : "Nenhuma melhoria significativa detectada.",
             variant: "default"
           });
-          setIsPlaying(true);
+          if (isPlaying) {
+            playGame();
+          }
         },
         (progress) => {
           setRetrainingProgress(progress);
@@ -161,7 +197,7 @@ const PlayPage: React.FC = () => {
         clearInterval(retrainingInterval);
       }
     };
-  }, [trainedModel, csvData, csvDates, gameLogic, toast]);
+  }, [trainedModel, csvData, csvDates, gameLogic, toast, isPlaying, playGame, clearGameInterval]);
 
   return (
     <div className="p-6">
