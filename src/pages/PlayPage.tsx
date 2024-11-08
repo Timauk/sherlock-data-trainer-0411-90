@@ -103,14 +103,12 @@ const PlayPage: React.FC = () => {
       return;
     }
     setIsPlaying(true);
-    gameLogic.addLog("Jogo iniciado.");
-    gameLogic.gameLoop();
+    gameLogic.gameLoop(); // Inicia o loop contínuo
   }, [trainedModel, csvData, gameLogic]);
 
   const pauseGame = useCallback(() => {
     setIsPlaying(false);
-    gameLogic.addLog("Jogo pausado.");
-  }, [gameLogic]);
+  }, []);
 
   const resetGame = useCallback(() => {
     setIsPlaying(false);

@@ -171,6 +171,9 @@ export const useGameLoop = (
       await updateModelWithNewData(trainedModel, trainingData, addLog, showToast);
       setTrainingData([]);
     }
+
+    // Chama o próximo loop automaticamente após um pequeno delay
+    setTimeout(gameLoop, 100);
     
   }, [
     players,
