@@ -7,7 +7,9 @@ export const calculateFitness = (player: Player, boardNumbers: number[]): number
 
   const matches = player.predictions.reduce((acc, prediction) => {
     if (Array.isArray(prediction)) {
-      const matchingNumbers = prediction.filter(num => boardNumbers.includes(num));
+      const matchingNumbers = prediction.filter((num): num is number => 
+        typeof num === 'number' && boardNumbers.includes(num)
+      );
       return acc + matchingNumbers.length;
     }
     return acc;
@@ -22,23 +24,26 @@ export const calculateFitness = (player: Player, boardNumbers: number[]): number
 };
 
 const calculateConsistencyBonus = (player: Player): number => {
-  if (!player.predictions || player.predictions.length < 2) return 0;
+  if (!Array.isArray(player.predictions) || player.predictions.length < 2) return 0;
   
   let consistentPredictions = 0;
   for (let i = 1; i < player.predictions.length; i++) {
-    if (!Array.isArray(player.predictions[i-1]) || !Array.isArray(player.predictions[i])) continue;
-    
     const prev = player.predictions[i - 1];
     const curr = player.predictions[i];
-    const intersection = prev.filter(num => curr.includes(num));
-    if (intersection.length >= 10) consistentPredictions++;
+    
+    if (Array.isArray(prev) && Array.isArray(curr)) {
+      const intersection = prev.filter(num => 
+        typeof num === 'number' && curr.includes(num)
+      );
+      if (intersection.length >= 10) consistentPredictions++;
+    }
   }
   
   return (consistentPredictions / Math.max(1, player.predictions.length - 1)) * 5;
 };
 
 const calculateAdaptabilityScore = (player: Player): number => {
-  if (!player.predictions || player.predictions.length < 5) return 0;
+  if (!Array.isArray(player.predictions) || player.predictions.length < 5) return 0;
   
   const recentPredictions = player.predictions.slice(-5);
   if (!recentPredictions.every(Array.isArray)) return 0;
