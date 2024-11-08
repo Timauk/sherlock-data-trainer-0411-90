@@ -2,14 +2,12 @@ import { useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import { Player, ModelVisualization } from '@/types/gameTypes';
 import { makePrediction } from '@/utils/predictionUtils';
-import { updateModelWithNewData } from '@/utils/modelUtils';
 import { calculateReward, logReward } from '@/utils/rewardSystem';
 import { getLunarPhase, analyzeLunarPatterns } from '@/utils/lunarCalculations';
-import { performCrossValidation } from '@/utils/validation/crossValidation';
-import { calculateConfidenceScore } from '@/utils/prediction/confidenceScoring';
 import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
 import { temporalAccuracyTracker } from '@/utils/prediction/temporalAccuracy';
 import { TimeSeriesAnalysis } from '@/utils/analysis/timeSeriesAnalysis';
+import { systemLogger } from '@/utils/logging/systemLogger';
 
 export const useGameLoop = (
   players: Player[],
@@ -39,30 +37,27 @@ export const useGameLoop = (
   showToast?: (title: string, description: string) => void
 ) => {
   const gameLoop = useCallback(async () => {
-    if (csvData.length === 0 || !trainedModel) return;
+    if (csvData.length === 0 || !trainedModel || concursoNumber >= csvData.length) {
+      addLog("Fim dos concursos disponíveis no CSV");
+      return;
+    }
 
-    setConcursoNumber(concursoNumber + 1);
-    setGameCount(prev => prev + 1);
-
-    const currentBoardNumbers = csvData[concursoNumber % csvData.length];
+    // Obtém os números do concurso atual do CSV
+    const currentBoardNumbers = csvData[concursoNumber];
     setBoardNumbers(currentBoardNumbers);
     
-    const validationMetrics = performCrossValidation(
-      [players[0].predictions],
-      csvData.slice(Math.max(0, concursoNumber - 10), concursoNumber)
-    );
-
     const currentDate = new Date();
     const lunarPhase = getLunarPhase(currentDate);
     const lunarPatterns = analyzeLunarPatterns([currentDate], [currentBoardNumbers]);
     
+    // Atualiza os números e datas
     setNumbers(currentNumbers => {
       const newNumbers = [...currentNumbers, currentBoardNumbers].slice(-100);
       return newNumbers;
     });
-    
     setDates(currentDates => [...currentDates, currentDate].slice(-100));
 
+    // Processa as apostas dos jogadores para o concurso atual
     const playerPredictions = await Promise.all(
       players.map(async player => {
         const prediction = await makePrediction(
@@ -75,7 +70,6 @@ export const useGameLoop = (
           { numbers: [[...currentBoardNumbers]], dates: [currentDate] }
         );
 
-        // Monitorar previsões
         const timeSeriesAnalyzer = new TimeSeriesAnalysis([[...currentBoardNumbers]]);
         const arimaPredictor = timeSeriesAnalyzer.analyzeNumbers();
         predictionMonitor.recordPrediction(prediction, currentBoardNumbers, arimaPredictor);
@@ -85,36 +79,27 @@ export const useGameLoop = (
     );
 
     let totalMatches = 0;
-    let randomMatches = 0;
     let currentGameMatches = 0;
-    let currentGameRandomMatches = 0;
-    const totalPredictions = players.length * (concursoNumber + 1);
 
+    // Atualiza os resultados dos jogadores
     const updatedPlayers = players.map((player, index) => {
       const predictions = playerPredictions[index];
       const matches = predictions.filter(num => currentBoardNumbers.includes(num)).length;
+      
       totalMatches += matches;
       currentGameMatches += matches;
-      
-      const randomPrediction = Array.from({ length: 15 }, () => Math.floor(Math.random() * 25) + 1);
-      const randomMatch = randomPrediction.filter(num => currentBoardNumbers.includes(num)).length;
-      randomMatches += randomMatch;
-      currentGameRandomMatches += randomMatch;
 
-      // Record temporal accuracy
-      temporalAccuracyTracker.recordAccuracy(matches, 15);
-
-      const reward = calculateReward(matches);
-      
       if (matches >= 11) {
         const logMessage = logReward(matches, player.id);
         addLog(logMessage, matches);
         
         if (matches >= 13) {
           showToast?.("Desempenho Excepcional!", 
-            `Jogador ${player.id} acertou ${matches} números!`);
+            `Jogador ${player.id} acertou ${matches} números no concurso ${concursoNumber}!`);
         }
       }
+
+      const reward = calculateReward(matches);
 
       return {
         ...player,
@@ -122,14 +107,6 @@ export const useGameLoop = (
         predictions,
         fitness: matches
       };
-    });
-
-    setModelMetrics({
-      accuracy: totalMatches / (players.length * 15),
-      randomAccuracy: randomMatches / (players.length * 15),
-      totalPredictions: totalPredictions,
-      perGameAccuracy: currentGameMatches / (players.length * 15),
-      perGameRandomAccuracy: currentGameRandomMatches / (players.length * 15)
     });
 
     setPlayers(updatedPlayers);
@@ -143,22 +120,20 @@ export const useGameLoop = (
       }))
     ]);
 
-    const enhancedTrainingData = [...currentBoardNumbers, 
-      ...updatedPlayers[0].predictions,
-      lunarPhase === 'Cheia' ? 1 : 0,
-      lunarPhase === 'Nova' ? 1 : 0,
-      lunarPhase === 'Crescente' ? 1 : 0,
-      lunarPhase === 'Minguante' ? 1 : 0
-    ];
+    // Atualiza métricas do modelo
+    setModelMetrics({
+      accuracy: totalMatches / (players.length * 15),
+      randomAccuracy: 0,
+      totalPredictions: players.length * (concursoNumber + 1),
+      perGameAccuracy: currentGameMatches / (players.length * 15),
+      perGameRandomAccuracy: 0
+    });
 
-    setTrainingData(currentTrainingData => 
-      [...currentTrainingData, enhancedTrainingData]);
+    // Avança para o próximo concurso
+    setConcursoNumber(concursoNumber + 1);
+    setGameCount(prev => prev + 1);
 
-    if (concursoNumber % Math.min(updateInterval, 50) === 0 && trainingData.length > 0) {
-      await updateModelWithNewData(trainedModel, trainingData, addLog, showToast);
-      setTrainingData([]);
-    }
-
+    // Agenda o próximo loop
     setTimeout(gameLoop, updateInterval);
 
   }, [
@@ -171,8 +146,6 @@ export const useGameLoop = (
     generation,
     addLog,
     updateInterval,
-    trainingData,
-    setTrainingData,
     setNumbers,
     setDates,
     setBoardNumbers,
