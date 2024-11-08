@@ -15,11 +15,12 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3001;
 
-// Updated CORS configuration to be more permissive during development
+// Updated CORS configuration to be more specific and handle credentials
 app.use(cors({
-  origin: '*', // Allow all origins in development
+  origin: true, // Allow requests from any origin
+  credentials: true, // Allow credentials (cookies, authorization headers, etc)
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
 
 app.use(express.json({ limit: '50mb' }));
@@ -62,6 +63,9 @@ app.use((err, req, res, next) => {
     message: err.message
   });
 });
+
+// Add OPTIONS handler for preflight requests
+app.options('*', cors());
 
 app.listen(PORT, () => {
   logger.info(`Server running at http://localhost:${PORT}`);
