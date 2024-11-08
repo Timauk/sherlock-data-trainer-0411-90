@@ -30,15 +30,17 @@ export const useGameLoop = (
   setGameCount: React.Dispatch<React.SetStateAction<number>>,
   showToast?: (title: string, description: string) => void
 ) => {
-  const gameLoop = useCallback(async () => {
-    if (csvData.length === 0 || !trainedModel || concursoNumber >= csvData.length) {
+  return useCallback(async () => {
+    if (!csvData || csvData.length === 0 || !trainedModel || concursoNumber >= csvData.length) {
       addLog("Fim dos concursos disponíveis no CSV");
       return;
     }
 
-    // Obtém os números do concurso atual do CSV e força atualização do estado
+    // Obtém os números do concurso atual do CSV
     const currentBoardNumbers = [...csvData[concursoNumber]];
-    console.log('Game Loop - Setting board numbers:', currentBoardNumbers, 'for concurso:', concursoNumber);
+    console.log('Game Loop - Definindo números:', currentBoardNumbers, 'para concurso:', concursoNumber);
+    
+    // Força a atualização dos números do quadro
     setBoardNumbers(currentBoardNumbers);
     
     const currentDate = new Date();
@@ -107,9 +109,9 @@ export const useGameLoop = (
     });
 
     // Avança para o próximo concurso
-    console.log('Advancing concurso from', concursoNumber, 'to', concursoNumber + 1);
+    console.log('Avançando concurso de', concursoNumber, 'para', concursoNumber + 1);
     setConcursoNumber(concursoNumber + 1);
-    setGameCount(gameCount => gameCount + 1);
+    setGameCount(prev => prev + 1);
 
   }, [
     players,
@@ -130,6 +132,4 @@ export const useGameLoop = (
     setGameCount,
     showToast
   ]);
-
-  return gameLoop;
 };
