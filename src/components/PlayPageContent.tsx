@@ -4,6 +4,7 @@ import ProcessingPanel from './PlayPageContent/ProcessingPanel';
 import AnalysisPanel from './PlayPageContent/AnalysisPanel';
 import { useToast } from "@/hooks/use-toast";
 import * as tf from '@tensorflow/tfjs';
+import { exportPredictionsToCSV } from '@/utils/exportUtils';
 
 interface PlayPageContentProps {
   isPlaying: boolean;
@@ -41,6 +42,27 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         (current.fitness > (prev?.fitness || 0)) ? current : prev, 
         gameLogic.players[0])
     : null;
+
+  const handleExportCSV = () => {
+    if (gameLogic.players && gameLogic.players.length > 0) {
+      const predictions = gameLogic.players.map((player: any) => ({
+        concurso: gameLogic.concursoNumber,
+        numbers: player.predictions || []
+      }));
+      
+      exportPredictionsToCSV(predictions, gameLogic.players);
+      toast({
+        title: "Exportação Concluída",
+        description: "O arquivo CSV foi gerado com sucesso.",
+      });
+    } else {
+      toast({
+        title: "Erro na Exportação",
+        description: "Não há dados para exportar.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const saveFullModel = async () => {
     try {
@@ -159,6 +181,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         modelMetrics={gameLogic.modelMetrics}
         neuralNetworkVisualization={gameLogic.neuralNetworkVisualization}
         concursoNumber={gameLogic.concursoNumber}
+        onExportCSV={handleExportCSV}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import React from 'react';
-import ChampionPredictions from '../ChampionPredictions';
-import GeneticTreeVisualization from '../GeneticTreeVisualization';
+import { Card } from "@/components/ui/card";
+import TotalScoreChart from '../TotalScoreChart';
+import TotalFitnessChart from '../TotalFitnessChart';
 import AnalysisTabs from '../GameAnalysis/AnalysisTabs';
 
 interface AnalysisPanelProps {
@@ -14,8 +15,9 @@ interface AnalysisPanelProps {
   dates: Date[];
   numbers: number[][];
   modelMetrics: any;
-  neuralNetworkVisualization: any;
+  neuralNetworkVisualization?: any;
   concursoNumber: number;
+  onExportCSV?: () => void;
 }
 
 const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
@@ -30,24 +32,26 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   numbers,
   modelMetrics,
   neuralNetworkVisualization,
-  concursoNumber
+  concursoNumber,
+  onExportCSV
 }) => {
-  return (
-    <div className="space-y-4">
-      <GeneticTreeVisualization 
-        players={players}
-        generation={generation}
-      />
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChampionPredictions
-          champion={champion}
-          trainedModel={trainedModel}
-          lastConcursoNumbers={boardNumbers}
-          isServerProcessing={isServerProcessing}
-        />
-      </div>
+  const scoreData = evolutionData.map(data => ({
+    gameNumber: data.generation,
+    totalScore: data.score
+  }));
 
+  const fitnessData = evolutionData.map(data => ({
+    gameNumber: data.generation,
+    totalFitness: data.fitness
+  }));
+
+  return (
+    <Card className="p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <TotalScoreChart scoreData={scoreData} onExportCSV={onExportCSV} />
+        <TotalFitnessChart fitnessData={fitnessData} />
+      </div>
+      
       <AnalysisTabs
         boardNumbers={boardNumbers}
         concursoNumber={concursoNumber}
@@ -55,11 +59,11 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
         evolutionData={evolutionData}
         dates={dates}
         numbers={numbers}
-        updateFrequencyData={function(){}}
+        updateFrequencyData={() => {}}
         modelMetrics={modelMetrics}
         neuralNetworkVisualization={neuralNetworkVisualization}
       />
-    </div>
+    </Card>
   );
 };
 
