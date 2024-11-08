@@ -81,9 +81,15 @@ const GameBoard: React.FC<GameBoardProps> = ({
   }, [] as Array<{ gameNumber: number; totalScore: number }>);
 
   return (
-    <div>
-      <BoardDisplay numbers={boardNumbers} concursoNumber={concursoNumber} />
-      <PlayerList players={players} onUpdatePlayer={onUpdatePlayer} />
+    <div className="space-y-4">
+      <BoardDisplay 
+        numbers={boardNumbers} 
+        concursoNumber={concursoNumber} 
+      />
+      <PlayerList 
+        players={players} 
+        onUpdatePlayer={onUpdatePlayer} 
+      />
       <EvolutionChart data={evolutionData} />
       <GeneticEvolutionChart evolutionData={processedEvolutionData} />
       <TotalScoreChart scoreData={totalScoreData} />

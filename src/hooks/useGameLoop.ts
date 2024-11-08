@@ -1,4 +1,3 @@
-// Vamos dividir o useGameLoop em arquivos menores para melhor manutenção
 import { useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import { Player, ModelVisualization } from '@/types/gameTypes';
@@ -42,6 +41,11 @@ export const useGameLoop = (
     
     setConcursoNumber(nextConcurso);
     setGameCount(prev => prev + 1);
+    
+    // Atualizar números da banca
+    const currentBoardNumbers = csvData[nextConcurso];
+    setBoardNumbers(currentBoardNumbers);
+    
     systemLogger.log('system', `Processando concurso #${nextConcurso}`);
 
     try {
