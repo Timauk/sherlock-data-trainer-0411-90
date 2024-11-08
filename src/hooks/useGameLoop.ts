@@ -107,10 +107,8 @@ export const useGameLoop = (
     });
 
     // Avança para o próximo concurso
-    setConcursoNumber(prev => {
-      console.log('Advancing concurso from', prev, 'to', prev + 1);
-      return prev + 1;
-    });
+    console.log('Advancing concurso from', concursoNumber, 'to', concursoNumber + 1);
+    setConcursoNumber(concursoNumber + 1);
     setGameCount(prev => prev + 1);
 
   }, [
