@@ -39,6 +39,7 @@ export const useGameLoop = (
       return;
     }
     
+    // Atualiza o número do concurso antes de processar
     setConcursoNumber(nextConcurso);
     setGameCount(prev => prev + 1);
     
