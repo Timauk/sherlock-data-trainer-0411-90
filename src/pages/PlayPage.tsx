@@ -8,6 +8,8 @@ import PlayPageContent from '@/components/PlayPageContent';
 import SpeedControl from '@/components/SpeedControl';
 import { loadModelFiles } from '@/utils/modelLoader';
 import { loadModelWithWeights, saveModelWithWeights } from '@/utils/modelUtils';
+import { setupPeriodicRetraining } from '@/utils/dataManagement/weightedTraining';
+import { Progress } from "@/components/ui/progress";
 
 const PlayPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -18,8 +20,9 @@ const PlayPage: React.FC = () => {
   const [trainedModel, setTrainedModel] = useState<tf.LayersModel | null>(null);
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
-
   const gameLogic = useGameLogic(csvData, trainedModel);
+  const [isRetraining, setIsRetraining] = useState(false);
+  const [retrainingProgress, setRetrainingProgress] = useState(0);
 
   const loadCSV = useCallback(async (file: File) => {
     try {
@@ -46,16 +49,11 @@ const PlayPage: React.FC = () => {
     try {
       const { model, metadata } = await loadModelFiles(jsonFile, weightsFile, metadataFile);
       setTrainedModel(model);
-      
-      // Save model immediately after loading for future use
       await saveModelWithWeights(model);
-      
       gameLogic.addLog("Modelo e metadata carregados com sucesso!");
-      
       if (metadata.playersData) {
         gameLogic.initializePlayers();
       }
-
       toast({
         title: "Modelo Carregado",
         description: "O modelo e seus metadados foram carregados com sucesso.",
@@ -122,34 +120,63 @@ const PlayPage: React.FC = () => {
   }, [gameLogic]);
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-    if (isPlaying) {
-      intervalId = setInterval(() => {
-        gameLogic.gameLoop();
-        setProgress((prevProgress) => {
-          const newProgress = prevProgress + (100 / csvData.length);
-          
-          // Verifica se completou um ciclo
-          if (newProgress >= 100) {
-            if (!gameLogic.isManualMode) {
-              // Evolui apenas ao completar um ciclo completo
-              gameLogic.evolveGeneration();
-            }
-            return gameLogic.isInfiniteMode ? 0 : 100;
-          }
-          return newProgress;
-        });
-      }, gameSpeed);
+    let retrainingInterval: NodeJS.Timeout;
+    
+    if (trainedModel && csvData.length > 0) {
+      retrainingInterval = setupPeriodicRetraining(
+        trainedModel,
+        csvData,
+        csvDates,
+        gameLogic.addLog,
+        () => {
+          setIsPlaying(false);
+          setIsRetraining(true);
+          setRetrainingProgress(0);
+          toast({
+            title: "Iniciando Retreinamento",
+            description: "O jogo será pausado para retreinar o modelo.",
+          });
+        },
+        (improved) => {
+          setIsRetraining(false);
+          setRetrainingProgress(0);
+          toast({
+            title: improved ? "Retreinamento Concluído!" : "Retreinamento Finalizado",
+            description: improved 
+              ? "O modelo melhorou com o novo conhecimento!" 
+              : "Nenhuma melhoria significativa detectada.",
+            variant: improved ? "default" : "secondary",
+          });
+          setIsPlaying(true);
+        },
+        (progress) => {
+          setRetrainingProgress(progress);
+        }
+      );
     }
-    return () => clearInterval(intervalId);
-  }, [isPlaying, csvData, gameLogic, gameSpeed]);
+
+    return () => {
+      if (retrainingInterval) {
+        clearInterval(retrainingInterval);
+      }
+    };
+  }, [trainedModel, csvData, csvDates, gameLogic, toast]);
 
   return (
     <div className="p-6">
       <PlayPageHeader />
       <SpeedControl onSpeedChange={setGameSpeed} />
+      {isRetraining && (
+        <div className="my-4 p-4 border rounded-lg bg-secondary">
+          <h3 className="text-lg font-semibold mb-2">Retreinando Modelo</h3>
+          <Progress value={retrainingProgress} className="w-full" />
+          <p className="text-sm text-muted-foreground mt-2">
+            Progresso: {Math.round(retrainingProgress)}%
+          </p>
+        </div>
+      )}
       <PlayPageContent
-        isPlaying={isPlaying}
+        isPlaying={isPlaying && !isRetraining}
         onPlay={playGame}
         onPause={pauseGame}
         onReset={resetGame}
