@@ -5,9 +5,13 @@ export const calculateFitness = (player: Player, boardNumbers: number[]): number
     return 0;
   }
 
-  const matches = player.predictions.filter(prediction => 
-    Array.isArray(prediction) && prediction.some(num => boardNumbers.includes(num))
-  ).length;
+  const matches = player.predictions.reduce((acc, prediction) => {
+    if (Array.isArray(prediction)) {
+      const matchingNumbers = prediction.filter(num => boardNumbers.includes(num));
+      return acc + matchingNumbers.length;
+    }
+    return acc;
+  }, 0);
   
   const consistencyBonus = calculateConsistencyBonus(player);
   const adaptabilityScore = calculateAdaptabilityScore(player);
@@ -76,13 +80,10 @@ const findSequences = (numbers: number[]): number => {
 };
 
 export const createMutatedClone = (player: Player, mutationRate: number = 0.1): Player => {
-  // Taxa de mutação adaptativa baseada na idade
   const adaptiveMutationRate = mutationRate * (1 + (player.age / 50));
   
-  // Mutação dos pesos preservando o nicho
   const mutatedWeights = player.weights.map(weight => {
     if (Math.random() < adaptiveMutationRate) {
-      // Mutação mais suave para evitar mudanças bruscas
       const mutation = (Math.random() - 0.5) * 0.1;
       return Math.max(0, Math.min(1, weight * (1 + mutation)));
     }
@@ -103,13 +104,11 @@ export const createMutatedClone = (player: Player, mutationRate: number = 0.1): 
 };
 
 export const crossoverPlayers = (parent1: Player, parent2: Player): Player => {
-  // Crossover uniforme com bias para o pai mais forte
   const childWeights = parent1.weights.map((weight, index) => {
     const useParent1 = Math.random() < (0.5 + (parent1.fitness > parent2.fitness ? 0.2 : -0.2));
     return useParent1 ? weight : parent2.weights[index];
   });
 
-  // Herda o nicho do pai mais forte
   const preferredNiche = parent1.fitness > parent2.fitness ? 
     parent1.niche : parent2.niche;
 
