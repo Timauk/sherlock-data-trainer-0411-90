@@ -1,8 +1,12 @@
 import { useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import { Player, ModelVisualization } from '@/types/gameTypes';
-import { processGameIteration } from '@/utils/gameProcessing/gameIteration';
-import { handleModelUpdate } from '@/utils/gameProcessing/modelUpdate';
+import { makePrediction } from '@/utils/predictionUtils';
+import { calculateReward, logReward } from '@/utils/rewardSystem';
+import { getLunarPhase, analyzeLunarPatterns } from '@/utils/lunarCalculations';
+import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
+import { temporalAccuracyTracker } from '@/utils/prediction/temporalAccuracy';
+import { TimeSeriesAnalysis } from '@/utils/analysis/timeSeriesAnalysis';
 import { systemLogger } from '@/utils/logging/systemLogger';
 
 export const useGameLoop = (
@@ -42,56 +46,109 @@ export const useGameLoop = (
     setConcursoNumber(nextConcurso);
     setGameCount(prev => prev + 1);
 
-    const currentBoardNumbers = csvData[nextConcurso];
-    if (!currentBoardNumbers || currentBoardNumbers.length !== 15) {
-      systemLogger.log('system', `Erro: Dados inválidos no concurso ${nextConcurso}`);
-      return;
-    }
-
+    const currentBoardNumbers = csvData[nextConcurso % csvData.length];
     setBoardNumbers(currentBoardNumbers);
-    systemLogger.log('system', `Processando concurso #${nextConcurso} - Números: ${currentBoardNumbers.join(',')}`);
 
-    try {
-      const { updatedPlayers, metrics } = await processGameIteration({
-        players,
-        csvData,
-        nextConcurso,
-        trainedModel,
+    const currentDate = new Date();
+    const lunarPhase = getLunarPhase(currentDate);
+    const lunarPatterns = analyzeLunarPatterns([currentDate], [currentBoardNumbers]);
+
+    setNumbers(currentNumbers => {
+      const newNumbers = [...currentNumbers, currentBoardNumbers].slice(-100);
+      return newNumbers;
+    });
+    
+    setDates(currentDates => [...currentDates, currentDate].slice(-100));
+
+    const playerPredictions = await Promise.all(
+      players.map(async player => {
+        const prediction = await makePrediction(
+          trainedModel,
+          currentBoardNumbers,
+          player.weights,
+          nextConcurso,
+          setNeuralNetworkVisualization,
+          { lunarPhase, lunarPatterns },
+          { numbers: [[...currentBoardNumbers]], dates: [currentDate] }
+        );
+
+        const timeSeriesAnalyzer = new TimeSeriesAnalysis([[...currentBoardNumbers]]);
+        const arimaPredictor = timeSeriesAnalyzer.analyzeNumbers();
+        predictionMonitor.recordPrediction(prediction, currentBoardNumbers, arimaPredictor);
+
+        return prediction;
+      })
+    );
+
+    let totalMatches = 0;
+    let randomMatches = 0;
+    let currentGameMatches = 0;
+    let currentGameRandomMatches = 0;
+
+    const updatedPlayers = players.map((player, index) => {
+      const predictions = playerPredictions[index];
+      const matches = predictions.filter(num => currentBoardNumbers.includes(num)).length;
+      totalMatches += matches;
+      currentGameMatches += matches;
+
+      const randomPrediction = Array.from({ length: 15 }, () => Math.floor(Math.random() * 25) + 1);
+      const randomMatch = randomPrediction.filter(num => currentBoardNumbers.includes(num)).length;
+      randomMatches += randomMatch;
+      currentGameRandomMatches += randomMatch;
+
+      temporalAccuracyTracker.recordAccuracy(matches, 15);
+
+      const reward = calculateReward(matches);
+      
+      if (matches >= 11) {
+        const logMessage = logReward(matches, player.id);
+        addLog(logMessage, matches);
+        
+        if (matches >= 13) {
+          showToast?.("Desempenho Excepcional!", 
+            `Jogador ${player.id} acertou ${matches} números!`);
+        }
+      }
+
+      return {
+        ...player,
+        score: player.score + reward,
+        predictions,
+        fitness: matches
+      };
+    });
+
+    setPlayers(updatedPlayers);
+    setModelMetrics({
+      accuracy: totalMatches / (players.length * 15),
+      randomAccuracy: randomMatches / (players.length * 15),
+      totalPredictions: players.length * (nextConcurso + 1),
+      perGameAccuracy: currentGameMatches / (players.length * 15),
+      perGameRandomAccuracy: currentGameRandomMatches / (players.length * 15)
+    });
+
+    setEvolutionData(prev => [
+      ...prev,
+      ...updatedPlayers.map(player => ({
         generation,
-        addLog,
-        setNeuralNetworkVisualization,
-        showToast
-      });
+        playerId: player.id,
+        score: player.score,
+        fitness: player.fitness
+      }))
+    ]);
 
-      setPlayers(updatedPlayers);
-      setModelMetrics(metrics);
-      setEvolutionData(prev => [
-        ...prev,
-        ...updatedPlayers.map(player => ({
-          generation,
-          playerId: player.id,
-          score: player.score,
-          fitness: player.fitness
-        }))
-      ]);
+    const enhancedTrainingData = [...currentBoardNumbers, 
+      ...updatedPlayers[0].predictions,
+      lunarPhase === 'Cheia' ? 1 : 0,
+      lunarPhase === 'Nova' ? 1 : 0,
+      lunarPhase === 'Crescente' ? 1 : 0,
+      lunarPhase === 'Minguante' ? 1 : 0
+    ];
 
-      await handleModelUpdate({
-        nextConcurso,
-        updateInterval,
-        trainedModel,
-        trainingData,
-        setTrainingData,
-        addLog,
-        showToast
-      });
+    setTrainingData(currentTrainingData => [...currentTrainingData, enhancedTrainingData]);
 
-      setTimeout(gameLoop, updateInterval);
+    setTimeout(gameLoop, updateInterval);
 
-    } catch (error) {
-      systemLogger.log('system', 'Erro durante processamento do concurso', { error });
-      console.error('Erro no loop do jogo:', error);
-      showToast?.("Erro no Processamento", "Ocorreu um erro durante o processamento do jogo");
-    }
   }, [
     players,
     setPlayers,
