@@ -41,7 +41,13 @@ export const useGameLoop = (
   const gameLoop = useCallback(async () => {
     if (csvData.length === 0 || !trainedModel) return;
 
-    const nextConcurso = (concursoNumber + 1) % csvData.length;
+    // Atualiza para o próximo concurso sem resetar para 0
+    const nextConcurso = concursoNumber + 1;
+    if (nextConcurso >= csvData.length) {
+      showToast?.("Fim dos Dados", "Todos os jogos foram processados!");
+      return;
+    }
+    
     setConcursoNumber(nextConcurso);
     setGameCount(prev => prev + 1);
 
