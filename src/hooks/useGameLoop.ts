@@ -1,15 +1,10 @@
+// Vamos dividir o useGameLoop em arquivos menores para melhor manutenção
 import { useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import { Player, ModelVisualization } from '@/types/gameTypes';
-import { makePrediction } from '@/utils/predictionUtils';
-import { updateModelWithNewData } from '@/utils/modelUtils';
-import { calculateReward, logReward } from '@/utils/rewardSystem';
-import { getLunarPhase, analyzeLunarPatterns } from '@/utils/lunarCalculations';
-import { performCrossValidation } from '@/utils/validation/crossValidation';
-import { calculateConfidenceScore } from '@/utils/prediction/confidenceScoring';
-import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
-import { temporalAccuracyTracker } from '@/utils/prediction/temporalAccuracy';
-import { TimeSeriesAnalysis } from '@/utils/analysis/timeSeriesAnalysis';
+import { processGameIteration } from '@/utils/gameProcessing/gameIteration';
+import { handleModelUpdate } from '@/utils/gameProcessing/modelUpdate';
+import { systemLogger } from '@/utils/logging/systemLogger';
 
 export const useGameLoop = (
   players: Player[],
@@ -27,153 +22,69 @@ export const useGameLoop = (
   setDates: React.Dispatch<React.SetStateAction<Date[]>>,
   setNeuralNetworkVisualization: (vis: ModelVisualization | null) => void,
   setBoardNumbers: (numbers: number[]) => void,
-  setModelMetrics: (metrics: { 
-    accuracy: number; 
-    randomAccuracy: number; 
-    totalPredictions: number;
-    perGameAccuracy: number;
-    perGameRandomAccuracy: number;
-  }) => void,
+  setModelMetrics: (metrics: any) => void,
   setConcursoNumber: (num: number) => void,
   setGameCount: React.Dispatch<React.SetStateAction<number>>,
   showToast?: (title: string, description: string) => void
 ) => {
   const gameLoop = useCallback(async () => {
-    if (csvData.length === 0 || !trainedModel) return;
+    if (csvData.length === 0 || !trainedModel) {
+      systemLogger.log('system', 'Jogo não pode continuar - Dados ou modelo ausentes');
+      return;
+    }
 
-    // Atualiza para o próximo concurso sem resetar para 0
     const nextConcurso = concursoNumber + 1;
     if (nextConcurso >= csvData.length) {
+      systemLogger.log('system', 'Processamento finalizado - Todos os concursos analisados');
       showToast?.("Fim dos Dados", "Todos os jogos foram processados!");
       return;
     }
     
     setConcursoNumber(nextConcurso);
     setGameCount(prev => prev + 1);
+    systemLogger.log('system', `Processando concurso #${nextConcurso}`);
 
-    const currentBoardNumbers = csvData[nextConcurso];
-    setBoardNumbers(currentBoardNumbers);
-    
-    const validationMetrics = performCrossValidation(
-      [players[0].predictions],
-      csvData.slice(Math.max(0, nextConcurso - 10), nextConcurso)
-    );
-
-    const currentDate = new Date();
-    const lunarPhase = getLunarPhase(currentDate);
-    const lunarPatterns = analyzeLunarPatterns([currentDate], [currentBoardNumbers]);
-    
-    setNumbers(currentNumbers => {
-      const newNumbers = [...currentNumbers, currentBoardNumbers].slice(-100);
-      return newNumbers;
-    });
-    
-    setDates(currentDates => [...currentDates, currentDate].slice(-100));
-
-    const playerPredictions = await Promise.all(
-      players.map(async player => {
-        const prediction = await makePrediction(
-          trainedModel, 
-          currentBoardNumbers, 
-          player.weights, 
-          nextConcurso,
-          setNeuralNetworkVisualization,
-          { lunarPhase, lunarPatterns },
-          { numbers: [[...currentBoardNumbers]], dates: [currentDate] }
-        );
-
-        // Monitorar previsões
-        const timeSeriesAnalyzer = new TimeSeriesAnalysis([[...currentBoardNumbers]]);
-        const arimaPredictor = timeSeriesAnalyzer.analyzeNumbers();
-        predictionMonitor.recordPrediction(prediction, currentBoardNumbers, arimaPredictor);
-
-        return prediction;
-      })
-    );
-
-    let totalMatches = 0;
-    let randomMatches = 0;
-    let currentGameMatches = 0;
-    let currentGameRandomMatches = 0;
-    const totalPredictions = players.length * (nextConcurso + 1);
-
-    const updatedPlayers = players.map((player, index) => {
-      const predictions = playerPredictions[index];
-      const matches = predictions.filter(num => currentBoardNumbers.includes(num)).length;
-      totalMatches += matches;
-      currentGameMatches += matches;
-
-      // Apenas notifica acertos excepcionais, sem parar o jogo
-      if (matches >= 15) {
-        showToast?.("Resultado Excepcional!", 
-          `Jogador ${player.id} acertou ${matches} números!`);
-      }
-
-      const randomPrediction = Array.from({ length: 15 }, () => Math.floor(Math.random() * 25) + 1);
-      const randomMatch = randomPrediction.filter(num => currentBoardNumbers.includes(num)).length;
-      randomMatches += randomMatch;
-      currentGameRandomMatches += randomMatch;
-
-      // Record temporal accuracy
-      temporalAccuracyTracker.recordAccuracy(matches, 15);
-
-      const reward = calculateReward(matches);
-      
-      if (matches >= 11) {
-        const logMessage = logReward(matches, player.id);
-        addLog(logMessage, matches);
-        
-        if (matches >= 13) {
-          showToast?.("Desempenho Excepcional!", 
-            `Jogador ${player.id} acertou ${matches} números!`);
-        }
-      }
-
-      return {
-        ...player,
-        score: player.score + reward,
-        predictions,
-        fitness: matches
-      };
-    });
-
-    setModelMetrics({
-      accuracy: totalMatches / (players.length * 15),
-      randomAccuracy: randomMatches / (players.length * 15),
-      totalPredictions: totalPredictions,
-      perGameAccuracy: currentGameMatches / (players.length * 15),
-      perGameRandomAccuracy: currentGameRandomMatches / (players.length * 15)
-    });
-
-    setPlayers(updatedPlayers);
-    setEvolutionData(prev => [
-      ...prev,
-      ...updatedPlayers.map(player => ({
+    try {
+      const { updatedPlayers, metrics } = await processGameIteration({
+        players,
+        csvData,
+        nextConcurso,
+        trainedModel,
         generation,
-        playerId: player.id,
-        score: player.score,
-        fitness: player.fitness
-      }))
-    ]);
+        addLog,
+        setNeuralNetworkVisualization,
+        showToast
+      });
 
-    const enhancedTrainingData = [...currentBoardNumbers, 
-      ...updatedPlayers[0].predictions,
-      lunarPhase === 'Cheia' ? 1 : 0,
-      lunarPhase === 'Nova' ? 1 : 0,
-      lunarPhase === 'Crescente' ? 1 : 0,
-      lunarPhase === 'Minguante' ? 1 : 0
-    ];
+      setPlayers(updatedPlayers);
+      setModelMetrics(metrics);
+      setEvolutionData(prev => [
+        ...prev,
+        ...updatedPlayers.map(player => ({
+          generation,
+          playerId: player.id,
+          score: player.score,
+          fitness: player.fitness
+        }))
+      ]);
 
-    setTrainingData(currentTrainingData => 
-      [...currentTrainingData, enhancedTrainingData]);
+      await handleModelUpdate({
+        nextConcurso,
+        updateInterval,
+        trainedModel,
+        trainingData,
+        setTrainingData,
+        addLog,
+        showToast
+      });
 
-    if (nextConcurso % Math.min(updateInterval, 50) === 0 && trainingData.length > 0) {
-      await updateModelWithNewData(trainedModel, trainingData, addLog, showToast);
-      setTrainingData([]);
+      // Chama o próximo loop automaticamente após um pequeno delay
+      setTimeout(gameLoop, 100);
+      
+    } catch (error) {
+      systemLogger.log('system', 'Erro durante processamento do concurso', { error });
+      console.error('Erro no loop do jogo:', error);
     }
-
-    // Chama o próximo loop automaticamente após um pequeno delay
-    setTimeout(gameLoop, 100);
     
   }, [
     players,
@@ -189,8 +100,8 @@ export const useGameLoop = (
     setTrainingData,
     setNumbers,
     setDates,
-    setBoardNumbers,
     setNeuralNetworkVisualization,
+    setBoardNumbers,
     setModelMetrics,
     setConcursoNumber,
     setGameCount,

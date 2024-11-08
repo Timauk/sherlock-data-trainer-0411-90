@@ -103,18 +103,20 @@ const PlayPage: React.FC = () => {
       return;
     }
     setIsPlaying(true);
+    gameLogic.addLog("Jogo iniciado - Processamento automático ativado");
     gameLogic.gameLoop(); // Inicia o loop contínuo
   }, [trainedModel, csvData, gameLogic]);
 
   const pauseGame = useCallback(() => {
     setIsPlaying(false);
-  }, []);
+    gameLogic.addLog("Jogo pausado pelo usuário");
+  }, [gameLogic]);
 
   const resetGame = useCallback(() => {
     setIsPlaying(false);
     setProgress(0);
     gameLogic.initializePlayers();
-    gameLogic.addLog("Jogo reiniciado.");
+    gameLogic.addLog("Jogo reiniciado - Estado inicial restaurado");
   }, [gameLogic]);
 
   useEffect(() => {
