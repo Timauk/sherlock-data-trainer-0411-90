@@ -3,6 +3,7 @@ import cors from 'cors';
 import compression from 'compression';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import fs from 'fs';
 import NodeCache from 'node-cache';
 import * as tf from '@tensorflow/tfjs';
 import { logger } from './src/utils/logging/logger.js';
