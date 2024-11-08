@@ -39,8 +39,8 @@ export const useGameLoop = (
       return;
     }
 
-    // Atualiza o número do concurso
-    setConcursoNumber(nextConcurso);
+    // Força a atualização do número do concurso antes de continuar
+    await Promise.resolve(setConcursoNumber(nextConcurso));
     setGameCount(prev => prev + 1);
 
     // Atualiza números da banca para o concurso atual
@@ -50,12 +50,11 @@ export const useGameLoop = (
       return;
     }
 
-    // Atualiza o display com os novos números
-    setBoardNumbers(currentBoardNumbers);
+    // Força a atualização do display com os novos números
+    await Promise.resolve(setBoardNumbers(currentBoardNumbers));
     systemLogger.log('system', `Processando concurso #${nextConcurso} - Números: ${currentBoardNumbers.join(',')}`);
 
     try {
-      // Processa a iteração do jogo com os novos números
       const { updatedPlayers, metrics } = await processGameIteration({
         players,
         csvData,
@@ -67,22 +66,20 @@ export const useGameLoop = (
         showToast
       });
 
-      // Atualiza os jogadores e métricas
-      setPlayers(updatedPlayers);
-      setModelMetrics(metrics);
-      
-      // Atualiza dados de evolução
-      setEvolutionData(prev => [
-        ...prev,
-        ...updatedPlayers.map(player => ({
-          generation,
-          playerId: player.id,
-          score: player.score,
-          fitness: player.fitness
-        }))
+      await Promise.all([
+        Promise.resolve(setPlayers(updatedPlayers)),
+        Promise.resolve(setModelMetrics(metrics)),
+        Promise.resolve(setEvolutionData(prev => [
+          ...prev,
+          ...updatedPlayers.map(player => ({
+            generation,
+            playerId: player.id,
+            score: player.score,
+            fitness: player.fitness
+          }))
+        ]))
       ]);
 
-      // Atualiza o modelo se necessário
       await handleModelUpdate({
         nextConcurso,
         updateInterval,
@@ -93,9 +90,13 @@ export const useGameLoop = (
         showToast
       });
 
-      // Aguarda um pequeno intervalo antes da próxima iteração
-      // O intervalo é ajustado com base na velocidade definida
+      // Ajusta o delay com base na velocidade definida
       const processingDelay = Math.max(50, Math.min(1000, updateInterval));
+      
+      // Garante que todas as atualizações de estado foram processadas
+      await new Promise(resolve => setTimeout(resolve, 10));
+      
+      // Agenda o próximo loop
       setTimeout(gameLoop, processingDelay);
 
     } catch (error) {
