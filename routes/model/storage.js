@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
+// Explicitly define the route
 router.post('/save-full-model', async (req, res) => {
   try {
     const { playersData, evolutionHistory } = req.body;
@@ -25,49 +26,19 @@ router.post('/save-full-model', async (req, res) => {
 
     const model = await getOrCreateModel();
     
-    // Get model weights and topology
-    const saveResult = await model.save(tf.io.withSaveHandler(async (artifacts) => {
-      // Create base directory if it doesn't exist
-      const baseModelDir = path.join(__dirname, '..', '..', 'saved-models');
-      if (!fs.existsSync(baseModelDir)) {
-        fs.mkdirSync(baseModelDir, { recursive: true });
-      }
-      
-      const modelPath = path.join(baseModelDir, 'full-model');
-      if (!fs.existsSync(modelPath)) {
-        fs.mkdirSync(modelPath, { recursive: true });
-      }
+    // Create base directory if it doesn't exist
+    const baseModelDir = path.join(__dirname, '..', '..', 'saved-models');
+    if (!fs.existsSync(baseModelDir)) {
+      fs.mkdirSync(baseModelDir, { recursive: true });
+    }
+    
+    const modelPath = path.join(baseModelDir, 'full-model');
+    if (!fs.existsSync(modelPath)) {
+      fs.mkdirSync(modelPath, { recursive: true });
+    }
 
-      // Save model topology with weights manifest
-      const modelJson = {
-        modelTopology: artifacts.modelTopology,
-        weightsManifest: [{
-          paths: ['weights.bin'],
-          weights: artifacts.weightSpecs
-        }],
-        format: 'layers-model',
-        generatedBy: 'TensorFlow.js tfjs-layers v4.21.0',
-        convertedBy: null
-      };
-      
-      fs.writeFileSync(
-        path.join(modelPath, 'model.json'),
-        JSON.stringify(modelJson, null, 2)
-      );
-      
-      // Save weights binary data
-      fs.writeFileSync(
-        path.join(modelPath, 'weights.bin'),
-        Buffer.from(artifacts.weightData)
-      );
-
-      return {
-        modelArtifactsInfo: {
-          dateSaved: new Date(),
-          modelTopologyType: 'JSON',
-        }
-      };
-    }));
+    // Save model topology and weights
+    const saveResult = await model.save(`file://${modelPath}`);
 
     const fullModelData = {
       totalSamples: global.totalSamples || 0,
@@ -78,13 +49,13 @@ router.post('/save-full-model', async (req, res) => {
 
     // Save metadata
     fs.writeFileSync(
-      path.join(path.dirname(saveResult.modelArtifactsInfo.path), 'metadata.json'),
+      path.join(modelPath, 'metadata.json'),
       JSON.stringify(fullModelData, null, 2)
     );
 
     logger.info({
       timestamp: fullModelData.timestamp,
-      modelArtifacts: saveResult
+      modelPath: modelPath
     }, 'Model saved successfully');
     
     res.json({
