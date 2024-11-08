@@ -44,9 +44,13 @@ export const useGameLoop = (
     
     // Atualizar números da banca
     const currentBoardNumbers = csvData[nextConcurso];
-    setBoardNumbers(currentBoardNumbers);
+    if (!currentBoardNumbers || currentBoardNumbers.length !== 15) {
+      systemLogger.log('system', `Erro: Dados inválidos no concurso ${nextConcurso}`);
+      return;
+    }
     
-    systemLogger.log('system', `Processando concurso #${nextConcurso}`);
+    setBoardNumbers(currentBoardNumbers);
+    systemLogger.log('system', `Processando concurso #${nextConcurso} - Números: ${currentBoardNumbers.join(',')}`);
 
     try {
       const { updatedPlayers, metrics } = await processGameIteration({
