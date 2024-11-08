@@ -15,7 +15,13 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3001;
 
-// Updated CORS configuration to be more specific and handle credentials
+// Cache configuration
+const gameCache = new NodeCache({ 
+  stdTTL: 0, // Infinite TTL
+  checkperiod: 0, // Disable periodic checks
+  useClones: false
+});
+
 app.use(cors({
   origin: true, // Allow requests from any origin
   credentials: true, // Allow credentials (cookies, authorization headers, etc)
@@ -37,6 +43,32 @@ dirs.forEach(dir => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
+});
+
+// New endpoint to store game predictions
+app.post('/api/game/store', (req, res) => {
+  const { concurso, predictions, players } = req.body;
+  const currentGames = gameCache.get('games') || [];
+  
+  currentGames.push({
+    concurso,
+    predictions,
+    players,
+    timestamp: new Date().toISOString()
+  });
+  
+  gameCache.set('games', currentGames);
+  
+  res.json({ 
+    success: true, 
+    gamesStored: currentGames.length 
+  });
+});
+
+// Endpoint to retrieve all stored games
+app.get('/api/game/all', (req, res) => {
+  const games = gameCache.get('games') || [];
+  res.json(games);
 });
 
 // Import routes

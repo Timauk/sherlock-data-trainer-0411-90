@@ -1,8 +1,8 @@
 import React from 'react';
 import { Card } from "@/components/ui/card";
-import TotalScoreChart from '../TotalScoreChart';
 import TotalFitnessChart from '../TotalFitnessChart';
 import AnalysisTabs from '../GameAnalysis/AnalysisTabs';
+import { Button } from "@/components/ui/button";
 
 interface AnalysisPanelProps {
   champion: any;
@@ -35,11 +35,6 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   concursoNumber,
   onExportCSV
 }) => {
-  const scoreData = evolutionData.map(data => ({
-    gameNumber: data.generation,
-    totalScore: data.score
-  }));
-
   const fitnessData = evolutionData.map(data => ({
     gameNumber: data.generation,
     totalFitness: data.fitness
@@ -47,8 +42,19 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
 
   return (
     <Card className="p-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <TotalScoreChart scoreData={scoreData} onExportCSV={onExportCSV} />
+      <div className="flex justify-end mb-4">
+        {onExportCSV && (
+          <Button 
+            variant="outline" 
+            onClick={onExportCSV}
+            className="ml-auto"
+          >
+            Exportar CSV
+          </Button>
+        )}
+      </div>
+      
+      <div className="mb-4">
         <TotalFitnessChart fitnessData={fitnessData} />
       </div>
       

@@ -43,26 +43,72 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         gameLogic.players[0])
     : null;
 
-  const handleExportCSV = () => {
-    if (gameLogic.players && gameLogic.players.length > 0) {
-      const predictions = gameLogic.players.map((player: any) => ({
-        concurso: gameLogic.concursoNumber,
-        numbers: player.predictions || []
-      }));
+  const handleExportCSV = async () => {
+    try {
+      // Recupera todos os jogos armazenados
+      const response = await fetch('http://localhost:3001/api/game/all');
+      const allGames = await response.json();
       
-      exportPredictionsToCSV(predictions, gameLogic.players);
-      toast({
-        title: "Exportação Concluída",
-        description: "O arquivo CSV foi gerado com sucesso.",
-      });
-    } else {
+      if (allGames && allGames.length > 0) {
+        const allPredictions = allGames.flatMap(game => 
+          game.predictions.map((pred: any) => ({
+            concurso: game.concurso,
+            numbers: pred.numbers
+          }))
+        );
+        
+        exportPredictionsToCSV(allPredictions, gameLogic.players);
+        toast({
+          title: "Exportação Concluída",
+          description: `${allGames.length} jogos foram exportados com sucesso.`,
+        });
+      } else {
+        toast({
+          title: "Erro na Exportação",
+          description: "Não há dados para exportar.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
       toast({
         title: "Erro na Exportação",
-        description: "Não há dados para exportar.",
+        description: "Erro ao recuperar os jogos do servidor.",
         variant: "destructive"
       });
     }
   };
+
+  // Função para armazenar o jogo atual
+  const storeCurrentGame = async () => {
+    if (gameLogic.players && gameLogic.players.length > 0) {
+      try {
+        const predictions = gameLogic.players.map((player: any) => ({
+          numbers: player.predictions || []
+        }));
+        
+        await fetch('http://localhost:3001/api/game/store', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            concurso: gameLogic.concursoNumber,
+            predictions,
+            players: gameLogic.players
+          })
+        });
+      } catch (error) {
+        console.error('Erro ao armazenar jogo:', error);
+      }
+    }
+  };
+
+  // Armazena o jogo atual sempre que houver mudança no número do concurso
+  React.useEffect(() => {
+    if (gameLogic.concursoNumber > 0) {
+      storeCurrentGame();
+    }
+  }, [gameLogic.concursoNumber]);
 
   const saveFullModel = async () => {
     try {
