@@ -6,10 +6,10 @@ export interface GameLogicProps {
   players: any[];
   modelMetrics: any;
   trainedModel: any;
-  boardNumbers: any[];
+  boardNumbers: number[];
   evolutionData: any;
   dates: Date[];
-  numbers: number[];
+  numbers: number[][];  // Changed from number[] to number[][] to match the actual data structure
   neuralNetworkVisualization: any;
   concursoNumber: number;
   toggleInfiniteMode: () => void;

@@ -4,6 +4,7 @@ import ProcessingPanel from './PlayPageContent/ProcessingPanel';
 import AnalysisPanel from './PlayPageContent/AnalysisPanel';
 import { useToast } from "@/hooks/use-toast";
 import { ModelUploadProps, GameLogicProps } from '@/types/modelTypes';
+import { exportPredictionsToCSV } from '@/utils/exportUtils';
 
 interface PlayPageContentProps extends ModelUploadProps {
   isPlaying: boolean;
