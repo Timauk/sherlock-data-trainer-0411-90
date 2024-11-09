@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Trophy } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { exportPredictionsToCSV } from '@/utils/exportUtils';
+import { useToast } from "@/components/ui/use-toast";
 
 interface TotalScoreChartProps {
   scoreData: Array<{
@@ -14,12 +14,36 @@ interface TotalScoreChartProps {
 }
 
 const TotalScoreChart: React.FC<TotalScoreChartProps> = ({ scoreData, onExportCSV }) => {
+  const { toast } = useToast();
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (!onExportCSV) return;
+    
+    setIsExporting(true);
+    try {
+      await onExportCSV();
+      toast({
+        title: "Exportação Concluída",
+        description: "O histórico completo de jogos foi exportado com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro na Exportação",
+        description: "Ocorreu um erro ao exportar o histórico de jogos.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Calcula a média por partida em vez do total acumulado
   const averageScoreData = scoreData.map((data, index) => {
     const previousTotal = index > 0 ? scoreData[index - 1].totalScore : 0;
     return {
       gameNumber: data.gameNumber,
-      scorePerGame: data.totalScore - previousTotal // Diferença do total anterior
+      scorePerGame: data.totalScore - previousTotal
     };
   });
 
@@ -33,10 +57,11 @@ const TotalScoreChart: React.FC<TotalScoreChartProps> = ({ scoreData, onExportCS
         {onExportCSV && (
           <Button 
             variant="outline" 
-            onClick={onExportCSV}
+            onClick={handleExport}
+            disabled={isExporting}
             className="ml-auto"
           >
-            Exportar CSV
+            {isExporting ? "Exportando..." : "Exportar Histórico Completo"}
           </Button>
         )}
       </CardHeader>
