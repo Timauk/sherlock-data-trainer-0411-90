@@ -7,10 +7,11 @@ export async function getOrCreateModel() {
   if (!globalModel) {
     globalModel = tf.sequential();
     
+    // First layer must specify inputShape
     globalModel.add(tf.layers.dense({ 
       units: 256, 
       activation: 'relu', 
-      inputShape: [17],
+      inputShape: [17], // Explicitly specify input shape
       kernelInitializer: 'glorotNormal',
       kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
     }));
