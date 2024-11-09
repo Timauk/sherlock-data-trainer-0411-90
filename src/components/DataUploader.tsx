@@ -7,7 +7,7 @@ import CheckpointControls from './CheckpointControls';
 
 interface DataUploaderProps {
   onCsvUpload: (file: File) => void;
-  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile: File, weightSpecsFile: File) => void;
+  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile?: File, weightSpecsFile?: File) => void;
   onSaveModel: () => void;
 }
 
@@ -57,13 +57,11 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
   const validateFiles = () => {
     const jsonFile = jsonFileRef.current?.files?.[0];
     const weightsFile = weightsFileRef.current?.files?.[0];
-    const metadataFile = metadataFileRef.current?.files?.[0];
-    const weightSpecsFile = weightSpecsFileRef.current?.files?.[0];
 
-    if (!jsonFile || !weightsFile || !metadataFile || !weightSpecsFile) {
+    if (!jsonFile || !weightsFile) {
       toast({
         title: "Arquivos Necessários",
-        description: "Por favor, selecione todos os quatro arquivos: model.json, weights.bin, metadata.json e weight-specs.json",
+        description: "Por favor, selecione pelo menos os arquivos model.json e weights.bin",
         variant: "destructive"
       });
       return false;
@@ -92,10 +90,10 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
           </div>
           
           <div className="space-y-4 p-4 border rounded-lg bg-secondary">
-            <h3 className="font-medium mb-2">Carregar Modelo (Todos os arquivos são necessários):</h3>
+            <h3 className="font-medium mb-2">Carregar Modelo:</h3>
             
             <div>
-              <label htmlFor="modelJsonInput" className="block mb-2">1. Arquivo do Modelo (JSON):</label>
+              <label htmlFor="modelJsonInput" className="block mb-2">1. Arquivo do Modelo (JSON) *:</label>
               <input
                 type="file"
                 id="modelJsonInput"
@@ -106,7 +104,7 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
             </div>
             
             <div>
-              <label htmlFor="modelWeightsInput" className="block mb-2">2. Arquivo de Pesos (bin):</label>
+              <label htmlFor="modelWeightsInput" className="block mb-2">2. Arquivo de Pesos (bin) *:</label>
               <input
                 type="file"
                 id="modelWeightsInput"
@@ -117,7 +115,7 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
             </div>
             
             <div>
-              <label htmlFor="modelMetadataInput" className="block mb-2">3. Arquivo de Metadata (JSON):</label>
+              <label htmlFor="modelMetadataInput" className="block mb-2">3. Arquivo de Metadata (JSON) (opcional):</label>
               <input
                 type="file"
                 id="modelMetadataInput"
@@ -128,7 +126,7 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
             </div>
 
             <div>
-              <label htmlFor="weightSpecsInput" className="block mb-2">4. Arquivo de Especificações de Pesos (JSON):</label>
+              <label htmlFor="weightSpecsInput" className="block mb-2">4. Arquivo de Especificações de Pesos (JSON) (opcional):</label>
               <input
                 type="file"
                 id="weightSpecsInput"
@@ -146,14 +144,14 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
                   const metadataFile = metadataFileRef.current?.files?.[0];
                   const weightSpecsFile = weightSpecsFileRef.current?.files?.[0];
                   
-                  if (jsonFile && weightsFile && metadataFile && weightSpecsFile) {
+                  if (jsonFile && weightsFile) {
                     onModelUpload(jsonFile, weightsFile, metadataFile, weightSpecsFile);
                   }
                 }
               }}
               className="w-full mt-4"
             >
-              <Upload className="mr-2 h-4 w-4" /> Carregar Modelo Completo
+              <Upload className="mr-2 h-4 w-4" /> Carregar Modelo
             </Button>
           </div>
         </TabsContent>
