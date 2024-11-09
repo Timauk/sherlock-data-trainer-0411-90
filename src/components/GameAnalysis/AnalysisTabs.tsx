@@ -9,6 +9,7 @@ import ModelMetrics from '../ModelMetrics';
 import LunarAnalysis from '../LunarAnalysis';
 import FrequencyAnalysis from '../FrequencyAnalysis';
 import AdvancedAnalysis from '../AdvancedAnalysis';
+import ChampionPredictions from '../ChampionPredictions';
 
 interface AnalysisTabsProps {
   boardNumbers: number[];
@@ -27,6 +28,9 @@ interface AnalysisTabsProps {
     input?: number[];
     output?: number[];
   };
+  champion?: Player;
+  trainedModel: any;
+  lastConcursoNumbers: number[];
 }
 
 const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
@@ -38,12 +42,16 @@ const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
   numbers,
   updateFrequencyData,
   modelMetrics,
-  neuralNetworkVisualization
+  neuralNetworkVisualization,
+  champion,
+  trainedModel,
+  lastConcursoNumbers
 }) => {
   return (
     <Tabs defaultValue="game" className="w-full">
-      <TabsList>
+      <TabsList className="grid grid-cols-5 w-full">
         <TabsTrigger value="game">Jogo</TabsTrigger>
+        <TabsTrigger value="generator">Gerador</TabsTrigger>
         <TabsTrigger value="analysis">Análise</TabsTrigger>
         <TabsTrigger value="neural">Rede Neural</TabsTrigger>
         <TabsTrigger value="diagnostics">Diagnóstico</TabsTrigger>
@@ -59,6 +67,14 @@ const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
           />
           <EnhancedLogDisplay />
         </div>
+      </TabsContent>
+
+      <TabsContent value="generator">
+        <ChampionPredictions
+          champion={champion}
+          trainedModel={trainedModel}
+          lastConcursoNumbers={lastConcursoNumbers}
+        />
       </TabsContent>
 
       <TabsContent value="analysis">

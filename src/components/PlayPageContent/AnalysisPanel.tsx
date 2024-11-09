@@ -40,6 +40,9 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
     totalFitness: data.fitness
   }));
 
+  // Pegar os últimos números do concurso
+  const lastConcursoNumbers = numbers[numbers.length - 1] || [];
+
   return (
     <Card className="p-6">
       <div className="flex justify-end mb-4">
@@ -68,6 +71,9 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
         updateFrequencyData={() => {}}
         modelMetrics={modelMetrics}
         neuralNetworkVisualization={neuralNetworkVisualization}
+        champion={champion}
+        trainedModel={trainedModel}
+        lastConcursoNumbers={lastConcursoNumbers}
       />
     </Card>
   );
