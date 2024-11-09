@@ -68,7 +68,9 @@ const ProcessingPanel: React.FC<ProcessingPanelProps> = ({
         onReset={onReset}
         onThemeToggle={onThemeToggle}
         onCsvUpload={onCsvUpload}
-        onModelUpload={onModelUpload}
+        onModelUpload={(jsonFile: File, weightsFile: File, metadataFile: File, weightSpecsFile: File) => {
+          onModelUpload(jsonFile, weightsFile, metadataFile, weightSpecsFile);
+        }}
         onSaveModel={onSaveModel}
         toggleInfiniteMode={gameLogic.toggleInfiniteMode}
         toggleManualMode={gameLogic.toggleManualMode}
