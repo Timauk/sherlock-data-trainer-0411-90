@@ -14,7 +14,6 @@ export const loadModelFiles = async (
   weightSpecsFile?: File
 ): Promise<{ model: tf.LayersModel; metadata: ModelMetadata }> => {
   try {
-    // Load and parse the model.json file
     const modelJsonContent = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => resolve(e.target?.result as string);
@@ -22,12 +21,10 @@ export const loadModelFiles = async (
       reader.readAsText(jsonFile);
     });
 
-    // Parse and validate the JSON content
     let modelJson;
     try {
       modelJson = JSON.parse(modelJsonContent);
       
-      // Validate and ensure model structure matches training
       if (!modelJson.modelTopology || !modelJson.weightsManifest) {
         modelJson = {
           modelTopology: {
@@ -43,7 +40,13 @@ export const loadModelFiles = async (
                     use_bias: true,
                     kernel_initializer: "glorotNormal",
                     bias_initializer: "zeros",
-                    kernel_regularizer: { class_name: "L2", config: { l2: 0.01 } },
+                    kernel_regularizer: {
+                      class_name: "L1L2",
+                      config: {
+                        l1: 0,
+                        l2: 0.01
+                      }
+                    },
                     input_shape: [17]
                   }
                 },
@@ -65,7 +68,13 @@ export const loadModelFiles = async (
                     use_bias: true,
                     kernel_initializer: "glorotNormal",
                     bias_initializer: "zeros",
-                    kernel_regularizer: { class_name: "L2", config: { l2: 0.01 } }
+                    kernel_regularizer: {
+                      class_name: "L1L2",
+                      config: {
+                        l1: 0,
+                        l2: 0.01
+                      }
+                    }
                   }
                 },
                 {
@@ -152,16 +161,13 @@ export const loadModelFiles = async (
       throw new Error('Invalid JSON format in model.json file');
     }
 
-    // Create a blob URL for the model JSON
     const modelJsonBlob = new Blob([JSON.stringify(modelJson)], { type: 'application/json' });
 
     try {
-      // Load the model using tf.loadLayersModel
       const model = await tf.loadLayersModel(tf.io.browserFiles(
         [new File([modelJsonBlob], 'model.json'), weightsFile]
       ));
 
-      // Load metadata if provided
       let metadata: ModelMetadata = {};
       if (metadataFile) {
         metadata = await new Promise((resolve, reject) => {
