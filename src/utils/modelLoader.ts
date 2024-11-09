@@ -1,5 +1,4 @@
 import * as tf from '@tensorflow/tfjs';
-import { useToast } from "@/hooks/use-toast";
 
 export interface ModelMetadata {
   totalSamples?: number;
@@ -28,69 +27,125 @@ export const loadModelFiles = async (
     try {
       modelJson = JSON.parse(modelJsonContent);
       
-      // Validate model topology
-      if (!modelJson.modelTopology) {
-        // If topology is missing, create a default model structure
-        modelJson.modelTopology = {
-          class_name: "Sequential",
-          config: {
-            name: "sequential_1",
-            layers: [
-              {
-                class_name: "Dense",
-                config: {
-                  units: 256,
-                  activation: "relu",
-                  use_bias: true,
-                  kernel_initializer: "glorotNormal",
-                  bias_initializer: "zeros",
-                  kernel_regularizer: { class_name: "L2", config: { l2: 0.01 } },
-                  input_shape: [17]
+      // Validate and ensure model structure matches training
+      if (!modelJson.modelTopology || !modelJson.weightsManifest) {
+        modelJson = {
+          modelTopology: {
+            class_name: "Sequential",
+            config: {
+              name: "sequential_1",
+              layers: [
+                {
+                  class_name: "Dense",
+                  config: {
+                    units: 256,
+                    activation: "relu",
+                    use_bias: true,
+                    kernel_initializer: "glorotNormal",
+                    bias_initializer: "zeros",
+                    kernel_regularizer: { class_name: "L2", config: { l2: 0.01 } },
+                    input_shape: [17]
+                  }
+                },
+                {
+                  class_name: "BatchNormalization",
+                  config: {
+                    axis: -1,
+                    momentum: 0.99,
+                    epsilon: 0.001,
+                    center: true,
+                    scale: true
+                  }
+                },
+                {
+                  class_name: "Dense",
+                  config: {
+                    units: 128,
+                    activation: "relu",
+                    use_bias: true,
+                    kernel_initializer: "glorotNormal",
+                    bias_initializer: "zeros",
+                    kernel_regularizer: { class_name: "L2", config: { l2: 0.01 } }
+                  }
+                },
+                {
+                  class_name: "BatchNormalization",
+                  config: {
+                    axis: -1,
+                    momentum: 0.99,
+                    epsilon: 0.001,
+                    center: true,
+                    scale: true
+                  }
+                },
+                {
+                  class_name: "Dense",
+                  config: {
+                    units: 15,
+                    activation: "sigmoid",
+                    use_bias: true,
+                    kernel_initializer: "glorotNormal",
+                    bias_initializer: "zeros"
+                  }
                 }
+              ]
+            }
+          },
+          weightsManifest: [{
+            paths: ["weights.bin"],
+            weights: [
+              {
+                name: "dense_1/kernel",
+                shape: [17, 256],
+                dtype: "float32"
               },
               {
-                class_name: "BatchNormalization",
-                config: {
-                  axis: -1,
-                  momentum: 0.99,
-                  epsilon: 0.001,
-                  center: true,
-                  scale: true
-                }
+                name: "dense_1/bias",
+                shape: [256],
+                dtype: "float32"
               },
               {
-                class_name: "Dense",
-                config: {
-                  units: 128,
-                  activation: "relu",
-                  use_bias: true,
-                  kernel_initializer: "glorotNormal",
-                  bias_initializer: "zeros",
-                  kernel_regularizer: { class_name: "L2", config: { l2: 0.01 } }
-                }
+                name: "batch_normalization_1/gamma",
+                shape: [256],
+                dtype: "float32"
               },
               {
-                class_name: "BatchNormalization",
-                config: {
-                  axis: -1,
-                  momentum: 0.99,
-                  epsilon: 0.001,
-                  center: true,
-                  scale: true
-                }
+                name: "batch_normalization_1/beta",
+                shape: [256],
+                dtype: "float32"
               },
               {
-                class_name: "Dense",
-                config: {
-                  units: 15,
-                  activation: "sigmoid",
-                  use_bias: true,
-                  kernel_initializer: "glorotNormal",
-                  bias_initializer: "zeros"
-                }
+                name: "dense_2/kernel",
+                shape: [256, 128],
+                dtype: "float32"
+              },
+              {
+                name: "dense_2/bias",
+                shape: [128],
+                dtype: "float32"
+              },
+              {
+                name: "batch_normalization_2/gamma",
+                shape: [128],
+                dtype: "float32"
+              },
+              {
+                name: "batch_normalization_2/beta",
+                shape: [128],
+                dtype: "float32"
+              },
+              {
+                name: "dense_3/kernel",
+                shape: [128, 15],
+                dtype: "float32"
+              },
+              {
+                name: "dense_3/bias",
+                shape: [15],
+                dtype: "float32"
               }
             ]
-          }
+          }]
         };
       }
     } catch (error) {
