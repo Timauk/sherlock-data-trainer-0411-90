@@ -7,47 +7,28 @@ export async function getOrCreateModel() {
   if (!globalModel) {
     globalModel = tf.sequential();
     
-    // First layer must specify inputShape
     globalModel.add(tf.layers.dense({ 
       units: 256, 
       activation: 'relu', 
       inputShape: [17],
       kernelInitializer: 'glorotNormal',
-      kernelRegularizer: tf.regularizers.l1l2({ l1: 0, l2: 0.01 }),
-      useBias: true,
-      biasInitializer: 'zeros'
+      kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
     }));
-    globalModel.add(tf.layers.batchNormalization({
-      axis: -1,
-      momentum: 0.99,
-      epsilon: 0.001,
-      center: true,
-      scale: true
-    }));
+    globalModel.add(tf.layers.batchNormalization());
     globalModel.add(tf.layers.dropout({ rate: 0.3 }));
     
     globalModel.add(tf.layers.dense({ 
       units: 128, 
       activation: 'relu',
       kernelInitializer: 'glorotNormal',
-      kernelRegularizer: tf.regularizers.l1l2({ l1: 0, l2: 0.01 }),
-      useBias: true,
-      biasInitializer: 'zeros'
+      kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
     }));
-    globalModel.add(tf.layers.batchNormalization({
-      axis: -1,
-      momentum: 0.99,
-      epsilon: 0.001,
-      center: true,
-      scale: true
-    }));
+    globalModel.add(tf.layers.batchNormalization());
     
     globalModel.add(tf.layers.dense({ 
       units: 15, 
       activation: 'sigmoid',
-      kernelInitializer: 'glorotNormal',
-      useBias: true,
-      biasInitializer: 'zeros'
+      kernelInitializer: 'glorotNormal'
     }));
 
     globalModel.compile({ 
