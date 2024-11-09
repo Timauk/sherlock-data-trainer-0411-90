@@ -7,7 +7,7 @@ import CheckpointControls from './CheckpointControls';
 
 interface DataUploaderProps {
   onCsvUpload: (file: File) => void;
-  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile?: File) => void;
+  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile: File, weightSpecsFile: File) => void;
   onSaveModel: () => void;
 }
 
@@ -15,6 +15,7 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
   const jsonFileRef = useRef<HTMLInputElement>(null);
   const weightsFileRef = useRef<HTMLInputElement>(null);
   const metadataFileRef = useRef<HTMLInputElement>(null);
+  const weightSpecsFileRef = useRef<HTMLInputElement>(null);
   const [savePath, setSavePath] = React.useState(localStorage.getItem('checkpointPath') || '');
   const { toast } = useToast();
 
@@ -57,11 +58,12 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
     const jsonFile = jsonFileRef.current?.files?.[0];
     const weightsFile = weightsFileRef.current?.files?.[0];
     const metadataFile = metadataFileRef.current?.files?.[0];
+    const weightSpecsFile = weightSpecsFileRef.current?.files?.[0];
 
-    if (!jsonFile || !weightsFile || !metadataFile) {
+    if (!jsonFile || !weightsFile || !metadataFile || !weightSpecsFile) {
       toast({
         title: "Arquivos Necessários",
-        description: "Por favor, selecione todos os três arquivos: model.json, weights.bin e metadata.json",
+        description: "Por favor, selecione todos os quatro arquivos: model.json, weights.bin, metadata.json e weight-specs.json",
         variant: "destructive"
       });
       return false;
@@ -125,15 +127,27 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
               />
             </div>
 
+            <div>
+              <label htmlFor="weightSpecsInput" className="block mb-2">4. Arquivo de Especificações de Pesos (JSON):</label>
+              <input
+                type="file"
+                id="weightSpecsInput"
+                accept=".json"
+                ref={weightSpecsFileRef}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+            </div>
+
             <Button 
               onClick={() => {
                 if (validateFiles()) {
                   const jsonFile = jsonFileRef.current?.files?.[0];
                   const weightsFile = weightsFileRef.current?.files?.[0];
                   const metadataFile = metadataFileRef.current?.files?.[0];
+                  const weightSpecsFile = weightSpecsFileRef.current?.files?.[0];
                   
-                  if (jsonFile && weightsFile && metadataFile) {
-                    onModelUpload(jsonFile, weightsFile, metadataFile);
+                  if (jsonFile && weightsFile && metadataFile && weightSpecsFile) {
+                    onModelUpload(jsonFile, weightsFile, metadataFile, weightSpecsFile);
                   }
                 }
               }}

@@ -13,7 +13,7 @@ interface PlayPageContentProps {
   onReset: () => void;
   onThemeToggle: () => void;
   onCsvUpload: (file: File) => void;
-  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile?: File) => void;
+  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile: File, weightSpecsFile: File) => void;
   onSaveModel: () => void;
   progress: number;
   generation: number;
@@ -145,7 +145,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
 
   const loadFullModel = async () => {
     try {
-      const [modelJson, modelWeights, metadataFile] = await Promise.all([
+      const [modelJson, modelWeights, metadataFile, weightSpecsFile] = await Promise.all([
         new Promise<File>((resolve) => {
           const input = document.createElement('input');
           input.type = 'file';
@@ -175,10 +175,20 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
             if (files) resolve(files[0]);
           };
           input.click();
+        }),
+        new Promise<File>((resolve) => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.json';
+          input.onchange = (e) => {
+            const files = (e.target as HTMLInputElement).files;
+            if (files) resolve(files[0]);
+          };
+          input.click();
         })
       ]);
 
-      onModelUpload(modelJson, modelWeights, metadataFile);
+      onModelUpload(modelJson, modelWeights, metadataFile, weightSpecsFile);
       toast({
         title: "Modelo Carregado",
         description: "O modelo treinado foi carregado com sucesso.",
