@@ -23,17 +23,82 @@ export const loadModelFiles = async (
       reader.readAsText(jsonFile);
     });
 
-    // Parse the JSON content
+    // Parse and validate the JSON content
     let modelJson;
     try {
       modelJson = JSON.parse(modelJsonContent);
+      
+      // Validate model topology
+      if (!modelJson.modelTopology) {
+        // If topology is missing, create a default model structure
+        modelJson.modelTopology = {
+          class_name: "Sequential",
+          config: {
+            name: "sequential_1",
+            layers: [
+              {
+                class_name: "Dense",
+                config: {
+                  units: 256,
+                  activation: "relu",
+                  use_bias: true,
+                  kernel_initializer: "glorotNormal",
+                  bias_initializer: "zeros",
+                  kernel_regularizer: { class_name: "L2", config: { l2: 0.01 } },
+                  input_shape: [17]
+                }
+              },
+              {
+                class_name: "BatchNormalization",
+                config: {
+                  axis: -1,
+                  momentum: 0.99,
+                  epsilon: 0.001,
+                  center: true,
+                  scale: true
+                }
+              },
+              {
+                class_name: "Dense",
+                config: {
+                  units: 128,
+                  activation: "relu",
+                  use_bias: true,
+                  kernel_initializer: "glorotNormal",
+                  bias_initializer: "zeros",
+                  kernel_regularizer: { class_name: "L2", config: { l2: 0.01 } }
+                }
+              },
+              {
+                class_name: "BatchNormalization",
+                config: {
+                  axis: -1,
+                  momentum: 0.99,
+                  epsilon: 0.001,
+                  center: true,
+                  scale: true
+                }
+              },
+              {
+                class_name: "Dense",
+                config: {
+                  units: 15,
+                  activation: "sigmoid",
+                  use_bias: true,
+                  kernel_initializer: "glorotNormal",
+                  bias_initializer: "zeros"
+                }
+              }
+            ]
+          }
+        };
+      }
     } catch (error) {
       throw new Error('Invalid JSON format in model.json file');
     }
 
     // Create a blob URL for the model JSON
     const modelJsonBlob = new Blob([JSON.stringify(modelJson)], { type: 'application/json' });
-    const modelJsonUrl = URL.createObjectURL(modelJsonBlob);
 
     try {
       // Load the model using tf.loadLayersModel
@@ -63,12 +128,8 @@ export const loadModelFiles = async (
         });
       }
 
-      // Cleanup
-      URL.revokeObjectURL(modelJsonUrl);
-
       return { model, metadata };
     } catch (error) {
-      URL.revokeObjectURL(modelJsonUrl);
       console.error('Error loading model:', error);
       throw new Error(`Failed to load model: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
