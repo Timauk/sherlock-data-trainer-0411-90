@@ -3,21 +3,19 @@ import { useServerStatus } from '@/hooks/useServerStatus';
 import ProcessingPanel from './PlayPageContent/ProcessingPanel';
 import AnalysisPanel from './PlayPageContent/AnalysisPanel';
 import { useToast } from "@/hooks/use-toast";
-import * as tf from '@tensorflow/tfjs';
-import { exportPredictionsToCSV } from '@/utils/exportUtils';
+import { ModelUploadProps, GameLogicProps } from '@/types/modelTypes';
 
-interface PlayPageContentProps {
+interface PlayPageContentProps extends ModelUploadProps {
   isPlaying: boolean;
   onPlay: () => void;
   onPause: () => void;
   onReset: () => void;
   onThemeToggle: () => void;
   onCsvUpload: (file: File) => void;
-  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile: File, weightSpecsFile: File) => void;
   onSaveModel: () => void;
   progress: number;
   generation: number;
-  gameLogic: any;
+  gameLogic: GameLogicProps;
 }
 
 const PlayPageContent: React.FC<PlayPageContentProps> = ({
@@ -36,7 +34,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
   const [isServerProcessing, setIsServerProcessing] = useState(false);
   const { status: serverStatus } = useServerStatus();
   const { toast } = useToast();
-  
+
   const champion = gameLogic.players && gameLogic.players.length > 0 
     ? gameLogic.players.reduce((prev, current) => 
         (current.fitness > (prev?.fitness || 0)) ? current : prev, 
@@ -45,7 +43,6 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
 
   const handleExportCSV = async () => {
     try {
-      // Recupera todos os jogos armazenados
       const response = await fetch('http://localhost:3001/api/game/all');
       const allGames = await response.json();
       
@@ -78,7 +75,6 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
     }
   };
 
-  // Função para armazenar o jogo atual
   const storeCurrentGame = async () => {
     if (gameLogic.players && gameLogic.players.length > 0) {
       try {
@@ -103,7 +99,6 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
     }
   };
 
-  // Armazena o jogo atual sempre que houver mudança no número do concurso
   React.useEffect(() => {
     if (gameLogic.concursoNumber > 0) {
       storeCurrentGame();
