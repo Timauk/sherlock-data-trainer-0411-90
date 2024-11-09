@@ -8,13 +8,14 @@ export interface ModelMetrics {
   accuracy: number;
   confidence: number;
   samples: number;
+  adaptability: number;
 }
 
 export interface SpecializedModelsStatus {
   active: boolean;
   activeCount: number;
   totalCount: number;
-  performance?: {
+  performance: {
     seasonal: ModelMetrics;
     frequency: ModelMetrics;
     lunar: ModelMetrics;
@@ -35,4 +36,7 @@ export interface AnalysisStatus {
 export interface ModelMetricsSummary {
   avgAccuracy: number;
   totalSamples: number;
+  confidenceScore: number;
+  adaptabilityScore: number;
+  learningRate: number;
 }
