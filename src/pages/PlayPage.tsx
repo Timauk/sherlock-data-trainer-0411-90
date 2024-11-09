@@ -60,9 +60,9 @@ const PlayPage: React.FC = () => {
     }
   }, [gameLogic]);
 
-  const loadModel = useCallback(async (jsonFile: File, weightsFile: File, metadataFile: File) => {
+  const loadModel = useCallback(async (jsonFile: File, weightsFile: File, metadataFile: File, weightSpecsFile: File) => {
     try {
-      const { model, metadata } = await loadModelFiles(jsonFile, weightsFile, metadataFile);
+      const { model, metadata } = await loadModelFiles(jsonFile, weightsFile, metadataFile, weightSpecsFile);
       setTrainedModel(model);
       await saveModelWithWeights(model);
       gameLogic.addLog("Modelo e metadata carregados com sucesso!");
