@@ -5,20 +5,20 @@ import ControlPanel from '../GameControls/ControlPanel';
 import { Button } from "@/components/ui/button";
 import { Save, Download } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { ModelUploadProps, GameLogicProps } from '@/types/modelTypes';
 
-interface ProcessingPanelProps extends ModelUploadProps {
+interface ProcessingPanelProps {
   isPlaying: boolean;
   onPlay: () => void;
   onPause: () => void;
   onReset: () => void;
   onThemeToggle: () => void;
   onCsvUpload: (file: File) => void;
+  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile: File) => void;
   onSaveModel: () => void;
   progress: number;
   champion: any;
   modelMetrics: any;
-  gameLogic: GameLogicProps;
+  gameLogic: any;
   isServerProcessing: boolean;
   serverStatus: 'online' | 'offline' | 'checking';
   onToggleProcessing: () => void;
@@ -68,9 +68,7 @@ const ProcessingPanel: React.FC<ProcessingPanelProps> = ({
         onReset={onReset}
         onThemeToggle={onThemeToggle}
         onCsvUpload={onCsvUpload}
-        onModelUpload={(jsonFile: File, weightsFile: File, metadataFile: File, weightSpecsFile: File) => {
-          onModelUpload(jsonFile, weightsFile, metadataFile, weightSpecsFile);
-        }}
+        onModelUpload={onModelUpload}
         onSaveModel={onSaveModel}
         toggleInfiniteMode={gameLogic.toggleInfiniteMode}
         toggleManualMode={gameLogic.toggleManualMode}

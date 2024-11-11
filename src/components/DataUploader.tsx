@@ -7,7 +7,7 @@ import CheckpointControls from './CheckpointControls';
 
 interface DataUploaderProps {
   onCsvUpload: (file: File) => void;
-  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile: File, weightSpecsFile: File) => void;
+  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile?: File) => void;
   onSaveModel: () => void;
 }
 
@@ -15,7 +15,6 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
   const jsonFileRef = useRef<HTMLInputElement>(null);
   const weightsFileRef = useRef<HTMLInputElement>(null);
   const metadataFileRef = useRef<HTMLInputElement>(null);
-  const weightSpecsFileRef = useRef<HTMLInputElement>(null);
   const [savePath, setSavePath] = React.useState(localStorage.getItem('checkpointPath') || '');
   const { toast } = useToast();
 
@@ -54,23 +53,6 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
     }
   };
 
-  const validateFiles = () => {
-    const jsonFile = jsonFileRef.current?.files?.[0];
-    const weightsFile = weightsFileRef.current?.files?.[0];
-    const metadataFile = metadataFileRef.current?.files?.[0];
-    const weightSpecsFile = weightSpecsFileRef.current?.files?.[0];
-
-    if (!jsonFile || !weightsFile || !metadataFile || !weightSpecsFile) {
-      toast({
-        title: "Arquivos Necessários",
-        description: "Por favor, selecione todos os quatro arquivos: model.json, weights.bin, metadata.json e weight-specs.json",
-        variant: "destructive"
-      });
-      return false;
-    }
-    return true;
-  };
-
   return (
     <div className="space-y-4">
       <Tabs defaultValue="preparation" className="w-full">
@@ -90,72 +72,53 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
               className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
           </div>
-          
-          <div className="space-y-4 p-4 border rounded-lg bg-secondary">
-            <h3 className="font-medium mb-2">Carregar Modelo (Todos os arquivos são necessários):</h3>
-            
-            <div>
-              <label htmlFor="modelJsonInput" className="block mb-2">1. Arquivo do Modelo (JSON):</label>
-              <input
-                type="file"
-                id="modelJsonInput"
-                accept=".json"
-                ref={jsonFileRef}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="modelWeightsInput" className="block mb-2">2. Arquivo de Pesos (bin):</label>
-              <input
-                type="file"
-                id="modelWeightsInput"
-                accept=".bin"
-                ref={weightsFileRef}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="modelMetadataInput" className="block mb-2">3. Arquivo de Metadata (JSON):</label>
-              <input
-                type="file"
-                id="modelMetadataInput"
-                accept=".json"
-                ref={metadataFileRef}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="weightSpecsInput" className="block mb-2">4. Arquivo de Especificações de Pesos (JSON):</label>
-              <input
-                type="file"
-                id="weightSpecsInput"
-                accept=".json"
-                ref={weightSpecsFileRef}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
-            </div>
-
-            <Button 
-              onClick={() => {
-                if (validateFiles()) {
-                  const jsonFile = jsonFileRef.current?.files?.[0];
-                  const weightsFile = weightsFileRef.current?.files?.[0];
-                  const metadataFile = metadataFileRef.current?.files?.[0];
-                  const weightSpecsFile = weightSpecsFileRef.current?.files?.[0];
-                  
-                  if (jsonFile && weightsFile && metadataFile && weightSpecsFile) {
-                    onModelUpload(jsonFile, weightsFile, metadataFile, weightSpecsFile);
-                  }
-                }
-              }}
-              className="w-full mt-4"
-            >
-              <Upload className="mr-2 h-4 w-4" /> Carregar Modelo Completo
-            </Button>
+          <div>
+            <label htmlFor="modelJsonInput" className="block mb-2">Carregar Modelo (JSON):</label>
+            <input
+              type="file"
+              id="modelJsonInput"
+              accept=".json"
+              ref={jsonFileRef}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
           </div>
+          <div>
+            <label htmlFor="modelWeightsInput" className="block mb-2">Carregar Pesos (bin):</label>
+            <input
+              type="file"
+              id="modelWeightsInput"
+              accept=".bin"
+              ref={weightsFileRef}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+          </div>
+          <div>
+            <label htmlFor="modelMetadataInput" className="block mb-2">Carregar Metadata (JSON - Opcional):</label>
+            <input
+              type="file"
+              id="modelMetadataInput"
+              accept=".json"
+              ref={metadataFileRef}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+          </div>
+          <Button onClick={() => {
+            const jsonFile = jsonFileRef.current?.files?.[0];
+            const weightsFile = weightsFileRef.current?.files?.[0];
+            const metadataFile = metadataFileRef.current?.files?.[0];
+            
+            if (jsonFile && weightsFile) {
+              onModelUpload(jsonFile, weightsFile, metadataFile);
+            } else {
+              toast({
+                title: "Arquivos Faltando",
+                description: "Por favor, selecione os arquivos model.json e weights.bin",
+                variant: "destructive"
+              });
+            }
+          }}>
+            <Upload className="mr-2 h-4 w-4" /> Carregar Modelo
+          </Button>
         </TabsContent>
 
         <TabsContent value="checkpoint">

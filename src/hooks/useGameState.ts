@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { Player } from '@/types/gameTypes';
 
 export const useGameState = () => {
-  // Recupera o último concurso do localStorage, ou começa do 0
-  const lastConcurso = parseInt(localStorage.getItem('lastConcurso') || '0');
   const [players, setPlayers] = useState<Player[]>([]);
   const [generation, setGeneration] = useState(1);
   const [gameCount, setGameCount] = useState(0);
@@ -14,15 +12,9 @@ export const useGameState = () => {
     fitness: number;
   }>>([]);
   const [boardNumbers, setBoardNumbers] = useState<number[]>([]);
-  const [concursoNumber, setConcursoNumber] = useState(lastConcurso);
+  const [concursoNumber, setConcursoNumber] = useState(0);
   const [isInfiniteMode, setIsInfiniteMode] = useState(false);
   const [trainingData, setTrainingData] = useState<number[][]>([]);
-
-  // Atualiza o localStorage quando o concursoNumber muda
-  const updateConcursoNumber = (num: number) => {
-    localStorage.setItem('lastConcurso', num.toString());
-    setConcursoNumber(num);
-  };
 
   return {
     players,
@@ -36,7 +28,7 @@ export const useGameState = () => {
     boardNumbers,
     setBoardNumbers,
     concursoNumber,
-    setConcursoNumber: updateConcursoNumber,
+    setConcursoNumber,
     isInfiniteMode,
     setIsInfiniteMode,
     trainingData,

@@ -1,5 +1,4 @@
 import * as tf from '@tensorflow/tfjs';
-import { systemLogger } from '../logging/systemLogger';
 import { useToast } from "@/hooks/use-toast";
 
 // Função para calcular pesos baseados na idade dos dados
@@ -9,6 +8,7 @@ export const calculateDataWeights = (dates: Date[]): number[] => {
   
   return dates.map(date => {
     const age = now.getTime() - date.getTime();
+    // Dados mais recentes têm peso maior (0.5 a 1.0)
     return 0.5 + (0.5 * (1 - age / maxAge));
   });
 };
@@ -18,112 +18,60 @@ export const periodicModelRetraining = async (
   model: tf.LayersModel,
   historicalData: number[][],
   dates: Date[],
-  addLog: (message: string) => void,
-  onProgress?: (progress: number) => void
-): Promise<{ model: tf.LayersModel; improved: boolean }> => {
+  addLog: (message: string) => void
+): Promise<tf.LayersModel> => {
   try {
+    // Calcula pesos para cada entrada de dados
     const weights = calculateDataWeights(dates);
+    
+    // Prepara os dados de treinamento
     const xs = tf.tensor2d(historicalData.map(data => data.slice(0, -15)));
     const ys = tf.tensor2d(historicalData.map(data => data.slice(-15)));
     const sampleWeights = tf.tensor1d(weights);
 
-    const initialLoss = await evaluateModel(model, xs, ys);
-    let bestLoss = initialLoss;
-    let improved = false;
-
+    // Configura o retreinamento
     await model.fit(xs, ys, {
-      epochs: 25,
+      epochs: 10,
       batchSize: 32,
       sampleWeight: sampleWeights,
       validationSplit: 0.2,
-      callbacks: [
-        tf.callbacks.earlyStopping({
-          monitor: 'val_loss',
-          patience: 5,
-          restoreBestWeights: true
-        }),
-        {
-          onEpochEnd: async (epoch, logs) => {
-            if (logs) {
-              const progress = ((epoch + 1) / 25) * 100;
-              onProgress?.(progress);
-              
-              const message = `Retreinamento - Época ${epoch + 1}: Loss = ${logs.loss.toFixed(4)}, Val Loss = ${logs.val_loss?.toFixed(4)}`;
-              addLog(message);
-              systemLogger.log('model', message);
-
-              if (logs.val_loss && logs.val_loss < bestLoss) {
-                bestLoss = logs.val_loss;
-                improved = true;
-              }
-            }
+      callbacks: {
+        onEpochEnd: (epoch, logs) => {
+          if (logs) {
+            addLog(`Retreinamento - Época ${epoch + 1}: Loss = ${logs.loss.toFixed(4)}`);
           }
         }
-      ]
+      }
     });
 
+    // Limpa os tensores
     xs.dispose();
     ys.dispose();
     sampleWeights.dispose();
 
-    return { model, improved };
+    return model;
   } catch (error) {
-    const errorMessage = `Erro no retreinamento: ${error instanceof Error ? error.message : 'Erro desconhecido'}`;
-    systemLogger.log('system', errorMessage);
+    console.error('Erro no retreinamento:', error);
     throw error;
   }
 };
 
-// Configuração do intervalo de retreinamento (15 minutos)
+// Configuração do intervalo de retreinamento
 export const setupPeriodicRetraining = (
   model: tf.LayersModel,
   historicalData: number[][],
   dates: Date[],
   addLog: (message: string) => void,
-  onRetrainingStart: () => void,
-  onRetrainingComplete: (improved: boolean) => void,
-  onProgress: (progress: number) => void
+  intervalHours: number = 24
 ) => {
-  const interval = 15 * 60 * 1000; // 15 minutos
+  const interval = intervalHours * 60 * 60 * 1000; // Converte horas para milissegundos
   
   return setInterval(async () => {
     try {
-      onRetrainingStart();
-      const { model: updatedModel, improved } = await periodicModelRetraining(
-        model, 
-        historicalData, 
-        dates, 
-        addLog,
-        onProgress
-      );
-      
-      onRetrainingComplete(improved);
-
-      if (improved) {
-        const message = "Modelo melhorou com o retreinamento!";
-        addLog(message);
-        systemLogger.log('model', message, { improved: true });
-      } else {
-        const message = "Nada de novo aprendido no retreinamento.";
-        addLog(message);
-        systemLogger.log('model', message, { improved: false });
-      }
+      await periodicModelRetraining(model, historicalData, dates, addLog);
+      addLog('Retreinamento periódico concluído com sucesso');
     } catch (error) {
-      const errorMessage = `Erro no retreinamento periódico: ${error instanceof Error ? error.message : 'Erro desconhecido'}`;
-      addLog(errorMessage);
-      systemLogger.log('system', errorMessage);
-      onRetrainingComplete(false);
+      addLog(`Erro no retreinamento periódico: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     }
   }, interval);
 };
-
-async function evaluateModel(
-  model: tf.LayersModel, 
-  xs: tf.Tensor, 
-  ys: tf.Tensor
-): Promise<number> {
-  const result = await model.evaluate(xs, ys) as tf.Tensor;
-  const loss = (await result.data())[0];
-  result.dispose();
-  return loss;
-}
