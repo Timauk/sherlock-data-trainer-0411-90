@@ -3,6 +3,7 @@ import BoardDisplay from './BoardDisplay';
 import PlayerList from './PlayerList';
 import EvolutionChart from './EvolutionChart';
 import GeneticEvolutionChart from './GeneticEvolutionChart';
+import TotalScoreChart from './TotalScoreChart';
 import { Player } from '@/types/gameTypes';
 
 interface GameBoardProps {
@@ -68,12 +69,30 @@ const GameBoard: React.FC<GameBoardProps> = ({
     });
   });
 
+  // Calcular pontuação total por jogo
+  const totalScoreData = evolutionData.reduce((acc, curr) => {
+    const existingGame = acc.find(d => d.gameNumber === curr.generation);
+    if (existingGame) {
+      existingGame.totalScore += curr.score;
+    } else {
+      acc.push({ gameNumber: curr.generation, totalScore: curr.score });
+    }
+    return acc;
+  }, [] as Array<{ gameNumber: number; totalScore: number }>);
+
   return (
-    <div>
-      <BoardDisplay numbers={boardNumbers} concursoNumber={concursoNumber} />
-      <PlayerList players={players} onUpdatePlayer={onUpdatePlayer} />
+    <div className="space-y-4">
+      <BoardDisplay 
+        numbers={boardNumbers} 
+        concursoNumber={concursoNumber} 
+      />
+      <PlayerList 
+        players={players} 
+        onUpdatePlayer={onUpdatePlayer} 
+      />
       <EvolutionChart data={evolutionData} />
       <GeneticEvolutionChart evolutionData={processedEvolutionData} />
+      <TotalScoreChart scoreData={totalScoreData} />
     </div>
   );
 };

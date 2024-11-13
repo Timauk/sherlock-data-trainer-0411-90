@@ -7,8 +7,12 @@ export function processCSV(text: string): number[][] {
     const values = line.split(',');
     // Extract only the ball numbers (indexes 2 to 16)
     const ballNumbers = values.slice(2, 17).map(Number);
+    if (ballNumbers.length !== 15 || ballNumbers.some(isNaN)) {
+      console.error('Invalid line in CSV:', line);
+      return [];
+    }
     return ballNumbers;
-  });
+  }).filter(numbers => numbers.length === 15);
 }
 
 export function extractDateFromCSV(text: string): Date[] {

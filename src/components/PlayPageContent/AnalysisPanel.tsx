@@ -1,7 +1,8 @@
 import React from 'react';
-import ChampionPredictions from '../ChampionPredictions';
-import GeneticTreeVisualization from '../GeneticTreeVisualization';
+import { Card } from "@/components/ui/card";
+import TotalFitnessChart from '../TotalFitnessChart';
 import AnalysisTabs from '../GameAnalysis/AnalysisTabs';
+import { Button } from "@/components/ui/button";
 
 interface AnalysisPanelProps {
   champion: any;
@@ -14,8 +15,9 @@ interface AnalysisPanelProps {
   dates: Date[];
   numbers: number[][];
   modelMetrics: any;
-  neuralNetworkVisualization: any;
+  neuralNetworkVisualization?: any;
   concursoNumber: number;
+  onExportCSV?: () => void;
 }
 
 const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
@@ -30,24 +32,35 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   numbers,
   modelMetrics,
   neuralNetworkVisualization,
-  concursoNumber
+  concursoNumber,
+  onExportCSV
 }) => {
-  return (
-    <div className="space-y-4">
-      <GeneticTreeVisualization 
-        players={players}
-        generation={generation}
-      />
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChampionPredictions
-          champion={champion}
-          trainedModel={trainedModel}
-          lastConcursoNumbers={boardNumbers}
-          isServerProcessing={isServerProcessing}
-        />
-      </div>
+  const fitnessData = evolutionData.map(data => ({
+    gameNumber: data.generation,
+    totalFitness: data.fitness
+  }));
 
+  // Pegar os últimos números do concurso
+  const lastConcursoNumbers = numbers[numbers.length - 1] || [];
+
+  return (
+    <Card className="p-6">
+      <div className="flex justify-end mb-4">
+        {onExportCSV && (
+          <Button 
+            variant="outline" 
+            onClick={onExportCSV}
+            className="ml-auto"
+          >
+            Exportar CSV
+          </Button>
+        )}
+      </div>
+      
+      <div className="mb-4">
+        <TotalFitnessChart fitnessData={fitnessData} />
+      </div>
+      
       <AnalysisTabs
         boardNumbers={boardNumbers}
         concursoNumber={concursoNumber}
@@ -55,11 +68,14 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
         evolutionData={evolutionData}
         dates={dates}
         numbers={numbers}
-        updateFrequencyData={function(){}}
+        updateFrequencyData={() => {}}
         modelMetrics={modelMetrics}
         neuralNetworkVisualization={neuralNetworkVisualization}
+        champion={champion}
+        trainedModel={trainedModel}
+        lastConcursoNumbers={lastConcursoNumbers}
       />
-    </div>
+    </Card>
   );
 };
 
