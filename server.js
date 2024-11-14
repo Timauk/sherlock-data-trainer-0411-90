@@ -10,9 +10,6 @@ import cluster from 'cluster';
 import os from 'os';
 import { logger } from './src/utils/logging/logger.js';
 import { cacheMiddleware } from './src/utils/performance/serverCache.js';
-import { modelRouter } from './routes/model.js';
-import { checkpointRouter } from './routes/checkpoint.js';
-import { statusRouter } from './routes/status.js';
 
 const numCPUs = os.cpus().length;
 
@@ -20,7 +17,6 @@ if (cluster.isPrimary) {
   logger.info(`Primary ${process.pid} is running`);
   logger.info(`Starting ${numCPUs} workers...`);
 
-  // Fork workers
   for (let i = 0; i < numCPUs; i++) {
     cluster.fork();
   }
@@ -33,7 +29,7 @@ if (cluster.isPrimary) {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
   const app = express();
-  const PORT = 3001;
+  const PORT = process.env.PORT || 3001;
 
   // Cache configuration
   const gameCache = new NodeCache({ 
@@ -115,10 +111,17 @@ if (cluster.isPrimary) {
     }
   });
 
+  // Status endpoint
+  app.get('/api/status', (req, res) => {
+    res.json({ 
+      status: 'online',
+      memory: process.memoryUsage(),
+      uptime: process.uptime(),
+      cpuUsage: process.cpuUsage()
+    });
+  });
+
   app.use('/api/game', gameRouter);
-  app.use('/api/model', modelRouter);
-  app.use('/api/checkpoint', checkpointRouter);
-  app.use('/api/status', statusRouter);
 
   app.use((err, req, res, next) => {
     logger.error({
