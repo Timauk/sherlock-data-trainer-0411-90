@@ -13,6 +13,17 @@ export const calculateDetailedMetrics = (
   actual: number[][],
   historicalData: number[][]
 ): DetailedMetrics => {
+  // Ensure all inputs are valid arrays
+  if (!Array.isArray(predictions) || !Array.isArray(actual) || !Array.isArray(historicalData)) {
+    return {
+      accuracy: 0,
+      reliability: 0,
+      coverage: 0,
+      confidence: 0,
+      temporalScore: 0
+    };
+  }
+
   const accuracy = calculateAccuracy(predictions, actual);
   const reliability = calculateReliability(predictions, actual);
   const coverage = calculateCoverage(predictions, historicalData);
@@ -29,21 +40,29 @@ export const calculateDetailedMetrics = (
 };
 
 const calculateAccuracy = (predictions: number[][], actual: number[][]): number => {
+  if (!predictions.length || !actual.length) return 0;
+  
   let totalMatches = 0;
   let totalNumbers = 0;
 
   predictions.forEach((pred, idx) => {
-    const matches = pred.filter(num => actual[idx].includes(num)).length;
+    if (!Array.isArray(pred) || !Array.isArray(actual[idx])) return;
+    
+    const matches = pred.filter(num => actual[idx]?.includes(num)).length;
     totalMatches += matches;
     totalNumbers += pred.length;
   });
 
-  return totalMatches / totalNumbers;
+  return totalNumbers > 0 ? totalMatches / totalNumbers : 0;
 };
 
 const calculateReliability = (predictions: number[][], actual: number[][]): number => {
+  if (!predictions.length || !actual.length) return 0;
+  
   const consistencyScores = predictions.map((pred, idx) => {
-    const matches = pred.filter(num => actual[idx].includes(num)).length;
+    if (!Array.isArray(pred) || !Array.isArray(actual[idx])) return 0;
+    
+    const matches = pred.filter(num => actual[idx]?.includes(num)).length;
     return matches >= 11 ? 1 : matches / 11;
   });
 
@@ -51,15 +70,21 @@ const calculateReliability = (predictions: number[][], actual: number[][]): numb
 };
 
 const calculateCoverage = (predictions: number[][], historical: number[][]): number => {
-  const allPredicted = new Set(predictions.flat());
-  const allHistorical = new Set(historical.flat());
+  if (!predictions.length || !historical.length) return 0;
   
-  return allPredicted.size / allHistorical.size;
+  const allPredicted = new Set(predictions.flat().filter(Boolean));
+  const allHistorical = new Set(historical.flat().filter(Boolean));
+  
+  return allHistorical.size > 0 ? allPredicted.size / allHistorical.size : 0;
 };
 
 const calculateConfidence = (predictions: number[][], actual: number[][]): number => {
+  if (!predictions.length || !actual.length) return 0;
+  
   const confidenceScores = predictions.map((pred, idx) => {
-    const matches = pred.filter(num => actual[idx].includes(num)).length;
+    if (!Array.isArray(pred) || !Array.isArray(actual[idx])) return 0;
+    
+    const matches = pred.filter(num => actual[idx]?.includes(num)).length;
     return Math.pow(matches / pred.length, 2);
   });
 
@@ -67,9 +92,15 @@ const calculateConfidence = (predictions: number[][], actual: number[][]): numbe
 };
 
 const calculateTemporalScore = (predictions: number[][], historical: number[][]): number => {
-  // Implementa análise temporal usando últimos N resultados
-  const recentResults = historical.slice(-10);
-  const recentAccuracy = calculateAccuracy([predictions[predictions.length - 1]], [recentResults[recentResults.length - 1]]);
+  if (!predictions.length || !historical.length) return 0;
   
-  return recentAccuracy;
+  const recentResults = historical.slice(-10);
+  if (!recentResults.length) return 0;
+  
+  const lastPrediction = predictions[predictions.length - 1];
+  const lastActual = recentResults[recentResults.length - 1];
+  
+  if (!Array.isArray(lastPrediction) || !Array.isArray(lastActual)) return 0;
+  
+  return calculateAccuracy([lastPrediction], [lastActual]);
 };

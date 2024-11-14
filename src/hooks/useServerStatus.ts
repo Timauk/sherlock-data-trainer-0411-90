@@ -7,7 +7,12 @@ export const useServerStatus = () => {
 
   const checkServerStatus = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/status', {
+      // Get the current hostname and use it to build the API URL
+      const apiUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:3001/api/status'
+        : `${window.location.protocol}//${window.location.hostname}/api/status`;
+
+      const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -38,7 +43,7 @@ export const useServerStatus = () => {
       if (status === 'online') {
         toast({
           title: "Servidor Desconectado",
-          description: "Verifique se o servidor está rodando em localhost:3001",
+          description: "Verifique se o servidor está rodando corretamente",
           variant: "destructive",
         });
       }
@@ -47,7 +52,7 @@ export const useServerStatus = () => {
 
   useEffect(() => {
     checkServerStatus();
-    const interval = setInterval(checkServerStatus, 5000); // Verifica a cada 5 segundos
+    const interval = setInterval(checkServerStatus, 5000);
     return () => clearInterval(interval);
   }, []);
 
