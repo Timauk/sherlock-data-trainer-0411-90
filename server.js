@@ -39,41 +39,24 @@ if (cluster.isPrimary) {
     useClones: false
   });
 
-  // Configure middleware with updated CORS settings
-  app.use(cors({
-    origin: function(origin, callback) {
-      const allowedOrigins = [
-        'http://localhost:5173',
-        'http://127.0.0.1:5173',
-        'http://localhost:8080',
-        'http://127.0.0.1:8080',
-        'http://localhost:3001',
-        'http://127.0.0.1:3001',
-        'https://id-preview--dcc838c0-148c-47bb-abaf-cbdd03ce84f5.lovable.app',
-        'https://lovable.dev',
-        'https://lovable.app'
-      ];
-      
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      
-      // Allow all subdomains of lovable.app and lovable.dev
-      if (origin.match(/^https:\/\/.*\.lovable\.(app|dev)$/)) {
-        return callback(null, true);
-      }
-      
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
-    preflightContinue: false,
-    optionsSuccessStatus: 204
-  }));
+  // Basic CORS configuration first
+  app.use(cors());
+
+  // Then add specific CORS headers for all responses
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    // Handle preflight
+    if (req.method === 'OPTIONS') {
+      res.status(204).end();
+      return;
+    }
+    
+    next();
+  });
 
   app.use(express.json({ limit: '50mb' }));
   app.use(compression());
