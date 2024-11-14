@@ -41,8 +41,7 @@ if (cluster.isPrimary) {
 
   // Configure middleware
   app.use(cors({
-    origin: true,
-    credentials: true,
+    origin: '*', // Allow all origins
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
   }));
@@ -63,9 +62,9 @@ if (cluster.isPrimary) {
     }
   });
 
-  // Mount routes
-  app.use('/api/status', statusRouter);
-
+  // Mount routes - ensure status route is mounted at the root level
+  app.use('/status', statusRouter); // Changed from /api/status to /status
+  
   // Game routes
   const gameRouter = express.Router();
 
@@ -117,6 +116,7 @@ if (cluster.isPrimary) {
 
   app.use('/api/game', gameRouter);
 
+  // Error handling middleware
   app.use((err, req, res, next) => {
     logger.error({
       err,

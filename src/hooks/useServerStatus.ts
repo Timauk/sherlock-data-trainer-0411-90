@@ -9,8 +9,8 @@ export const useServerStatus = () => {
     try {
       // Get the current hostname and use it to build the API URL
       const apiUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:3001/api/status'
-        : `${window.location.origin}/api/status`; // Use full origin for deployed environment
+        ? 'http://localhost:3001/status'
+        : `${window.location.origin}/status`; // Updated path without /api prefix
 
       const response = await fetch(apiUrl, {
         method: 'GET',
