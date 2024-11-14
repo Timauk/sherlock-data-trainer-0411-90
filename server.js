@@ -41,19 +41,38 @@ if (cluster.isPrimary) {
 
   // Configure middleware with updated CORS settings
   app.use(cors({
-    origin: [
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      'http://localhost:8080',
-      'http://127.0.0.1:8080',
-      'http://localhost:3001',
-      'http://127.0.0.1:3001',
-      'https://id-preview--dcc838c0-148c-47bb-abaf-cbdd03ce84f5.lovable.app',
-      /\.lovable\.app$/  // Allow all subdomains of lovable.app
-    ],
+    origin: function(origin, callback) {
+      const allowedOrigins = [
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'http://localhost:8080',
+        'http://127.0.0.1:8080',
+        'http://localhost:3001',
+        'http://127.0.0.1:3001',
+        'https://id-preview--dcc838c0-148c-47bb-abaf-cbdd03ce84f5.lovable.app',
+        'https://lovable.dev',
+        'https://lovable.app'
+      ];
+      
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      // Allow all subdomains of lovable.app and lovable.dev
+      if (origin.match(/^https:\/\/.*\.lovable\.(app|dev)$/)) {
+        return callback(null, true);
+      }
+      
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
   }));
 
   app.use(express.json({ limit: '50mb' }));
@@ -140,9 +159,6 @@ if (cluster.isPrimary) {
       message: err.message
     });
   });
-
-  // Enable pre-flight requests for all routes
-  app.options('*', cors());
 
   app.listen(PORT, () => {
     logger.info(`Worker ${process.pid} started and listening on port ${PORT}`);
