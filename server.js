@@ -47,7 +47,9 @@ if (cluster.isPrimary) {
       'http://localhost:8080',
       'http://127.0.0.1:8080',
       'http://localhost:3001',
-      'http://127.0.0.1:3001'
+      'http://127.0.0.1:3001',
+      'https://id-preview--dcc838c0-148c-47bb-abaf-cbdd03ce84f5.lovable.app',
+      /\.lovable\.app$/  // Allow all subdomains of lovable.app
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
