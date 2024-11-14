@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Player } from '@/types/gameTypes';
 import * as tf from '@tensorflow/tfjs';
 import NumberSelector from './NumberSelector';
-import { Target, Star } from 'lucide-react';
+import { Target, Star, Trophy } from 'lucide-react';
 import { predictionMetrics } from '@/utils/prediction/metricsSystem';
 import MetricsDisplay from './PredictionMetrics/MetricsDisplay';
 import PredictionsList from './PredictionMetrics/PredictionsList';
