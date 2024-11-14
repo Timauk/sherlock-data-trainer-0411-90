@@ -5,6 +5,9 @@ import { getLunarPhase, analyzeLunarPatterns } from './lunarCalculations';
 import { TimeSeriesAnalysis } from './analysis/timeSeriesAnalysis';
 import { performanceMonitor } from './performance/performanceMonitor';
 import { PredictionScore, LunarData } from './prediction/types';
+import { advancedAnalysis } from './analysis/advancedAnalysis';
+import { createSpecializedModels } from './specializedModels/superSpecialized';
+
 import {
   calculateFrequencyAnalysis,
   getLunarNumberWeight,
@@ -12,6 +15,8 @@ import {
   calculateConsistencyScore,
   calculateVariabilityScore
 } from './prediction/helpers';
+
+const specializedModels = createSpecializedModels();
 
 export async function makePrediction(
   trainedModel: tf.LayersModel | null,
@@ -26,32 +31,72 @@ export async function makePrediction(
   
   const startTime = performance.now();
   
-  const timeSeriesAnalyzer = new TimeSeriesAnalysis(historicalData.numbers);
-  const arimaPredictor = timeSeriesAnalyzer.analyzeNumbers();
+  // Inicializa análise avançada
+  advancedAnalysis.updateData(historicalData.numbers, historicalData.dates);
+  const analysisResult = await advancedAnalysis.analyze();
   
-  const normalizedInput = prepareInputData(inputData, concursoNumber);
-  const patterns = analyzePatterns(historicalData, lunarData);
+  // Obtém previsões dos modelos especializados
+  const specializedPredictions = await Promise.all([
+    specializedModels.pairs.predict(inputData),
+    specializedModels.odds.predict(inputData),
+    specializedModels.sequences.predict(inputData),
+    specializedModels.primes.predict(inputData),
+    specializedModels.fibonacci.predict(inputData),
+    specializedModels.lunar.predict(inputData)
+  ]);
   
-  const predictions = await generateNeuralPredictions(
-    trainedModel,
-    normalizedInput,
-    playerWeights,
-    patterns
+  // Combina previsões
+  const combinedPrediction = combinePredictions(
+    specializedPredictions,
+    analysisResult.predictions.nextDraw,
+    playerWeights
   );
   
-  const selectedNumbers = selectBestNumbers(predictions, patterns);
-  
+  // Atualiza visualização
   updateVisualization(
     setNeuralNetworkVisualization,
-    normalizedInput,
-    predictions.map(p => p.score), // Corrigido aqui: extraindo apenas o score
+    inputData,
+    combinedPrediction,
     trainedModel
   );
   
   const endTime = performance.now();
-  performanceMonitor.recordMetrics(predictions[0].score, endTime - startTime); // Corrigido aqui: usando .score
+  performanceMonitor.recordMetrics(analysisResult.metrics.accuracy, endTime - startTime);
   
-  return selectedNumbers;
+  return combinedPrediction;
+}
+
+function combinePredictions(
+  specializedPredictions: number[][],
+  analysisPredicton: number[],
+  weights: number[]
+): number[] {
+  const weightedNumbers = new Map<number, number>();
+  
+  // Adiciona previsões especializadas
+  specializedPredictions.forEach((prediction, index) => {
+    prediction.forEach(num => {
+      weightedNumbers.set(
+        num,
+        (weightedNumbers.get(num) || 0) + weights[index] * 0.1
+      );
+    });
+  });
+  
+  // Adiciona previsões da análise avançada
+  analysisPredicton.forEach(num => {
+    weightedNumbers.set(
+      num,
+      (weightedNumbers.get(num) || 0) + 0.4
+    );
+  });
+  
+  // Seleciona os 15 números com maiores pesos
+  return Array.from(weightedNumbers.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15)
+    .map(([num]) => num)
+    .sort((a, b) => a - b);
 }
 
 function prepareInputData(inputData: number[], concursoNumber: number): number[] {
