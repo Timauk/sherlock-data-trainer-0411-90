@@ -45,7 +45,9 @@ if (cluster.isPrimary) {
       'http://localhost:5173',
       'http://127.0.0.1:5173',
       'http://localhost:8080',
-      'http://127.0.0.1:8080'
+      'http://127.0.0.1:8080',
+      'http://localhost:3001',
+      'http://127.0.0.1:3001'
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
