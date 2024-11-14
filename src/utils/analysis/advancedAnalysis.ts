@@ -1,6 +1,8 @@
 import { systemLogger } from '../logging/systemLogger';
 import { TimeSeriesAnalysis } from './timeSeriesAnalysis';
 import { analyzeLunarPatterns } from '../lunarCalculations';
+import { calculateDetailedMetrics } from './advancedMetrics';
+import { weightAdjuster } from '../prediction/dynamicWeights';
 
 interface AnalysisResult {
   patterns: {
@@ -120,27 +122,47 @@ export class AdvancedAnalysisSystem {
       .slice(0, 15);
   }
 
+  private calculateMetrics(): { accuracy: number; reliability: number; coverage: number } {
+    const predictions = this.historicalData.slice(-10);
+    const actual = this.historicalData.slice(-11, -1);
+    
+    const detailedMetrics = calculateDetailedMetrics(
+      predictions,
+      actual,
+      this.historicalData
+    );
+
+    return {
+      accuracy: detailedMetrics.accuracy,
+      reliability: detailedMetrics.reliability,
+      coverage: detailedMetrics.coverage
+    };
+  }
+
   private combinePredictions(
     timeSeriesPred: number[],
     lunarPatterns: any,
     sequentialPatterns: number[]
   ): { numbers: number[], confidence: number } {
+    const weights = weightAdjuster.getWeights();
     const weightedNumbers = new Map<number, number>();
     
-    // Combina as diferentes previsões com pesos
+    // Aplica pesos dinâmicos às previsões
     timeSeriesPred.forEach(num => {
-      weightedNumbers.set(num, (weightedNumbers.get(num) || 0) + 0.4);
+      weightedNumbers.set(num, (weightedNumbers.get(num) || 0) + weights.sequential);
     });
     
     Object.entries(lunarPatterns).forEach(([num, weight]) => {
-      weightedNumbers.set(Number(num), (weightedNumbers.get(Number(num)) || 0) + 0.3 * Number(weight));
+      weightedNumbers.set(
+        Number(num), 
+        (weightedNumbers.get(Number(num)) || 0) + weights.lunar * Number(weight)
+      );
     });
     
     sequentialPatterns.forEach(num => {
-      weightedNumbers.set(num, (weightedNumbers.get(num) || 0) + 0.3);
+      weightedNumbers.set(num, (weightedNumbers.get(num) || 0) + weights.cyclic);
     });
 
-    // Seleciona os 15 números com maiores pesos
     const sortedNumbers = Array.from(weightedNumbers.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 15);
@@ -149,14 +171,6 @@ export class AdvancedAnalysisSystem {
     const confidence = sortedNumbers.reduce((acc, [, weight]) => acc + weight, 0) / 15;
 
     return { numbers, confidence };
-  }
-
-  private calculateMetrics(): { accuracy: number; reliability: number; coverage: number } {
-    return {
-      accuracy: 0.75, // Placeholder - implementar cálculo real
-      reliability: 0.8, // Placeholder - implementar cálculo real
-      coverage: 0.9 // Placeholder - implementar cálculo real
-    };
   }
 }
 

@@ -36,16 +36,16 @@ class SuperSpecializedModel {
       inputShape: config.inputShape
     }));
 
-    // Camadas intermediárias
+    // Camadas intermediárias com dropout reduzido
     for (let i = 1; i < config.layers.length; i++) {
       model.add(tf.layers.dense({
         units: config.layers[i],
         activation: 'relu'
       }));
       
-      // Adiciona dropout para evitar overfitting
-      if (i < config.layers.length - 1) {
-        model.add(tf.layers.dropout({ rate: 0.3 }));
+      // Dropout reduzido e apenas em algumas camadas
+      if (i < config.layers.length - 1 && i % 2 === 0) {
+        model.add(tf.layers.dropout({ rate: 0.2 }));
       }
     }
 
@@ -64,22 +64,29 @@ class SuperSpecializedModel {
     return model;
   }
 
-  async train(data: number[][], labels: number[][], epochs: number = 50): Promise<void> {
+  async train(data: number[][], labels: number[][]): Promise<void> {
     const xs = tf.tensor2d(data);
     const ys = tf.tensor2d(labels);
 
     try {
       await this.model.fit(xs, ys, {
-        epochs,
+        epochs: 50,
         batchSize: 32,
         validationSplit: 0.2,
-        callbacks: {
-          onEpochEnd: (epoch, logs) => {
-            if (logs) {
-              this.metrics.accuracy = logs.acc;
+        callbacks: [
+          tf.callbacks.earlyStopping({
+            monitor: 'val_loss',
+            patience: 5,
+            restoreBestWeights: true
+          }),
+          {
+            onEpochEnd: (epoch, logs) => {
+              if (logs) {
+                this.metrics.accuracy = logs.acc;
+              }
             }
           }
-        }
+        ]
       });
     } finally {
       xs.dispose();
