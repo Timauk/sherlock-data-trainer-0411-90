@@ -10,7 +10,7 @@ export const useServerStatus = () => {
       // Get the current hostname and use it to build the API URL
       const apiUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:3001/api/status'
-        : `/api/status`; // Use relative path for deployed environment
+        : `${window.location.origin}/api/status`; // Use full origin for deployed environment
 
       const response = await fetch(apiUrl, {
         method: 'GET',
