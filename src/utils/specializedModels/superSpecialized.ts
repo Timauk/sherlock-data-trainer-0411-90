@@ -29,27 +29,23 @@ class SuperSpecializedModel {
   private buildModel(config: SpecializedModelConfig): tf.LayersModel {
     const model = tf.sequential();
     
-    // Primeira camada com inputShape
     model.add(tf.layers.dense({
       units: config.layers[0],
       activation: 'relu',
-      inputShape: config.inputShape
+      inputShape: [17] // Fixed input shape
     }));
 
-    // Camadas intermediárias com dropout reduzido
     for (let i = 1; i < config.layers.length; i++) {
       model.add(tf.layers.dense({
         units: config.layers[i],
         activation: 'relu'
       }));
       
-      // Dropout reduzido e apenas em algumas camadas
       if (i < config.layers.length - 1 && i % 2 === 0) {
         model.add(tf.layers.dropout({ rate: 0.2 }));
       }
     }
 
-    // Camada de saída
     model.add(tf.layers.dense({
       units: 15,
       activation: 'sigmoid'
@@ -96,10 +92,26 @@ class SuperSpecializedModel {
 
   async predict(input: number[]): Promise<number[]> {
     return tf.tidy(() => {
-      const inputTensor = tf.tensor2d([input]);
+      // Prepare input data to match expected shape [null,17]
+      const normalizedInput = this.prepareInput(input);
+      const inputTensor = tf.tensor2d([normalizedInput]);
       const prediction = this.model.predict(inputTensor) as tf.Tensor;
       return Array.from(prediction.dataSync());
     });
+  }
+
+  private prepareInput(input: number[]): number[] {
+    // Ensure input has length 17 by adding required features
+    if (input.length === 15) {
+      // Add two additional features (e.g., timestamp and generation number)
+      const timestamp = Date.now() / (1000 * 60 * 60 * 24); // Normalized timestamp
+      const generation = 0; // Default generation number
+      return [...input, timestamp, generation];
+    } else if (input.length === 17) {
+      return input;
+    } else {
+      throw new Error(`Invalid input length: ${input.length}. Expected 15 or 17.`);
+    }
   }
 
   getMetrics() {
