@@ -10,6 +10,7 @@ import cluster from 'cluster';
 import os from 'os';
 import { logger } from './src/utils/logging/logger.js';
 import { cacheMiddleware } from './src/utils/performance/serverCache.js';
+import { statusRouter } from './routes/status.js';
 
 const numCPUs = os.cpus().length;
 
@@ -62,6 +63,9 @@ if (cluster.isPrimary) {
     }
   });
 
+  // Mount routes
+  app.use('/api/status', statusRouter);
+
   // Game routes
   const gameRouter = express.Router();
 
@@ -109,16 +113,6 @@ if (cluster.isPrimary) {
         error: error.message 
       });
     }
-  });
-
-  // Status endpoint
-  app.get('/api/status', (req, res) => {
-    res.json({ 
-      status: 'online',
-      memory: process.memoryUsage(),
-      uptime: process.uptime(),
-      cpuUsage: process.cpuUsage()
-    });
   });
 
   app.use('/api/game', gameRouter);
