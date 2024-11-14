@@ -42,6 +42,21 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
     }
   };
 
+  const calculateVariationFactor = (targetMatches: number, championFitness: number) => {
+    // Dynamic variation factor based on champion's fitness and target matches
+    const baseFactor = 0.05;
+    const matchAdjustment = (15 - targetMatches) * 0.02;
+    const fitnessAdjustment = championFitness ? (1 / championFitness) * 0.01 : 0;
+    return baseFactor + matchAdjustment + fitnessAdjustment;
+  };
+
+  const normalizeInput = (number: number, championWeight: number, targetMatches: number) => {
+    const baseNormalization = number / 25;
+    const weightInfluence = championWeight / 1000;
+    const targetAdjustment = targetMatches / 15;
+    return baseNormalization * (1 + weightInfluence * targetAdjustment);
+  };
+
   const generatePredictions = async () => {
     if (!champion || !trainedModel || !lastConcursoNumbers.length) {
       toast({
@@ -64,19 +79,21 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       
       for (const target of targets) {
         for (let i = 0; i < target.count; i++) {
-          const variationFactor = 0.05 + ((15 - target.matches) * 0.02);
+          const variationFactor = calculateVariationFactor(target.matches, champion.fitness);
           
-          const normalizedInput = [
-            ...lastConcursoNumbers.slice(0, 15).map(n => {
-              const variation = (Math.random() - 0.5) * variationFactor;
-              return (n / 25) * (1 + variation);
-            }),
-            (champion.generation + i) / 1000,
-            (Date.now() + i * 1000) / (1000 * 60 * 60 * 24 * 365)
-          ];
+          // Using tf.tidy for automatic memory cleanup
+          const prediction = await tf.tidy(() => {
+            const normalizedInput = tf.tensor2d([
+              lastConcursoNumbers.slice(0, 15).map(n => 
+                normalizeInput(n, champion.weights[n % champion.weights.length], target.matches)
+              ),
+              [(champion.generation + i) / 1000],
+              [(Date.now() + i * 1000) / (1000 * 60 * 60 * 24 * 365)]
+            ]);
+            
+            return trainedModel.predict(normalizedInput) as tf.Tensor;
+          });
           
-          const inputTensor = tf.tensor2d([normalizedInput]);
-          const prediction = await trainedModel.predict(inputTensor) as tf.Tensor;
           const predictionArray = Array.from(await prediction.data());
           
           const weightAdjustment = target.matches / 15;
@@ -84,14 +101,11 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
             number: idx + 1,
             weight: predictionArray[idx % predictionArray.length] * 
                    (champion.weights[idx % champion.weights.length] / 1000) *
-                   weightAdjustment *
-                   (1 + (Math.random() - 0.5) * 0.2)
+                   weightAdjustment
           }));
           
           const selectedNumbers = weightedNumbers
             .sort((a, b) => b.weight - a.weight)
-            .slice(0, 20)
-            .sort(() => Math.random() - 0.5)
             .slice(0, 15)
             .map(n => n.number)
             .sort((a, b) => a - b);
@@ -105,15 +119,14 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
             matchesWithSelected: 0
           });
 
-          // Record metrics
           predictionMetrics.recordPrediction(
             selectedNumbers,
             lastConcursoNumbers,
             estimatedAccuracy / 100
           );
 
+          // Ensure proper cleanup
           prediction.dispose();
-          inputTensor.dispose();
         }
       }
 
