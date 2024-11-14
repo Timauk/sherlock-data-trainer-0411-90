@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Player } from '@/types/gameTypes';
 import * as tf from '@tensorflow/tfjs';
 import NumberSelector from './NumberSelector';
-import { Trophy, Target, Star, ChartBar } from 'lucide-react';
-import { Progress } from "@/components/ui/progress";
+import { Target, Star } from 'lucide-react';
+import { predictionMetrics } from '@/utils/prediction/metricsSystem';
+import MetricsDisplay from './PredictionMetrics/MetricsDisplay';
+import PredictionsList from './PredictionMetrics/PredictionsList';
 
 interface ChampionPredictionsProps {
   champion: Player | undefined;
@@ -21,7 +23,12 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   lastConcursoNumbers,
   isServerProcessing = false
 }) => {
-  const [predictions, setPredictions] = useState<Array<{ numbers: number[], estimatedAccuracy: number, targetMatches: number, matchesWithSelected: number }>>([]);
+  const [predictions, setPredictions] = useState<Array<{
+    numbers: number[];
+    estimatedAccuracy: number;
+    targetMatches: number;
+    matchesWithSelected: number;
+  }>>([]);
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const { toast } = useToast();
 
@@ -98,6 +105,13 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
             matchesWithSelected: 0
           });
 
+          // Record metrics
+          predictionMetrics.recordPrediction(
+            selectedNumbers,
+            lastConcursoNumbers,
+            estimatedAccuracy / 100
+          );
+
           prediction.dispose();
           inputTensor.dispose();
         }
@@ -112,20 +126,33 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       
       toast({
         title: "Previsões Geradas",
-        description: `8 jogos foram gerados com diferentes objetivos de acertos! ${isServerProcessing ? '(Processado no servidor)' : '(Processado no navegador)'}`
+        description: `8 jogos foram gerados com diferentes objetivos de acertos! ${
+          isServerProcessing ? '(Processado no servidor)' : '(Processado no navegador)'
+        }`
       });
     } catch (error) {
       console.error("Erro ao gerar previsões:", error);
       toast({
         title: "Erro",
-        description: "Erro ao gerar previsões: " + (error instanceof Error ? error.message : "Erro desconhecido"),
+        description: "Erro ao gerar previsões: " + 
+          (error instanceof Error ? error.message : "Erro desconhecido"),
         variant: "destructive"
       });
     }
   };
 
+  const metrics = predictionMetrics.getMetricsSummary();
+  const recentMatches = metrics.recentMetrics.map(m => m.matches);
+
   return (
     <div className="space-y-4">
+      <MetricsDisplay 
+        averageAccuracy={metrics.averageAccuracy}
+        successRate={metrics.successRate}
+        totalPredictions={metrics.totalPredictions}
+        recentMatches={recentMatches}
+      />
+
       <NumberSelector 
         onNumbersSelected={handleNumbersSelected} 
         predictions={predictions}
@@ -145,70 +172,10 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {predictions.length > 0 ? (
-            <div className="space-y-4">
-              {predictions.map((pred, idx) => (
-                <Card key={idx} className="p-4 bg-card">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Star className="h-5 w-5 text-yellow-500" />
-                        <span className="font-semibold">
-                          Jogo {idx + 1} (Objetivo: {pred.targetMatches} acertos)
-                        </span>
-                      </div>
-                      <ChartBar className="h-5 w-5 text-blue-500" />
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {pred.numbers.map((num, numIdx) => (
-                        <span 
-                          key={numIdx} 
-                          className={`px-3 py-1 rounded-full font-medium transition-colors ${
-                            selectedNumbers.includes(num) 
-                              ? 'bg-green-500 text-white' 
-                              : 'bg-blue-500 text-white'
-                          }`}
-                        >
-                          {num.toString().padStart(2, '0')}
-                        </span>
-                      ))}
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <span>Estimativa de Acertos</span>
-                        <span>{pred.estimatedAccuracy.toFixed(1)}%</span>
-                      </div>
-                      <Progress value={pred.estimatedAccuracy} className="h-2" />
-                      
-                      {selectedNumbers.length === 15 && (
-                        <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                              Acertos com sua seleção
-                            </span>
-                            <span className="text-sm font-bold text-green-700 dark:text-green-300">
-                              {pred.matchesWithSelected} / 15
-                            </span>
-                          </div>
-                          <Progress 
-                            value={(pred.matchesWithSelected / 15) * 100} 
-                            className="h-2 mt-1 bg-green-200 dark:bg-green-800"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center text-muted-foreground py-8">
-              <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Clique no botão para gerar 8 previsões para o próximo concurso</p>
-            </div>
-          )}
+          <PredictionsList 
+            predictions={predictions}
+            selectedNumbers={selectedNumbers}
+          />
         </CardContent>
       </Card>
     </div>
