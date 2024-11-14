@@ -2,16 +2,8 @@ import * as tf from '@tensorflow/tfjs';
 import { systemLogger } from '../logging/systemLogger';
 import { deepPatternAnalyzer } from '../analysis/deepPatternAnalysis';
 import { rewardSystem } from '../enhancedRewardSystem';
-
-interface FeedbackMetrics {
-  accuracy: number;
-  loss: number;
-  patterns: number;
-  reward: number;
-  consistency: number;
-  novelty: number;
-  efficiency: number;
-}
+import { FeedbackMetrics, MetricsSummary } from './types';
+import { calculateConsistency, calculateNovelty, calculateEfficiency } from './metricsCalculator';
 
 export class LearningFeedbackLoop {
   private static instance: LearningFeedbackLoop;
@@ -37,12 +29,13 @@ export class LearningFeedbackLoop {
   ): Promise<void> {
     const deepPatterns = await deepPatternAnalyzer.analyzePatterns(patterns);
     
-    const consistency = this.calculateConsistency(patterns);
-    const novelty = this.calculateNovelty(prediction, patterns);
-    const efficiency = this.calculateEfficiency(prediction, actual);
+    const matches = this.calculateMatches(prediction, actual);
+    const consistency = calculateConsistency(patterns);
+    const novelty = calculateNovelty(prediction, patterns);
+    const efficiency = calculateEfficiency(matches, prediction, actual);
     
     const adaptiveReward = this.calculateAdaptiveReward({
-      matches: this.calculateMatches(prediction, actual),
+      matches,
       consistency,
       novelty,
       efficiency
@@ -51,7 +44,7 @@ export class LearningFeedbackLoop {
     this.updateRewardMemory(adaptiveReward);
     await this.updateModel(model, prediction, actual, adaptiveReward);
 
-    this.recordMetrics({
+    this.addMetrics({
       accuracy: this.calculateAccuracy(prediction, actual),
       loss: await this.calculateLoss(model, prediction, actual),
       patterns: deepPatterns.length,
@@ -72,35 +65,11 @@ export class LearningFeedbackLoop {
     });
   }
 
-  private calculateConsistency(patterns: number[][]): number {
-    if (patterns.length < 2) return 0;
-    
-    let consistencyScore = 0;
-    for (let i = 1; i < patterns.length; i++) {
-      const prev = new Set(patterns[i - 1]);
-      const curr = new Set(patterns[i]);
-      const intersection = new Set([...prev].filter(x => curr.has(x)));
-      consistencyScore += intersection.size / Math.max(prev.size, curr.size);
+  private addMetrics(metrics: FeedbackMetrics): void {
+    this.metrics.push(metrics);
+    if (this.metrics.length > this.maxMetrics) {
+      this.metrics = this.metrics.slice(-this.maxMetrics);
     }
-    
-    return consistencyScore / (patterns.length - 1);
-  }
-
-  private calculateNovelty(prediction: number[], history: number[][]): number {
-    const predictionSet = new Set(prediction);
-    const historicalNumbers = new Set(history.flat());
-    
-    const novelElements = [...predictionSet].filter(num => !historicalNumbers.has(num));
-    return novelElements.length / predictionSet.size;
-  }
-
-  private calculateEfficiency(prediction: number[], actual: number[]): number {
-    const matches = this.calculateMatches(prediction, actual);
-    const precision = matches / prediction.length;
-    const recall = matches / actual.length;
-    
-    if (precision + recall === 0) return 0;
-    return 2 * (precision * recall) / (precision + recall); // F1 Score
   }
 
   private calculateAdaptiveReward(metrics: {
@@ -144,9 +113,7 @@ export class LearningFeedbackLoop {
     model.compile({
       optimizer,
       loss: 'meanSquaredError',
-      metrics: ['accuracy'],
-      // Adicionando regularização L2
-      regularizers: [tf.regularizers.l2({ l2: 0.01 })]
+      metrics: ['accuracy']
     });
 
     const xs = tf.tensor2d([prediction]);
@@ -189,15 +156,7 @@ export class LearningFeedbackLoop {
     return result[0];
   }
 
-  getMetricsSummary(): {
-    averageAccuracy: number;
-    averageLoss: number;
-    totalPatterns: number;
-    totalReward: number;
-    averageConsistency: number;
-    averageNovelty: number;
-    averageEfficiency: number;
-  } {
+  getMetricsSummary(): MetricsSummary {
     const sum = this.metrics.reduce(
       (acc, curr) => ({
         accuracy: acc.accuracy + curr.accuracy,
