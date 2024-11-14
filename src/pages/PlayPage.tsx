@@ -21,13 +21,12 @@ const PlayPage: React.FC = () => {
   const [trainedModel, setTrainedModel] = useState<tf.LayersModel | null>(null);
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(false);
   const gameLogic = useGameLogic(csvData, trainedModel);
-  const [isRetraining, setIsRetraining] = useState(false);
-  const [retrainingProgress, setRetrainingProgress] = useState(0);
 
   // Usa o novo hook useGameInterval
   useGameInterval(
-    isPlaying && !isRetraining,
+    isPlaying && !isProcessing,
     gameSpeed,
     gameLogic.gameLoop,
     () => {
@@ -116,18 +115,11 @@ const PlayPage: React.FC = () => {
     <div className="p-6">
       <PlayPageHeader />
       <SpeedControl onSpeedChange={setGameSpeed} />
-      {isRetraining && (
-        <div className="my-4 p-4 border rounded-lg bg-secondary">
-          <h3 className="text-lg font-semibold mb-2">Retreinando Modelo</h3>
-          <Progress value={retrainingProgress} className="w-full" />
-          <p className="text-sm text-muted-foreground mt-2">
-            Progresso: {Math.round(retrainingProgress)}%
-          </p>
-        </div>
-      )}
       <PlayPageContent
-        isPlaying={isPlaying && !isRetraining}
-        onPlay={() => setIsPlaying(true)}
+        isPlaying={isPlaying && !isProcessing}
+        onPlay={() => {
+          setIsPlaying(true);
+        }}
         onPause={() => setIsPlaying(false)}
         onReset={() => {
           setIsPlaying(false);
@@ -141,6 +133,7 @@ const PlayPage: React.FC = () => {
         progress={progress}
         generation={gameLogic.generation}
         gameLogic={gameLogic}
+        isProcessing={isProcessing}
       />
     </div>
   );
