@@ -7,12 +7,7 @@ export const useServerStatus = () => {
 
   const checkServerStatus = async () => {
     try {
-      // Get the current hostname and use it to build the API URL
-      const apiUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:3001/status'
-        : `${window.location.origin}/status`; // Updated path without /api prefix
-
-      const response = await fetch(apiUrl, {
+      const response = await fetch('http://localhost:3001/status', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
