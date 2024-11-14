@@ -20,7 +20,7 @@ interface ChampionPredictionsProps {
 const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   champion,
   trainedModel,
-  lastConcursoNumbers,
+  lastConcursoNumbers = [],
   isServerProcessing = false
 }) => {
   const [predictions, setPredictions] = useState<Array<{
@@ -33,6 +33,11 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   const { toast } = useToast();
 
   const handleNumbersSelected = (numbers: number[]) => {
+    if (!Array.isArray(numbers)) {
+      console.error("Invalid numbers array received");
+      return;
+    }
+    
     setSelectedNumbers(numbers);
     if (predictions.length > 0) {
       setPredictions(predictions.map(pred => ({

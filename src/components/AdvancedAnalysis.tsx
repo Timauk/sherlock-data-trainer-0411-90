@@ -11,8 +11,21 @@ interface AdvancedAnalysisProps {
   dates: Date[];
 }
 
-const AdvancedAnalysis: React.FC<AdvancedAnalysisProps> = ({ numbers, dates }) => {
+const AdvancedAnalysis: React.FC<AdvancedAnalysisProps> = ({ numbers = [], dates = [] }) => {
   const calculatePatterns = () => {
+    if (!numbers.length || !dates.length) {
+      return {
+        consecutive: 0,
+        evenOdd: 0,
+        sumRange: [],
+        gaps: [],
+        seasonalStrength: 0,
+        lunarCorrelation: 0,
+        frequencyScore: 0,
+        sequentialScore: 0
+      };
+    }
+
     const patterns = {
       consecutive: 0,
       evenOdd: 0,
@@ -25,6 +38,8 @@ const AdvancedAnalysis: React.FC<AdvancedAnalysisProps> = ({ numbers, dates }) =
     };
 
     numbers.forEach((draw, index) => {
+      if (!Array.isArray(draw)) return;
+
       // Análise de números consecutivos
       for (let i = 1; i < draw.length; i++) {
         if (draw[i] === draw[i-1] + 1) patterns.consecutive++;
@@ -43,12 +58,14 @@ const AdvancedAnalysis: React.FC<AdvancedAnalysisProps> = ({ numbers, dates }) =
       }
 
       // Força sazonal (baseada no mês)
-      const month = dates[index].getMonth();
-      patterns.seasonalStrength += (month % 3 === 0) ? 0.1 : 0.05;
+      if (dates[index] instanceof Date) {
+        const month = dates[index].getMonth();
+        patterns.seasonalStrength += (month % 3 === 0) ? 0.1 : 0.05;
 
-      // Correlação lunar (simulada)
-      const dayOfMonth = dates[index].getDate();
-      patterns.lunarCorrelation += (dayOfMonth <= 15) ? 0.07 : 0.03;
+        // Correlação lunar (simulada)
+        const dayOfMonth = dates[index].getDate();
+        patterns.lunarCorrelation += (dayOfMonth <= 15) ? 0.07 : 0.03;
+      }
 
       // Score de frequência
       const uniqueNumbers = new Set(draw).size;

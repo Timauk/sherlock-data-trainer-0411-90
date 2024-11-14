@@ -8,7 +8,20 @@ const RETRAIN_INTERVAL = 1000;
 router.post('/predict', async (req, res) => {
   try {
     const { inputData } = req.body;
+    
+    // Validate input data
+    if (!inputData || !Array.isArray(inputData)) {
+      return res.status(400).json({ 
+        error: "Input data must be provided as an array" 
+      });
+    }
+
     const model = await getOrCreateModel();
+    if (!model) {
+      return res.status(500).json({ 
+        error: "Model not available" 
+      });
+    }
     
     const patterns = analyzePatterns([inputData]);
     const enhancedInput = enrichDataWithPatterns([inputData], patterns)[0];
@@ -23,7 +36,7 @@ router.post('/predict', async (req, res) => {
         needsRetraining: true,
         totalSamples,
         modelInfo: {
-          layers: model.layers.length,
+          layers: model.layers?.length || 0,
           totalParams: model.countParams()
         },
         patterns: patterns
@@ -33,7 +46,7 @@ router.post('/predict', async (req, res) => {
         prediction: result,
         totalSamples,
         modelInfo: {
-          layers: model.layers.length,
+          layers: model.layers?.length || 0,
           totalParams: model.countParams()
         },
         patterns: patterns
@@ -43,6 +56,7 @@ router.post('/predict', async (req, res) => {
     inputTensor.dispose();
     prediction.dispose();
   } catch (error) {
+    console.error("Prediction error:", error);
     res.status(500).json({ error: error.message });
   }
 });
