@@ -10,6 +10,12 @@ interface LunarData {
   lunarPatterns: Record<string, number[]>;
 }
 
+interface PredictionScore {
+  number: number;
+  score: number;
+  confidence: number;
+}
+
 export async function makePrediction(
   trainedModel: tf.LayersModel | null,
   inputData: number[],
@@ -27,129 +33,200 @@ export async function makePrediction(
   const timeSeriesAnalyzer = new TimeSeriesAnalysis(historicalData.numbers);
   const arimaPredictor = timeSeriesAnalyzer.analyzeNumbers();
   
-  // Normalização dos dados base
+  // Normalização e preparação dos dados
+  const normalizedInput = prepareInputData(inputData, concursoNumber);
+  
+  // Análise de padrões e influências
+  const patterns = analyzePatterns(historicalData, lunarData);
+  
+  // Gerar previsões usando a rede neural
+  const predictions = await generateNeuralPredictions(
+    trainedModel,
+    normalizedInput,
+    playerWeights,
+    patterns
+  );
+  
+  // Selecionar os melhores números baseado nas previsões
+  const selectedNumbers = selectBestNumbers(predictions, patterns);
+  
+  // Atualizar visualização
+  updateVisualization(
+    setNeuralNetworkVisualization,
+    normalizedInput,
+    predictions,
+    trainedModel
+  );
+  
+  const endTime = performance.now();
+  performanceMonitor.recordMetrics(predictions[0], endTime - startTime);
+  
+  return selectedNumbers;
+}
+
+function prepareInputData(inputData: number[], concursoNumber: number): number[] {
   const normalizedConcursoNumber = concursoNumber / 3184;
   const normalizedDataSorteio = Date.now() / (1000 * 60 * 60 * 24 * 365);
   
-  let enrichedInput = [
-    ...inputData.slice(0, 15),
+  return [
+    ...inputData.slice(0, 15).map(n => n / 25),
     normalizedConcursoNumber,
     normalizedDataSorteio
   ];
-  
-  // Análises adicionais
-  const currentDate = new Date();
-  const lunarPhase = getLunarPhase(currentDate);
-  const lunarWeight = getLunarPhaseWeight(lunarPhase);
-  const frequencyAnalysis = analyzeFrequency(historicalData.numbers);
+}
+
+function analyzePatterns(
+  historicalData: { numbers: number[][], dates: Date[] },
+  lunarData?: LunarData
+) {
   const patterns = analyzeAdvancedPatterns(historicalData.numbers, historicalData.dates);
+  const frequencyAnalysis = calculateFrequencyAnalysis(historicalData.numbers);
+  const lunarInfluence = calculateLunarInfluence(lunarData);
   
-  // Integração com previsões ARIMA
-  const randomizedWeights = playerWeights.map((weight, index) => {
-    const lunarInfluence = lunarWeight * 0.2;
-    const frequencyInfluence = getFrequencyInfluence(index + 1, frequencyAnalysis) * 0.3;
-    const patternInfluence = patterns ? (patterns.consecutive + patterns.evenOdd) / 2 * 0.2 : 0;
-    const arimaInfluence = arimaPredictor.includes(index + 1) ? 0.3 : 0;
-    const randomFactor = 1 + (Math.random() - 0.5) * 0.2;
-    
-    return weight * (1 + lunarInfluence + frequencyInfluence + patternInfluence + arimaInfluence) * randomFactor;
-  });
-  
-  const weightedInput = enrichedInput.map((value, index) => 
-    value * (randomizedWeights[index % randomizedWeights.length] / 1000));
-  
-  const inputTensor = tf.tensor2d([weightedInput]);
-  const predictions = trainedModel.predict(inputTensor) as tf.Tensor;
-  const result = Array.from(await predictions.data());
+  return {
+    patterns,
+    frequencyAnalysis,
+    lunarInfluence
+  };
+}
+
+async function generateNeuralPredictions(
+  model: tf.LayersModel,
+  normalizedInput: number[],
+  weights: number[],
+  patterns: any
+): Promise<PredictionScore[]> {
+  const inputTensor = tf.tensor2d([normalizedInput]);
+  const predictions = model.predict(inputTensor) as tf.Tensor;
+  const rawPredictions = Array.from(await predictions.data());
   
   inputTensor.dispose();
   predictions.dispose();
   
-  setNeuralNetworkVisualization({
-    input: weightedInput,
-    output: result,
-    weights: trainedModel.getWeights().map(w => Array.from(w.dataSync()))
-  });
-  
-  // Sistema de seleção com influência ARIMA
-  const weightedNumbers = Array.from({ length: 25 }, (_, i) => {
-    const number = i + 1;
-    const baseWeight = result[i % result.length];
-    const frequencyBonus = getFrequencyInfluence(number, frequencyAnalysis);
-    const lunarBonus = getLunarNumberInfluence(number, lunarPhase);
-    const patternBonus = patterns ? getNumberPatternInfluence(number, patterns) : 0;
-    const arimaBonus = arimaPredictor.includes(number) ? 0.4 : 0;
-    
-    return {
-      number,
-      weight: baseWeight * (1 + frequencyBonus + lunarBonus + patternBonus + arimaBonus)
-    };
-  }).sort((a, b) => b.weight - a.weight);
-  
-  const uniqueNumbers = new Set<number>();
-  let index = 0;
-  
-  while (uniqueNumbers.size < 10 && index < weightedNumbers.length) {
-    uniqueNumbers.add(weightedNumbers[index].number);
-    index++;
-  }
-  
-  while (uniqueNumbers.size < 15) {
-    const randomIndex = Math.floor(Math.random() * weightedNumbers.length);
-    const number = weightedNumbers[randomIndex].number;
-    uniqueNumbers.add(number);
-  }
-  
-  const endTime = performance.now();
-  performanceMonitor.recordMetrics(result[0], endTime - startTime);
-  
-  return Array.from(uniqueNumbers).sort((a, b) => a - b);
+  return Array.from({ length: 25 }, (_, i) => ({
+    number: i + 1,
+    score: calculateScore(i + 1, rawPredictions[i], patterns),
+    confidence: calculateConfidence(i + 1, patterns)
+  }));
 }
 
-function getLunarPhaseWeight(phase: string): number {
-  const weights: Record<string, number> = {
+function calculateScore(
+  number: number,
+  prediction: number,
+  patterns: any
+): number {
+  const { frequencyAnalysis, lunarInfluence, patterns: historicalPatterns } = patterns;
+  
+  const frequencyScore = frequencyAnalysis[number] || 0;
+  const lunarScore = lunarInfluence[number] || 0;
+  const patternScore = calculatePatternScore(number, historicalPatterns);
+  
+  return (
+    prediction * 0.4 +
+    frequencyScore * 0.3 +
+    lunarScore * 0.2 +
+    patternScore * 0.1
+  );
+}
+
+function calculateConfidence(number: number, patterns: any): number {
+  const consistencyScore = calculateConsistencyScore(number, patterns);
+  const variabilityScore = calculateVariabilityScore(number, patterns);
+  
+  return (consistencyScore + variabilityScore) / 2;
+}
+
+function selectBestNumbers(
+  predictions: PredictionScore[],
+  patterns: any
+): number[] {
+  // Ordenar por score e confiança
+  const sortedPredictions = [...predictions].sort((a, b) => {
+    const scoreComparison = b.score - a.score;
+    if (Math.abs(scoreComparison) > 0.1) return scoreComparison;
+    return b.confidence - a.confidence;
+  });
+  
+  // Selecionar os 15 melhores números
+  return sortedPredictions
+    .slice(0, 15)
+    .map(p => p.number)
+    .sort((a, b) => a - b);
+}
+
+function updateVisualization(
+  setVisualization: (vis: ModelVisualization) => void,
+  input: number[],
+  predictions: PredictionScore[],
+  model: tf.LayersModel
+) {
+  setVisualization({
+    input,
+    output: predictions.map(p => p.score),
+    weights: model.getWeights().map(w => Array.from(w.dataSync()))
+  });
+}
+
+// Funções auxiliares
+function calculateFrequencyAnalysis(numbers: number[][]): Record<number, number> {
+  const frequency: Record<number, number> = {};
+  const totalGames = numbers.length;
+  
+  numbers.flat().forEach(num => {
+    frequency[num] = (frequency[num] || 0) + 1;
+  });
+  
+  // Normalizar frequências
+  Object.keys(frequency).forEach(key => {
+    frequency[Number(key)] = frequency[Number(key)] / totalGames;
+  });
+  
+  return frequency;
+}
+
+function calculateLunarInfluence(lunarData?: LunarData): Record<number, number> {
+  if (!lunarData) return {};
+  
+  const influence: Record<number, number> = {};
+  const { lunarPhase } = lunarData;
+  
+  // Mapear influência lunar para cada número
+  for (let i = 1; i <= 25; i++) {
+    influence[i] = getLunarNumberWeight(i, lunarPhase);
+  }
+  
+  return influence;
+}
+
+function getLunarNumberWeight(number: number, phase: string): number {
+  const phaseWeights: Record<string, number> = {
     'Nova': 0.8,
     'Crescente': 1.2,
     'Cheia': 1.0,
     'Minguante': 0.9
   };
-  return weights[phase] || 1.0;
-}
-
-function analyzeFrequency(numbers: number[][]): Record<number, number> {
-  const frequency: Record<number, number> = {};
-  numbers.flat().forEach(num => {
-    frequency[num] = (frequency[num] || 0) + 1;
-  });
-  return frequency;
-}
-
-function getFrequencyInfluence(number: number, frequency: Record<number, number>): number {
-  const max = Math.max(...Object.values(frequency));
-  return frequency[number] ? frequency[number] / max : 0;
-}
-
-function getLunarNumberInfluence(number: number, phase: string): number {
-  // Diferentes fases lunares podem favorecer diferentes ranges de números
-  const ranges = {
-    'Nova': [1, 6],
-    'Crescente': [7, 12],
-    'Cheia': [13, 19],
-    'Minguante': [20, 25]
-  };
   
-  const range = ranges[phase as keyof typeof ranges];
-  if (range && number >= range[0] && number <= range[1]) {
-    return 0.2;
-  }
-  return 0;
+  return phaseWeights[phase] || 1.0;
 }
 
-function getPatternInfluence(patterns: any): number {
-  return (patterns.consecutive + patterns.evenOdd) / 2;
-}
-
-function getNumberPatternInfluence(number: number, patterns: any): number {
+function calculatePatternScore(number: number, patterns: any): number {
+  if (!patterns) return 0;
+  
+  const { consecutive, evenOdd } = patterns;
   const isEven = number % 2 === 0;
-  return isEven ? patterns.evenOdd : (1 - patterns.evenOdd);
+  
+  return (
+    (consecutive * 0.5) +
+    (isEven ? evenOdd : (1 - evenOdd)) * 0.5
+  );
+}
+
+function calculateConsistencyScore(number: number, patterns: any): number {
+  // Implementar lógica de consistência baseada em padrões históricos
+  return 0.5;
+}
+
+function calculateVariabilityScore(number: number, patterns: any): number {
+  // Implementar lógica de variabilidade baseada em padrões históricos
+  return 0.5;
 }
