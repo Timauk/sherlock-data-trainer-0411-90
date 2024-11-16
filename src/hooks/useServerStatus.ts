@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
+import { systemLogger } from '@/utils/logging/systemLogger';
 
 export const useServerStatus = () => {
   const [status, setStatus] = useState<'online' | 'offline' | 'checking'>('checking');
@@ -13,8 +14,7 @@ export const useServerStatus = () => {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        mode: 'cors',
-        credentials: 'include'
+        mode: 'cors'
       });
       
       if (response.ok) {
@@ -22,6 +22,7 @@ export const useServerStatus = () => {
         if (data.status === 'online') {
           setStatus('online');
           if (status === 'offline') {
+            systemLogger.log('system', 'Server connection restored', {}, 'success');
             toast({
               title: "Servidor Conectado",
               description: "Conexão estabelecida com sucesso.",
@@ -36,9 +37,10 @@ export const useServerStatus = () => {
     } catch (error) {
       setStatus('offline');
       if (status === 'online') {
+        systemLogger.log('system', 'Server connection lost', {}, 'error');
         toast({
           title: "Servidor Desconectado",
-          description: "Verifique se o servidor está rodando corretamente",
+          description: "Verifique se o servidor está rodando em localhost:3001",
           variant: "destructive",
         });
       }
@@ -49,7 +51,7 @@ export const useServerStatus = () => {
     checkServerStatus();
     const interval = setInterval(checkServerStatus, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [status]); // Add status as dependency to properly handle status changes
 
   return { status, checkServerStatus };
 };

@@ -10,7 +10,6 @@ class SystemLogger {
   private static instance: SystemLogger;
   private logs: LogEntry[] = [];
   private maxLogs = 1000;
-  private subscribers: ((entry: LogEntry) => void)[] = [];
   private errorHandler: ((error: Error) => void) | null = null;
 
   private constructor() {}
@@ -24,27 +23,6 @@ class SystemLogger {
 
   setErrorHandler(handler: (error: Error) => void) {
     this.errorHandler = handler;
-  }
-
-  subscribe(callback: (entry: LogEntry) => void) {
-    this.subscribers.push(callback);
-    return () => {
-      this.subscribers = this.subscribers.filter(cb => cb !== callback);
-    };
-  }
-
-  private notify(entry: LogEntry) {
-    try {
-      this.subscribers.forEach(callback => callback(entry));
-      
-      // Dispara evento para atualização da UI
-      const event = new CustomEvent('systemLog', { detail: entry });
-      window.dispatchEvent(event);
-    } catch (error) {
-      if (this.errorHandler && error instanceof Error) {
-        this.errorHandler(error);
-      }
-    }
   }
 
   log(
@@ -67,32 +45,19 @@ class SystemLogger {
         this.logs = this.logs.slice(-this.maxLogs);
       }
 
-      this.notify(entry);
+      // Dispatch event for UI updates
+      const event = new CustomEvent('systemLog', { detail: entry });
+      window.dispatchEvent(event);
 
-      const styles = this.getConsoleStyles(severity);
-      console.log(
-        `%c[${type.toUpperCase()}] ${message}`,
-        styles,
-        details || ''
-      );
+      if (severity === 'error' && this.errorHandler) {
+        this.errorHandler(new Error(message));
+      }
+
+      console.log(`[${type.toUpperCase()}] ${message}`, details || '');
     } catch (error) {
       if (this.errorHandler && error instanceof Error) {
         this.errorHandler(error);
       }
-    }
-  }
-
-  private getConsoleStyles(severity: LogEntry['severity'] = 'info'): string {
-    const baseStyle = 'padding: 2px 5px; border-radius: 3px; color: white;';
-    switch (severity) {
-      case 'error':
-        return `${baseStyle} background-color: #ef4444;`;
-      case 'warning':
-        return `${baseStyle} background-color: #f97316;`;
-      case 'success':
-        return `${baseStyle} background-color: #10b981;`;
-      default:
-        return `${baseStyle} background-color: #6366f1;`;
     }
   }
 
@@ -104,22 +69,8 @@ class SystemLogger {
     return this.logs.filter(log => log.type === type);
   }
 
-  getLogsBySeverity(severity: LogEntry['severity']): LogEntry[] {
-    return this.logs.filter(log => log.severity === severity);
-  }
-
   clearLogs() {
     this.logs = [];
-    this.notify({ 
-      timestamp: new Date(), 
-      type: 'system', 
-      message: 'Logs limpos', 
-      severity: 'info' 
-    });
-  }
-
-  exportLogs(): string {
-    return JSON.stringify(this.logs, null, 2);
   }
 }
 

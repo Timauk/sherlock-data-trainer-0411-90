@@ -38,12 +38,13 @@ if (cluster.isPrimary) {
     useClones: false
   });
 
-  // Updated CORS configuration
+  // Updated CORS configuration to be more permissive
   app.use(cors({
-    origin: true, // Allow all origins
-    credentials: true,
+    origin: '*', // Allow all origins
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
+    allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
+    credentials: true,
+    optionsSuccessStatus: 200
   }));
 
   app.use(express.json({ limit: '50mb' }));
@@ -130,6 +131,9 @@ if (cluster.isPrimary) {
       message: err.message
     });
   });
+
+  // Add preflight handling for all routes
+  app.options('*', cors());
 
   app.listen(PORT, () => {
     logger.info(`Worker ${process.pid} started and listening on port ${PORT}`);
