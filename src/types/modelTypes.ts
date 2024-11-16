@@ -1,5 +1,5 @@
 import { LayersModel } from '@tensorflow/tfjs';
-import { ModelVisualization } from './gameTypes';
+import { ModelVisualization, Player } from './gameTypes';
 
 export interface ModelUploadProps {
   onModelUpload: (
@@ -10,22 +10,8 @@ export interface ModelUploadProps {
   ) => void;
 }
 
-export interface PlayPageContentProps extends ModelUploadProps {
-  isPlaying: boolean;
-  onPlay: () => void;
-  onPause: () => void;
-  onReset: () => void;
-  onThemeToggle: () => void;
-  onCsvUpload: (file: File) => void;
-  onSaveModel: () => void;
-  progress: number;
-  generation: number;
-  gameLogic: GameLogicProps;
-  isProcessing?: boolean;
-}
-
 export interface GameLogicProps {
-  players: any[];
+  players: Player[];
   trainedModel: LayersModel | null;
   boardNumbers: number[];
   evolutionData: Array<{
@@ -47,4 +33,19 @@ export interface GameLogicProps {
   toggleManualMode: () => void;
   isInfiniteMode: boolean;
   isManualMode: boolean;
+  isProcessing?: boolean;
+}
+
+export interface PlayPageContentProps extends ModelUploadProps {
+  isPlaying: boolean;
+  onPlay: () => void;
+  onPause: () => void;
+  onReset: () => void;
+  onThemeToggle: () => void;
+  onCsvUpload: (file: File) => void;
+  onSaveModel: () => void;
+  progress: number;
+  generation: number;
+  gameLogic: GameLogicProps;
+  isProcessing?: boolean;
 }

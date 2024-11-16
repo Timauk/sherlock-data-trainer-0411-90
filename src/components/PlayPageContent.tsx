@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useServerStatus } from '@/hooks/useServerStatus';
 import ProcessingPanel from './PlayPageContent/ProcessingPanel';
 import AnalysisPanel from './PlayPageContent/AnalysisPanel';
+import GameActions from './PlayPageContent/GameActions';
 import { useToast } from "@/hooks/use-toast";
-import { ModelUploadProps, GameLogicProps, PlayPageContentProps } from '@/types/modelTypes';
+import { PlayPageContentProps } from '@/types/modelTypes';
 import { exportPredictionsToCSV } from '@/utils/exportUtils';
 
 const PlayPageContent: React.FC<PlayPageContentProps> = ({
@@ -23,12 +24,6 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
   const [isServerProcessing, setIsServerProcessing] = useState(false);
   const { status: serverStatus } = useServerStatus();
   const { toast } = useToast();
-
-  const champion = gameLogic.players && gameLogic.players.length > 0 
-    ? gameLogic.players.reduce((prev, current) => 
-        (current.fitness > (prev?.fitness || 0)) ? current : prev, 
-        gameLogic.players[0])
-    : null;
 
   const handleExportCSV = async () => {
     try {
@@ -67,7 +62,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
   const storeCurrentGame = async () => {
     if (gameLogic.players && gameLogic.players.length > 0) {
       try {
-        const predictions = gameLogic.players.map((player: any) => ({
+        const predictions = gameLogic.players.map(player => ({
           numbers: player.predictions || []
         }));
         
@@ -198,7 +193,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         onModelUpload={onModelUpload}
         onSaveModel={onSaveModel}
         progress={progress}
-        champion={champion}
+        champion={gameLogic.players[0]}
         modelMetrics={gameLogic.modelMetrics}
         gameLogic={gameLogic}
         isServerProcessing={isServerProcessing}
@@ -210,7 +205,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
       />
       
       <AnalysisPanel
-        champion={champion}
+        champion={gameLogic.players[0]}
         trainedModel={gameLogic.trainedModel}
         boardNumbers={gameLogic.boardNumbers}
         isServerProcessing={isServerProcessing}
@@ -223,6 +218,12 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         neuralNetworkVisualization={gameLogic.neuralNetworkVisualization}
         concursoNumber={gameLogic.concursoNumber}
         onExportCSV={handleExportCSV}
+      />
+
+      <GameActions
+        onSaveFullModel={saveFullModel}
+        onLoadFullModel={loadFullModel}
+        isProcessing={isProcessing}
       />
     </div>
   );
