@@ -1,3 +1,6 @@
+import { LayersModel } from '@tensorflow/tfjs';
+import { ModelVisualization } from './gameTypes';
+
 export interface ModelUploadProps {
   onModelUpload: (
     jsonFile: File,
@@ -19,4 +22,29 @@ export interface PlayPageContentProps extends ModelUploadProps {
   generation: number;
   gameLogic: GameLogicProps;
   isProcessing?: boolean;
+}
+
+export interface GameLogicProps {
+  players: any[];
+  trainedModel: LayersModel | null;
+  boardNumbers: number[];
+  evolutionData: Array<{
+    generation: number;
+    playerId: number;
+    score: number;
+    fitness: number;
+  }>;
+  dates: Date[];
+  numbers: number[][];
+  modelMetrics: {
+    accuracy: number;
+    randomAccuracy: number;
+    totalPredictions: number;
+  };
+  neuralNetworkVisualization: ModelVisualization | null;
+  concursoNumber: number;
+  toggleInfiniteMode: () => void;
+  toggleManualMode: () => void;
+  isInfiniteMode: boolean;
+  isManualMode: boolean;
 }

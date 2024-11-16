@@ -3,21 +3,8 @@ import { useServerStatus } from '@/hooks/useServerStatus';
 import ProcessingPanel from './PlayPageContent/ProcessingPanel';
 import AnalysisPanel from './PlayPageContent/AnalysisPanel';
 import { useToast } from "@/hooks/use-toast";
-import { ModelUploadProps, GameLogicProps } from '@/types/modelTypes';
+import { ModelUploadProps, GameLogicProps, PlayPageContentProps } from '@/types/modelTypes';
 import { exportPredictionsToCSV } from '@/utils/exportUtils';
-
-interface PlayPageContentProps extends ModelUploadProps {
-  isPlaying: boolean;
-  onPlay: () => void;
-  onPause: () => void;
-  onReset: () => void;
-  onThemeToggle: () => void;
-  onCsvUpload: (file: File) => void;
-  onSaveModel: () => void;
-  progress: number;
-  generation: number;
-  gameLogic: GameLogicProps;
-}
 
 const PlayPageContent: React.FC<PlayPageContentProps> = ({
   isPlaying,
@@ -30,7 +17,8 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
   onSaveModel,
   progress,
   generation,
-  gameLogic
+  gameLogic,
+  isProcessing = false
 }) => {
   const [isServerProcessing, setIsServerProcessing] = useState(false);
   const { status: serverStatus } = useServerStatus();
@@ -218,6 +206,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         onToggleProcessing={() => setIsServerProcessing(prev => !prev)}
         saveFullModel={saveFullModel}
         loadFullModel={loadFullModel}
+        isProcessing={isProcessing}
       />
       
       <AnalysisPanel
