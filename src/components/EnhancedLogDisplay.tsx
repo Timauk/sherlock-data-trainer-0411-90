@@ -18,8 +18,8 @@ const EnhancedLogDisplay: React.FC = () => {
   const { toast } = useToast();
 
   const handleError = useCallback((error: Error) => {
+    // Ignore server connection errors as they're handled by useServerStatus
     if (error.message.includes('Failed to fetch')) {
-      // Ignore server connection errors as they're handled by useServerStatus
       return;
     }
     toast({
@@ -31,15 +31,19 @@ const EnhancedLogDisplay: React.FC = () => {
 
   useEffect(() => {
     try {
+      // Set up error handler
       systemLogger.setErrorHandler(handleError);
 
+      // Set up log event listener
       const updateLogs = (event: CustomEvent<LogEntry>) => {
         setLogs(prevLogs => [...prevLogs, event.detail]);
       };
 
+      // Add event listener and initialize logs
       window.addEventListener('systemLog', updateLogs as EventListener);
       setLogs(systemLogger.getLogs());
 
+      // Cleanup
       return () => {
         window.removeEventListener('systemLog', updateLogs as EventListener);
       };

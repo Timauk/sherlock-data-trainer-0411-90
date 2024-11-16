@@ -10,7 +10,7 @@ class SystemLogger {
   private static instance: SystemLogger;
   private logs: LogEntry[] = [];
   private maxLogs = 1000;
-  private errorHandler?: (error: Error) => void;
+  private errorHandler: ((error: Error) => void) | undefined;
 
   private constructor() {}
 
@@ -21,7 +21,7 @@ class SystemLogger {
     return SystemLogger.instance;
   }
 
-  setErrorHandler(handler: (error: Error) => void) {
+  setErrorHandler(handler: (error: Error) => void): void {
     this.errorHandler = handler;
   }
 
@@ -30,7 +30,7 @@ class SystemLogger {
     message: string, 
     details?: any, 
     severity: LogEntry['severity'] = 'info'
-  ) {
+  ): void {
     try {
       const entry: LogEntry = {
         timestamp: new Date(),
@@ -45,7 +45,6 @@ class SystemLogger {
         this.logs = this.logs.slice(-this.maxLogs);
       }
 
-      // Dispatch event for UI updates
       const event = new CustomEvent('systemLog', { detail: entry });
       window.dispatchEvent(event);
 
@@ -70,7 +69,7 @@ class SystemLogger {
     return this.logs.filter(log => log.type === type);
   }
 
-  clearLogs() {
+  clearLogs(): void {
     this.logs = [];
   }
 }
