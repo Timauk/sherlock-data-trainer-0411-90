@@ -38,13 +38,14 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const [trainingData, setTrainingData] = useState<number[][]>([]);
   const [boardNumbers, setBoardNumbers] = useState<number[]>([]);
   const [isManualMode, setIsManualMode] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const addLog = useCallback((message: string, matches?: number) => {
     const logType = matches ? 'prediction' : 'action';
     systemLogger.log(logType, message, { matches });
   }, []);
 
-  const gameLoop = useGameLoop(
+  const gameLoop = useGameLoop({
     players,
     setPlayers,
     csvData,
@@ -53,18 +54,14 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     setEvolutionData,
     generation,
     addLog,
-    updateInterval,
-    trainingData,
-    setTrainingData,
-    setNumbers,
-    setDates,
     setNeuralNetworkVisualization,
     setBoardNumbers,
     setModelMetrics,
     setConcursoNumber,
     setGameCount,
-    (title, description) => toast({ title, description })
-  );
+    setIsProcessing,
+    showToast: (title, description) => toast({ title, description })
+  });
 
   const evolveGeneration = useEvolutionLogic(
     players,
@@ -141,7 +138,9 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     gameCount,
     isManualMode,
     toggleManualMode,
-    clonePlayer
+    clonePlayer,
+    isProcessing,
+    setIsProcessing
   };
 };
 

@@ -9,23 +9,41 @@ import { temporalAccuracyTracker } from '@/utils/prediction/temporalAccuracy';
 import { TimeSeriesAnalysis } from '@/utils/analysis/timeSeriesAnalysis';
 import { systemLogger } from '@/utils/logging/systemLogger';
 
-export const useGameLoop = (
-  players: Player[],
-  setPlayers: (players: Player[]) => void,
-  csvData: number[][],
-  trainedModel: tf.LayersModel | null,
-  concursoNumber: number,
-  setEvolutionData: (data: any) => void,
-  generation: number,
-  addLog: (message: string, matches?: number) => void,
-  setNeuralNetworkVisualization: (vis: ModelVisualization | null) => void,
-  setBoardNumbers: (numbers: number[]) => void,
-  setModelMetrics: (metrics: any) => void,
-  setConcursoNumber: (num: number) => void,
-  setGameCount: React.Dispatch<React.SetStateAction<number>>,
-  setIsProcessing: (isProcessing: boolean) => void,
-  showToast?: (title: string, description: string) => void
-) => {
+interface GameLoopParams {
+  players: Player[];
+  setPlayers: (players: Player[]) => void;
+  csvData: number[][];
+  trainedModel: tf.LayersModel | null;
+  concursoNumber: number;
+  setEvolutionData: (data: any) => void;
+  generation: number;
+  addLog: (message: string, matches?: number) => void;
+  setNeuralNetworkVisualization: (vis: ModelVisualization | null) => void;
+  setBoardNumbers: (numbers: number[]) => void;
+  setModelMetrics: (metrics: any) => void;
+  setConcursoNumber: (num: number) => void;
+  setGameCount: React.Dispatch<React.SetStateAction<number>>;
+  setIsProcessing: (isProcessing: boolean) => void;
+  showToast?: (title: string, description: string) => void;
+}
+
+export const useGameLoop = ({
+  players,
+  setPlayers,
+  csvData,
+  trainedModel,
+  concursoNumber,
+  setEvolutionData,
+  generation,
+  addLog,
+  setNeuralNetworkVisualization,
+  setBoardNumbers,
+  setModelMetrics,
+  setConcursoNumber,
+  setGameCount,
+  setIsProcessing,
+  showToast
+}: GameLoopParams) => {
   return useCallback(async () => {
     setIsProcessing(true);
     
@@ -35,22 +53,15 @@ export const useGameLoop = (
         return false;
       }
 
-      // Obtém os números do concurso atual do CSV
       const currentBoardNumbers = [...csvData[concursoNumber]];
       console.log('Game Loop - Definindo números:', currentBoardNumbers, 'para concurso:', concursoNumber);
       
-      // Força a atualização dos números do quadro
       setBoardNumbers(currentBoardNumbers);
       
       const currentDate = new Date();
       const lunarPhase = getLunarPhase(currentDate);
       const lunarPatterns = analyzeLunarPatterns([currentDate], [currentBoardNumbers]);
 
-      // Atualiza os números e datas simultaneamente
-      setNumbers(prev => [...prev, currentBoardNumbers].slice(-100));
-      setDates(prev => [...prev, currentDate].slice(-100));
-
-      // Processa todas as apostas dos jogadores simultaneamente
       const playerResults = await Promise.all(
         players.map(async player => {
           const prediction = await makePrediction(
@@ -60,38 +71,61 @@ export const useGameLoop = (
             concursoNumber,
             setNeuralNetworkVisualization,
             { lunarPhase, lunarPatterns },
-            { numbers: [currentBoardNumbers], dates: [currentDate] }
+            { numbers: [[...currentBoardNumbers]], dates: [currentDate] }
           );
 
-          const matches = prediction.filter(num => currentBoardNumbers.includes(num)).length;
-          const reward = calculateReward(matches);
+          const timeSeriesAnalyzer = new TimeSeriesAnalysis([[...currentBoardNumbers]]);
+          const arimaPredictor = timeSeriesAnalyzer.analyzeNumbers();
+          predictionMonitor.recordPrediction(prediction, currentBoardNumbers, arimaPredictor);
 
-          if (matches >= 11) {
-            const logMessage = logReward(matches, player.id);
-            addLog(logMessage, matches);
-            
-            if (matches >= 13) {
-              showToast?.("Desempenho Excepcional!", 
-                `Jogador ${player.id} acertou ${matches} números no concurso ${concursoNumber}!`);
-            }
-          }
-
-          return {
-            ...player,
-            score: player.score + reward,
-            predictions: prediction,
-            fitness: matches
-          };
+          return prediction;
         })
       );
 
-      // Atualiza todos os jogadores simultaneamente
-      setPlayers(playerResults);
+      let totalMatches = 0;
+      let randomMatches = 0;
+      let currentGameMatches = 0;
+      let currentGameRandomMatches = 0;
+
+      const updatedPlayers = players.map((player, index) => {
+        const predictions = playerResults[index];
+        const matches = predictions.filter(num => currentBoardNumbers.includes(num)).length;
+        
+        totalMatches += matches;
+        currentGameMatches += matches;
+
+        if (matches >= 15) {
+          showToast?.("Resultado Excepcional!", 
+            `Jogador ${player.id} acertou ${matches} números!`);
+        }
+
+        const randomPrediction = Array.from({ length: 15 }, () => Math.floor(Math.random() * 25) + 1);
+        const randomMatch = randomPrediction.filter(num => currentBoardNumbers.includes(num)).length;
+        randomMatches += randomMatch;
+        currentGameRandomMatches += randomMatch;
+
+        temporalAccuracyTracker.recordAccuracy(matches, 15);
+
+        const reward = calculateReward(matches);
+        
+        if (matches >= 11) {
+          const logMessage = logReward(matches, player.id);
+          addLog(logMessage, matches);
+        }
+
+        return {
+          ...player,
+          score: player.score + reward,
+          predictions,
+          fitness: matches
+        };
+      });
+
+      setPlayers(updatedPlayers);
       
-      // Atualiza dados de evolução
       setEvolutionData(prev => [
         ...prev,
-        ...playerResults.map(player => ({
+        ...updatedPlayers.map(player => ({
           generation,
           playerId: player.id,
           score: player.score,
@@ -99,16 +133,15 @@ export const useGameLoop = (
         }))
       ]);
 
-      // Atualiza métricas do modelo
-      const totalMatches = playerResults.reduce((sum, player) => sum + player.fitness, 0);
-      setModelMetrics({
+      const metrics = {
         accuracy: totalMatches / (players.length * 15),
+        randomAccuracy: randomMatches / (players.length * 15),
         totalPredictions: players.length * (concursoNumber + 1),
-        perGameAccuracy: totalMatches / (players.length * 15)
-      });
+        perGameAccuracy: currentGameMatches / (players.length * 15),
+        perGameRandomAccuracy: currentGameRandomMatches / (players.length * 15)
+      };
 
-      // Avança para o próximo concurso
-      console.log('Avançando concurso de', concursoNumber, 'para', concursoNumber + 1);
+      setModelMetrics(metrics);
       setConcursoNumber(concursoNumber + 1);
       setGameCount(prev => prev + 1);
 
@@ -130,6 +163,7 @@ export const useGameLoop = (
     setModelMetrics,
     setConcursoNumber,
     setGameCount,
-    setIsProcessing
+    setIsProcessing,
+    showToast
   ]);
 };
