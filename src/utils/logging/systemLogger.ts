@@ -10,7 +10,7 @@ class SystemLogger {
   private static instance: SystemLogger;
   private logs: LogEntry[] = [];
   private maxLogs = 1000;
-  private errorHandler: ((error: Error) => void) | null = null;
+  private errorHandler?: (error: Error) => void;
 
   private constructor() {}
 
@@ -55,6 +55,7 @@ class SystemLogger {
 
       console.log(`[${type.toUpperCase()}] ${message}`, details || '');
     } catch (error) {
+      console.error('Error in SystemLogger:', error);
       if (this.errorHandler && error instanceof Error) {
         this.errorHandler(error);
       }

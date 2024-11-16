@@ -18,6 +18,10 @@ const EnhancedLogDisplay: React.FC = () => {
   const { toast } = useToast();
 
   const handleError = useCallback((error: Error) => {
+    if (error.message.includes('Failed to fetch')) {
+      // Ignore server connection errors as they're handled by useServerStatus
+      return;
+    }
     toast({
       title: "Erro no Sistema de Logs",
       description: error.message,
@@ -26,24 +30,22 @@ const EnhancedLogDisplay: React.FC = () => {
   }, [toast]);
 
   useEffect(() => {
-    systemLogger.setErrorHandler(handleError);
+    try {
+      systemLogger.setErrorHandler(handleError);
 
-    const updateLogs = (event: CustomEvent<LogEntry>) => {
-      try {
+      const updateLogs = (event: CustomEvent<LogEntry>) => {
         setLogs(prevLogs => [...prevLogs, event.detail]);
-      } catch (error) {
-        if (error instanceof Error) {
-          handleError(error);
-        }
-      }
-    };
+      };
 
-    window.addEventListener('systemLog', updateLogs as EventListener);
-    setLogs(systemLogger.getLogs());
+      window.addEventListener('systemLog', updateLogs as EventListener);
+      setLogs(systemLogger.getLogs());
 
-    return () => {
-      window.removeEventListener('systemLog', updateLogs as EventListener);
-    };
+      return () => {
+        window.removeEventListener('systemLog', updateLogs as EventListener);
+      };
+    } catch (error) {
+      console.error('Error in EnhancedLogDisplay:', error);
+    }
   }, [handleError]);
 
   const getLogColor = (type: string) => {
