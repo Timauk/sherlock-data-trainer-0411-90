@@ -1,22 +1,41 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { systemLogger } from '@/utils/logging/systemLogger';
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 interface LogEntry {
   timestamp: Date;
   type: string;
   message: string;
   details?: any;
+  severity?: 'info' | 'warning' | 'error' | 'success';
 }
 
 const EnhancedLogDisplay: React.FC = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filter, setFilter] = useState<string>('all');
+  const { toast } = useToast();
+
+  const handleError = useCallback((error: Error) => {
+    toast({
+      title: "Erro no Sistema de Logs",
+      description: error.message,
+      variant: "destructive"
+    });
+  }, [toast]);
 
   useEffect(() => {
+    systemLogger.setErrorHandler(handleError);
+
     const updateLogs = (event: CustomEvent<LogEntry>) => {
-      setLogs(prevLogs => [...prevLogs, event.detail]);
+      try {
+        setLogs(prevLogs => [...prevLogs, event.detail]);
+      } catch (error) {
+        if (error instanceof Error) {
+          handleError(error);
+        }
+      }
     };
 
     window.addEventListener('systemLog', updateLogs as EventListener);
@@ -25,7 +44,7 @@ const EnhancedLogDisplay: React.FC = () => {
     return () => {
       window.removeEventListener('systemLog', updateLogs as EventListener);
     };
-  }, []);
+  }, [handleError]);
 
   const getLogColor = (type: string) => {
     switch (type) {
@@ -45,6 +64,19 @@ const EnhancedLogDisplay: React.FC = () => {
         return 'bg-red-500';
       default:
         return 'bg-gray-500';
+    }
+  };
+
+  const getSeverityColor = (severity?: string) => {
+    switch (severity) {
+      case 'error':
+        return 'text-red-500';
+      case 'warning':
+        return 'text-yellow-500';
+      case 'success':
+        return 'text-green-500';
+      default:
+        return 'text-gray-700';
     }
   };
 
@@ -81,7 +113,9 @@ const EnhancedLogDisplay: React.FC = () => {
               {log.type}
             </Badge>
             <div className="flex-1">
-              <span className="text-sm">{log.message}</span>
+              <span className={`text-sm ${getSeverityColor(log.severity)}`}>
+                {log.message}
+              </span>
               {log.details && (
                 <pre className="text-xs mt-1 bg-gray-100 p-2 rounded overflow-x-auto">
                   {JSON.stringify(log.details, null, 2)}

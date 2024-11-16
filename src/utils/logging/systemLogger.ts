@@ -11,6 +11,7 @@ class SystemLogger {
   private logs: LogEntry[] = [];
   private maxLogs = 1000;
   private subscribers: ((entry: LogEntry) => void)[] = [];
+  private errorHandler: ((error: Error) => void) | null = null;
 
   private constructor() {}
 
@@ -21,6 +22,10 @@ class SystemLogger {
     return SystemLogger.instance;
   }
 
+  setErrorHandler(handler: (error: Error) => void) {
+    this.errorHandler = handler;
+  }
+
   subscribe(callback: (entry: LogEntry) => void) {
     this.subscribers.push(callback);
     return () => {
@@ -29,7 +34,17 @@ class SystemLogger {
   }
 
   private notify(entry: LogEntry) {
-    this.subscribers.forEach(callback => callback(entry));
+    try {
+      this.subscribers.forEach(callback => callback(entry));
+      
+      // Dispara evento para atualização da UI
+      const event = new CustomEvent('systemLog', { detail: entry });
+      window.dispatchEvent(event);
+    } catch (error) {
+      if (this.errorHandler && error instanceof Error) {
+        this.errorHandler(error);
+      }
+    }
   }
 
   log(
@@ -38,33 +53,33 @@ class SystemLogger {
     details?: any, 
     severity: LogEntry['severity'] = 'info'
   ) {
-    const entry: LogEntry = {
-      timestamp: new Date(),
-      type,
-      message,
-      details,
-      severity
-    };
+    try {
+      const entry: LogEntry = {
+        timestamp: new Date(),
+        type,
+        message,
+        details,
+        severity
+      };
 
-    this.logs.push(entry);
-    if (this.logs.length > this.maxLogs) {
-      this.logs = this.logs.slice(-this.maxLogs);
+      this.logs.push(entry);
+      if (this.logs.length > this.maxLogs) {
+        this.logs = this.logs.slice(-this.maxLogs);
+      }
+
+      this.notify(entry);
+
+      const styles = this.getConsoleStyles(severity);
+      console.log(
+        `%c[${type.toUpperCase()}] ${message}`,
+        styles,
+        details || ''
+      );
+    } catch (error) {
+      if (this.errorHandler && error instanceof Error) {
+        this.errorHandler(error);
+      }
     }
-
-    // Dispara evento para atualização da UI
-    const event = new CustomEvent('systemLog', { detail: entry });
-    window.dispatchEvent(event);
-
-    // Notifica subscribers
-    this.notify(entry);
-
-    // Console logging com cores
-    const styles = this.getConsoleStyles(severity);
-    console.log(
-      `%c[${type.toUpperCase()}] ${message}`,
-      styles,
-      details || ''
-    );
   }
 
   private getConsoleStyles(severity: LogEntry['severity'] = 'info'): string {
@@ -82,7 +97,7 @@ class SystemLogger {
   }
 
   getLogs(): LogEntry[] {
-    return this.logs;
+    return [...this.logs];
   }
 
   getLogsByType(type: LogEntry['type']): LogEntry[] {
