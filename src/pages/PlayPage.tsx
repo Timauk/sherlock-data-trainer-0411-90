@@ -9,9 +9,9 @@ import SpeedControl from '@/components/SpeedControl';
 import { useGameInterval } from '@/hooks/useGameInterval';
 import { loadModelFiles } from '@/utils/modelLoader';
 import { loadModelWithWeights, saveModelWithWeights } from '@/utils/modelUtils';
-import { setupPeriodicRetraining } from '@/utils/dataManagement/weightedTraining';
 import { Progress } from "@/components/ui/progress";
 import { systemLogger } from '@/utils/logging/systemLogger';
+import { Card } from '@/components/ui/card';
 
 const PlayPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -26,7 +26,6 @@ const PlayPage: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const gameLogic = useGameLogic(csvData, trainedModel);
 
-  // Add effect to check initialization status
   useEffect(() => {
     if (csvData.length > 0 && trainedModel !== null) {
       setIsInitialized(true);
@@ -63,7 +62,10 @@ const PlayPage: React.FC = () => {
       setCsvData(data.map(d => d.bolas));
       setCsvDates(data.map(d => d.data));
       systemLogger.log("action", "CSV carregado e processado com sucesso!");
-      systemLogger.log("action", `Número de registros carregados: ${data.length}`);
+      toast({
+        title: "CSV Carregado",
+        description: `${data.length} registros foram carregados com sucesso.`
+      });
     } catch (error) {
       systemLogger.log("action", `Erro ao carregar CSV: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, {}, 'error');
       setIsInitialized(false);
@@ -105,7 +107,7 @@ const PlayPage: React.FC = () => {
     if (!isInitialized) {
       toast({
         title: "Sistema não Inicializado",
-        description: "Por favor, verifique se o CSV e o modelo foram carregados corretamente.",
+        description: "Por favor, carregue o CSV e o modelo antes de iniciar.",
         variant: "destructive"
       });
       return;
@@ -144,6 +146,38 @@ const PlayPage: React.FC = () => {
       });
     }
   }, [trainedModel, toast]);
+
+  if (!isInitialized) {
+    return (
+      <div className="p-6">
+        <Card className="p-6">
+          <h2 className="text-2xl font-bold mb-4">Bem-vindo ao Sherlock Data Trainer</h2>
+          <p className="mb-4">Para começar, você precisa:</p>
+          <ol className="list-decimal list-inside space-y-2 mb-4">
+            <li>Carregar um arquivo CSV com os dados históricos</li>
+            <li>Carregar um modelo treinado (ou iniciar um novo)</li>
+          </ol>
+          <PlayPageContent
+            isPlaying={false}
+            onPlay={handlePlay}
+            onPause={() => setIsPlaying(false)}
+            onReset={() => {
+              setIsPlaying(false);
+              gameLogic.initializePlayers();
+            }}
+            onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            onCsvUpload={loadCSV}
+            onModelUpload={loadModel}
+            onSaveModel={saveModel}
+            progress={progress}
+            generation={gameLogic.generation}
+            gameLogic={gameLogic}
+            isProcessing={isProcessing}
+          />
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
