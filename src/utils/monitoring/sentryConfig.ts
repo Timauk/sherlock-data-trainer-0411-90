@@ -14,11 +14,10 @@ export const initSentry = () => {
       }
       return event;
     },
-    // Adiciona limitação de taxa
-    transport: Sentry.makeBrowserTransport({
-      // Implementa backoff exponencial
-      retryAfter: (attempt) => Math.min(1000 * Math.pow(2, attempt), 60000),
-      maxRetries: 3
-    })
+    // Configuração simplificada do transporte
+    transport: Sentry.defaultTransport,
+    // Configuração de retry
+    maxRetries: 3,
+    shutdownTimeout: 5000
   });
 };
