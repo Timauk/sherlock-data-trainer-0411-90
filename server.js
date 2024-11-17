@@ -38,14 +38,31 @@ if (cluster.isPrimary) {
     useClones: false
   });
 
-  // Updated CORS configuration to be more permissive
+  // Enhanced CORS configuration
   app.use(cors({
-    origin: '*', // Allow all origins
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
+    origin: function(origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if(!origin) return callback(null, true);
+      
+      const allowedOrigins = [
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'https://id-preview--dcc838c0-148c-47bb-abaf-cbdd03ce84f5.lovable.app'
+      ];
+      
+      if(allowedOrigins.indexOf(origin) === -1){
+        return callback(null, true); // Temporarily allow all origins
+      }
+      return callback(null, true);
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
     optionsSuccessStatus: 200
   }));
+
+  // Pre-flight requests
+  app.options('*', cors());
 
   app.use(express.json({ limit: '50mb' }));
   app.use(compression());
@@ -61,6 +78,11 @@ if (cluster.isPrimary) {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
+  });
+
+  // Health check endpoint
+  app.get('/health', (req, res) => {
+    res.json({ status: 'healthy' });
   });
 
   // Mount routes
@@ -132,10 +154,16 @@ if (cluster.isPrimary) {
     });
   });
 
-  // Add preflight handling for all routes
-  app.options('*', cors());
-
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     logger.info(`Worker ${process.pid} started and listening on port ${PORT}`);
+  });
+
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    logger.info('SIGTERM signal received: closing HTTP server');
+    server.close(() => {
+      logger.info('HTTP server closed');
+      process.exit(0);
+    });
   });
 }
