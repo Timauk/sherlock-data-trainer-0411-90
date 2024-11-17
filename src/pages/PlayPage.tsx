@@ -26,12 +26,22 @@ const PlayPage: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const gameLogic = useGameLogic(csvData, trainedModel);
 
+  // Inicializa os jogadores quando o componente é montado
+  useEffect(() => {
+    if (!isInitialized && gameLogic) {
+      gameLogic.initializePlayers();
+    }
+  }, [gameLogic, isInitialized]);
+
+  // Monitora mudanças no CSV e modelo
   useEffect(() => {
     if (csvData.length > 0 && trainedModel !== null) {
       setIsInitialized(true);
       systemLogger.log("action", "Sistema inicializado com sucesso!");
+      // Força reinicialização dos jogadores quando dados são carregados
+      gameLogic.initializePlayers();
     }
-  }, [csvData, trainedModel]);
+  }, [csvData, trainedModel, gameLogic]);
 
   useGameInterval(
     isPlaying && !isProcessing && isInitialized,
@@ -147,38 +157,7 @@ const PlayPage: React.FC = () => {
     }
   }, [trainedModel, toast]);
 
-  if (!isInitialized) {
-    return (
-      <div className="p-6">
-        <Card className="p-6">
-          <h2 className="text-2xl font-bold mb-4">Bem-vindo ao Sherlock Data Trainer</h2>
-          <p className="mb-4">Para começar, você precisa:</p>
-          <ol className="list-decimal list-inside space-y-2 mb-4">
-            <li>Carregar um arquivo CSV com os dados históricos</li>
-            <li>Carregar um modelo treinado (ou iniciar um novo)</li>
-          </ol>
-          <PlayPageContent
-            isPlaying={false}
-            onPlay={handlePlay}
-            onPause={() => setIsPlaying(false)}
-            onReset={() => {
-              setIsPlaying(false);
-              gameLogic.initializePlayers();
-            }}
-            onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            onCsvUpload={loadCSV}
-            onModelUpload={loadModel}
-            onSaveModel={saveModel}
-            progress={progress}
-            generation={gameLogic.generation}
-            gameLogic={gameLogic}
-            isProcessing={isProcessing}
-          />
-        </Card>
-      </div>
-    );
-  }
-
+  // Sempre renderiza o conteúdo principal, independente da inicialização
   return (
     <div className="p-6">
       <PlayPageHeader />
