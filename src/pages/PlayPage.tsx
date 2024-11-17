@@ -26,19 +26,13 @@ const PlayPage: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const gameLogic = useGameLogic(csvData, trainedModel);
 
+  // Add effect to check initialization status
   useEffect(() => {
-    const handleError = (error: Error) => {
-      setIsPlaying(false);
-      setIsProcessing(false);
-      toast({
-        title: "Erro no Sistema",
-        description: error.message,
-        variant: "destructive"
-      });
-    };
-
-    systemLogger.setErrorHandler(handleError);
-  }, [toast]);
+    if (csvData.length > 0 && trainedModel !== null) {
+      setIsInitialized(true);
+      systemLogger.log("action", "Sistema inicializado com sucesso!");
+    }
+  }, [csvData, trainedModel]);
 
   useGameInterval(
     isPlaying && !isProcessing && isInitialized,
@@ -70,12 +64,16 @@ const PlayPage: React.FC = () => {
       setCsvDates(data.map(d => d.data));
       systemLogger.log("action", "CSV carregado e processado com sucesso!");
       systemLogger.log("action", `Número de registros carregados: ${data.length}`);
-      setIsInitialized(true);
     } catch (error) {
       systemLogger.log("action", `Erro ao carregar CSV: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, {}, 'error');
       setIsInitialized(false);
+      toast({
+        title: "Erro ao Carregar CSV",
+        description: "Houve um erro ao processar o arquivo CSV",
+        variant: "destructive"
+      });
     }
-  }, []);
+  }, [toast]);
 
   const loadModel = useCallback(async (jsonFile: File, weightsFile: File, metadataFile: File, weightSpecsFile: File) => {
     try {
@@ -91,18 +89,33 @@ const PlayPage: React.FC = () => {
         title: "Modelo Carregado",
         description: "O modelo e seus metadados foram carregados com sucesso.",
       });
-      setIsInitialized(true);
     } catch (error) {
       systemLogger.log("action", `Erro ao carregar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, {}, 'error');
       console.error("Detalhes do erro:", error);
       toast({
         title: "Erro ao Carregar Modelo",
-        description: "Certifique-se de selecionar os três arquivos necessários: model.json, weights.bin e metadata.json",
+        description: "Certifique-se de selecionar os arquivos necessários: model.json e weights.bin",
         variant: "destructive",
       });
       setIsInitialized(false);
     }
   }, [gameLogic, toast]);
+
+  const handlePlay = () => {
+    if (!isInitialized) {
+      toast({
+        title: "Sistema não Inicializado",
+        description: "Por favor, verifique se o CSV e o modelo foram carregados corretamente.",
+        variant: "destructive"
+      });
+      return;
+    }
+    setIsPlaying(true);
+    toast({
+      title: "Iniciando Simulação",
+      description: "O processamento dos jogos começará em instantes..."
+    });
+  };
 
   const saveModel = useCallback(async () => {
     if (trainedModel) {
@@ -131,18 +144,6 @@ const PlayPage: React.FC = () => {
       });
     }
   }, [trainedModel, toast]);
-
-  const handlePlay = () => {
-    if (!isInitialized) {
-      toast({
-        title: "Sistema não Inicializado",
-        description: "Por favor, carregue o CSV e o modelo antes de iniciar.",
-        variant: "destructive"
-      });
-      return;
-    }
-    setIsPlaying(true);
-  };
 
   return (
     <div className="p-6">
