@@ -16,16 +16,22 @@ const numCPUs = os.cpus().length;
 
 if (cluster.isPrimary) {
   logger.info(`Primary ${process.pid} is running`);
-  logger.info(`Starting ${numCPUs} workers...`);
+  
+  // Only fork workers if we're not in development
+  if (process.env.NODE_ENV === 'production') {
+    logger.info(`Starting ${numCPUs} workers...`);
+    for (let i = 0; i < numCPUs; i++) {
+      cluster.fork();
+    }
 
-  for (let i = 0; i < numCPUs; i++) {
+    cluster.on('exit', (worker, code, signal) => {
+      logger.warn(`Worker ${worker.process.pid} died. Restarting...`);
+      cluster.fork();
+    });
+  } else {
+    // In development, just run a single instance
     cluster.fork();
   }
-
-  cluster.on('exit', (worker, code, signal) => {
-    logger.warn(`Worker ${worker.process.pid} died. Restarting...`);
-    cluster.fork();
-  });
 } else {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
@@ -38,54 +44,39 @@ if (cluster.isPrimary) {
     useClones: false
   });
 
-  // Enhanced CORS configuration
   app.use(cors({
     origin: function(origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
       if(!origin) return callback(null, true);
-      
       const allowedOrigins = [
         'http://localhost:3000',
         'http://localhost:5173',
         'https://id-preview--dcc838c0-148c-47bb-abaf-cbdd03ce84f5.lovable.app'
       ];
-      
-      if(allowedOrigins.indexOf(origin) === -1){
-        return callback(null, true); // Temporarily allow all origins
-      }
-      return callback(null, true);
+      callback(null, true); // Temporarily allow all origins
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
-    optionsSuccessStatus: 200
+    allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
   }));
 
-  // Pre-flight requests
   app.options('*', cors());
-
   app.use(express.json({ limit: '50mb' }));
   app.use(compression());
   app.use(express.static(path.join(__dirname, 'public')));
   app.use(cacheMiddleware);
 
   // Create necessary directories
-  const dirs = ['checkpoints', 'logs', 'saved-models'].map(dir => 
-    path.join(__dirname, dir)
-  );
-
-  dirs.forEach(dir => {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+  ['checkpoints', 'logs', 'saved-models'].forEach(dir => {
+    const dirPath = path.join(__dirname, dir);
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
     }
   });
 
-  // Health check endpoint
   app.get('/health', (req, res) => {
     res.json({ status: 'healthy' });
   });
 
-  // Mount routes
   app.use('/status', statusRouter);
   
   // Game routes
@@ -95,45 +86,24 @@ if (cluster.isPrimary) {
     try {
       const { concurso, predictions, players } = req.body;
       if (!concurso || !predictions || !players) {
-        return res.status(400).json({
-          success: false,
-          error: 'Missing required fields'
-        });
+        return res.status(400).json({ success: false, error: 'Missing required fields' });
       }
-
       const currentGames = gameCache.get('games') || [];
-      currentGames.push({
-        concurso,
-        predictions,
-        players,
-        timestamp: new Date().toISOString()
-      });
-      
+      currentGames.push({ concurso, predictions, players, timestamp: new Date().toISOString() });
       gameCache.set('games', currentGames);
-      
-      res.json({ 
-        success: true, 
-        gamesStored: currentGames.length 
-      });
+      res.json({ success: true, gamesStored: currentGames.length });
     } catch (error) {
       logger.error('Error storing game:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: error.message 
-      });
+      res.status(500).json({ success: false, error: error.message });
     }
   });
 
   gameRouter.get('/all', async (req, res) => {
     try {
-      const games = gameCache.get('games') || [];
-      res.json(games);
+      res.json(gameCache.get('games') || []);
     } catch (error) {
       logger.error('Error retrieving games:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: error.message 
-      });
+      res.status(500).json({ success: false, error: error.message });
     }
   });
 
@@ -141,24 +111,23 @@ if (cluster.isPrimary) {
 
   // Error handling middleware
   app.use((err, req, res, next) => {
-    logger.error({
-      err,
-      method: req.method,
-      url: req.url,
-      body: req.body
-    }, 'Error occurred');
-    
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: err.message
-    });
+    logger.error({ err, method: req.method, url: req.url, body: req.body }, 'Error occurred');
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
   });
 
+  // Try to start the server with error handling
   const server = app.listen(PORT, () => {
     logger.info(`Worker ${process.pid} started and listening on port ${PORT}`);
+  }).on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      logger.error(`Port ${PORT} is already in use. Please use a different port or stop the existing server.`);
+      process.exit(1);
+    } else {
+      logger.error('Server error:', err);
+      process.exit(1);
+    }
   });
 
-  // Graceful shutdown
   process.on('SIGTERM', () => {
     logger.info('SIGTERM signal received: closing HTTP server');
     server.close(() => {
