@@ -17,6 +17,7 @@ export async function getOrCreateModel() {
       useBias: true,
       biasInitializer: 'zeros'
     }));
+    
     globalModel.add(tf.layers.batchNormalization({
       axis: -1,
       momentum: 0.99,
@@ -65,22 +66,21 @@ export function analyzePatterns(data) {
   for (const entry of data) {
     const numbers = entry.slice(0, 15);
     
-    for (let i = 0; i < numbers.length - 1; i++) {
-      if (numbers[i + 1] - numbers[i] === 1) {
-        patterns.push({
-          type: 'consecutive',
-          numbers: [numbers[i], numbers[i + 1]]
-        });
-      }
-    }
-    
+    // Limit pattern analysis to essential data
+    const consecutiveCount = findConsecutiveNumbers(numbers);
     const evenCount = numbers.filter(n => n % 2 === 0).length;
+    const primeCount = numbers.filter(isPrime).length;
+    
+    patterns.push({
+      type: 'consecutive',
+      count: consecutiveCount
+    });
+    
     patterns.push({
       type: 'evenOdd',
       evenPercentage: (evenCount / numbers.length) * 100
     });
     
-    const primeCount = numbers.filter(isPrime).length;
     patterns.push({
       type: 'prime',
       primePercentage: (primeCount / numbers.length) * 100
@@ -88,6 +88,21 @@ export function analyzePatterns(data) {
   }
   
   return patterns;
+}
+
+function findConsecutiveNumbers(numbers) {
+  let count = 0;
+  for (let i = 0; i < numbers.length - 1; i++) {
+    if (numbers[i + 1] - numbers[i] === 1) count++;
+  }
+  return count;
+}
+
+function isPrime(num) {
+  for (let i = 2, sqrt = Math.sqrt(num); i <= sqrt; i++) {
+    if (num % i === 0) return false;
+  }
+  return num > 1;
 }
 
 export function enrichDataWithPatterns(data, patterns) {
@@ -100,13 +115,6 @@ export function enrichDataWithPatterns(data, patterns) {
     
     return [...entry, ...patternFeatures];
   });
-}
-
-function isPrime(num) {
-  for (let i = 2, sqrt = Math.sqrt(num); i <= sqrt; i++) {
-    if (num % i === 0) return false;
-  }
-  return num > 1;
 }
 
 export { totalSamples };

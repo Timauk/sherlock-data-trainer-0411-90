@@ -30,28 +30,27 @@ router.post('/predict', async (req, res) => {
     const prediction = model.predict(inputTensor);
     const result = Array.from(await prediction.data());
     
-    if (totalSamples > 0 && totalSamples % RETRAIN_INTERVAL === 0) {
-      res.json({ 
-        prediction: result,
-        needsRetraining: true,
-        totalSamples,
-        modelInfo: {
-          layers: model.layers?.length || 0,
-          totalParams: model.countParams()
-        },
-        patterns: patterns
-      });
-    } else {
-      res.json({ 
-        prediction: result,
-        totalSamples,
-        modelInfo: {
-          layers: model.layers?.length || 0,
-          totalParams: model.countParams()
-        },
-        patterns: patterns
-      });
-    }
+    // Limit the size of patterns data
+    const simplifiedPatterns = patterns.map(p => ({
+      type: p.type,
+      count: p.type === 'consecutive' ? p.numbers?.length || 0 : null,
+      percentage: p.type === 'evenOdd' ? p.evenPercentage : 
+                 p.type === 'prime' ? p.primePercentage : null
+    }));
+
+    // Create a simplified response object
+    const response = {
+      prediction: result,
+      needsRetraining: totalSamples > 0 && totalSamples % RETRAIN_INTERVAL === 0,
+      totalSamples,
+      modelInfo: {
+        layers: model.layers?.length || 0,
+        totalParams: model.countParams()
+      },
+      patterns: simplifiedPatterns
+    };
+
+    res.json(response);
     
     inputTensor.dispose();
     prediction.dispose();
