@@ -13,11 +13,6 @@ export const initSentry = () => {
         return null;
       }
       return event;
-    },
-    // Configuração simplificada do transporte
-    transport: Sentry.defaultTransport,
-    // Configuração de retry
-    maxRetries: 3,
-    shutdownTimeout: 5000
+    }
   });
 };
