@@ -31,8 +31,10 @@ const EnhancedLogDisplay: React.FC = () => {
 
   useEffect(() => {
     try {
-      // Set up error handler
-      systemLogger.setErrorHandler(handleError);
+      // Set up error handler if the method exists
+      if (typeof systemLogger.setErrorHandler === 'function') {
+        systemLogger.setErrorHandler(handleError);
+      }
 
       // Set up log event listener
       const updateLogs = (event: CustomEvent<LogEntry>) => {
@@ -49,6 +51,7 @@ const EnhancedLogDisplay: React.FC = () => {
       };
     } catch (error) {
       console.error('Error in EnhancedLogDisplay:', error);
+      handleError(error as Error);
     }
   }, [handleError]);
 
