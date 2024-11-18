@@ -40,6 +40,13 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const [isManualMode, setIsManualMode] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Initialize players when csvData or trainedModel changes
+  useEffect(() => {
+    if (csvData.length > 0 && trainedModel && players.length === 0) {
+      initializePlayers();
+    }
+  }, [csvData, trainedModel, players.length, initializePlayers]);
+
   const addLog = useCallback((message: string, matches?: number) => {
     const logType = matches ? 'prediction' : 'action';
     systemLogger.log(logType, message, { matches });
@@ -109,14 +116,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     systemLogger.log('player', `Novo clone do Jogador #${player.id} criado`);
   }, []);
 
-  useEffect(() => {
-    initializePlayers();
-  }, [initializePlayers]);
-
-  useEffect(() => {
-    setUpdateInterval(Math.max(10, Math.floor(csvData.length / 10)));
-  }, [csvData]);
-
   return {
     players,
     generation,
@@ -140,7 +139,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     toggleManualMode,
     clonePlayer,
     isProcessing,
-    setIsProcessing
+    setIsProcessing,
+    setPlayers
   };
 };
-

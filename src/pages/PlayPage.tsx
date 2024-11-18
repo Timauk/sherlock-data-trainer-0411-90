@@ -8,9 +8,7 @@ import SpeedControl from '@/components/SpeedControl';
 import { useGameInterval } from '@/hooks/useGameInterval';
 import { loadModelFiles } from '@/utils/modelLoader';
 import { loadModelWithWeights, saveModelWithWeights } from '@/utils/modelUtils';
-import { Progress } from "@/components/ui/progress";
 import { systemLogger } from '@/utils/logging/systemLogger';
-import { Card } from '@/components/ui/card';
 
 const PlayPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -90,14 +88,19 @@ const PlayPage: React.FC = () => {
       setCsvDates(data.map(d => d.data));
       
       systemLogger.log("action", "CSV carregado e processado com sucesso!");
+      
+      // Initialize players after loading CSV
+      if (gameLogic && gameLogic.initializePlayers) {
+        gameLogic.initializePlayers();
+      }
     } catch (error) {
       systemLogger.log("action", `Erro ao carregar CSV: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, {}, 'error');
       setIsInitialized(false);
     }
-  }, []);
+  }, [gameLogic]);
 
   useEffect(() => {
-    if (!isInitialized && gameLogic) {
+    if (!isInitialized && gameLogic && gameLogic.players.length === 0) {
       gameLogic.initializePlayers();
       setIsInitialized(true);
       systemLogger.log("action", "Sistema inicializado com sucesso!");
@@ -105,7 +108,7 @@ const PlayPage: React.FC = () => {
   }, [gameLogic, isInitialized]);
 
   useEffect(() => {
-    if (csvData.length > 0 && trainedModel !== null) {
+    if (csvData.length > 0 && trainedModel !== null && gameLogic.players.length === 0) {
       setIsInitialized(true);
       systemLogger.log("action", "Dados e modelo carregados com sucesso!");
       gameLogic.initializePlayers();
