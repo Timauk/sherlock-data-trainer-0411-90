@@ -40,9 +40,9 @@ const PlayPage: React.FC = () => {
     }
   };
 
-  const onUpdatePlayer = (playerId: number) => {
+  const onUpdatePlayer = (playerId: number, newWeights: number[]) => {
     const updatedPlayers = gameLogicHook.players.map(player => 
-      player.id === playerId ? player : player
+      player.id === playerId ? { ...player, weights: newWeights } : player
     );
     if ('setPlayers' in gameLogicHook) {
       (gameLogicHook as any).setPlayers(updatedPlayers);
@@ -51,7 +51,6 @@ const PlayPage: React.FC = () => {
 
   const handleModelUpload = async (file: File) => {
     try {
-      // Create a dummy weights file since we're simplifying the interface
       const weightsFile = new File([], 'weights.bin');
       const result = await loadModelFiles(file, weightsFile);
       if (result.model) {
@@ -102,7 +101,6 @@ const PlayPage: React.FC = () => {
       
       systemLogger.log("action", "CSV carregado e processado com sucesso!");
       
-      // Initialize players after loading CSV
       if (gameLogic && gameLogic.initializePlayers) {
         gameLogic.initializePlayers();
       }
