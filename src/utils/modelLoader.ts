@@ -1,7 +1,7 @@
 import * as tf from '@tensorflow/tfjs';
 import { LoadedModel } from './modelLoader/types';
+import { readJsonFile, readMetadataFile, createWeightsFile } from './modelLoader/fileHandlers';
 import { getDefaultModelJson } from './modelLoader/modelStructure';
-import { readJsonFile, readMetadataFile } from './modelLoader/fileHandlers';
 
 export const loadModelFiles = async (
   jsonFile: File,
@@ -18,11 +18,7 @@ export const loadModelFiles = async (
     }
 
     // Create a new File with the correct name for weights
-    const weightsFileWithCorrectName = new File(
-      [weightsFile], 
-      'weights.bin', 
-      { type: weightsFile.type }
-    );
+    const weightsFileWithCorrectName = createWeightsFile(weightsFile);
 
     // Create model JSON blob
     const modelJsonBlob = new Blob([JSON.stringify(modelJson)], { type: 'application/json' });

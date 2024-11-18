@@ -7,7 +7,17 @@ export const readJsonFile = async (file: File): Promise<any> => {
     reader.onload = (e) => {
       try {
         const content = e.target?.result as string;
-        resolve(JSON.parse(content));
+        const jsonData = JSON.parse(content);
+        
+        // Ensure weightsManifest has correct paths
+        if (jsonData.weightsManifest) {
+          jsonData.weightsManifest = jsonData.weightsManifest.map((manifest: any) => ({
+            ...manifest,
+            paths: ['weights.bin'] // Force the correct weights filename
+          }));
+        }
+        
+        resolve(jsonData);
       } catch (error) {
         reject(new Error('Invalid JSON format'));
       }
@@ -24,4 +34,8 @@ export const readMetadataFile = async (file: File): Promise<ModelMetadata> => {
     console.warn('Failed to parse metadata.json, continuing without metadata');
     return {};
   }
+};
+
+export const createWeightsFile = (weightsFile: File): File => {
+  return new File([weightsFile], 'weights.bin', { type: weightsFile.type });
 };
