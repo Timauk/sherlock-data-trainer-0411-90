@@ -40,12 +40,25 @@ const PlayPage: React.FC = () => {
     }
   };
 
-  const onUpdatePlayer = (playerId: number, newWeights: number[]) => {
+  const onUpdatePlayer = (playerId: number) => {
     const updatedPlayers = gameLogicHook.players.map(player => 
-      player.id === playerId ? { ...player, weights: newWeights } : player
+      player.id === playerId ? player : player
     );
     if ('setPlayers' in gameLogicHook) {
       (gameLogicHook as any).setPlayers(updatedPlayers);
+    }
+  };
+
+  const handleModelUpload = async (file: File) => {
+    try {
+      // Create a dummy weights file since we're simplifying the interface
+      const weightsFile = new File([], 'weights.bin');
+      const result = await loadModelFiles(file, weightsFile);
+      if (result.model) {
+        setTrainedModel(result.model);
+      }
+    } catch (error) {
+      systemLogger.log("action", "Erro ao carregar modelo", {}, 'error');
     }
   };
 
@@ -130,7 +143,7 @@ const PlayPage: React.FC = () => {
         }}
         onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         onCsvUpload={loadCSV}
-        onModelUpload={loadModelFiles}
+        onModelUpload={handleModelUpload}
         onSaveModel={saveFullModel}
         progress={progress}
         generation={gameLogic.generation}
