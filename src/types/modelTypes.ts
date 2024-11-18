@@ -34,6 +34,9 @@ export interface GameLogicProps {
   isInfiniteMode: boolean;
   isManualMode: boolean;
   isProcessing?: boolean;
+  saveFullModel: () => Promise<void>;
+  loadFullModel: () => Promise<void>;
+  onUpdatePlayer: (playerId: number, newWeights: number[]) => void;
 }
 
 export interface PlayPageContentProps extends ModelUploadProps {
