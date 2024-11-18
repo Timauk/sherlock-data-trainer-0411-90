@@ -1,34 +1,28 @@
 import React from 'react';
-import ProcessingSelector from '../ProcessingSelector';
-import GameMetrics from '../GameMetrics';
-import ControlPanel from '../GameControls/ControlPanel';
-import { Button } from "@/components/ui/button";
-import { Save, Download } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { ModelUploadProps, GameLogicProps } from '@/types/modelTypes';
-import { Progress } from "@/components/ui/progress";
 
-interface ProcessingPanelProps extends ModelUploadProps {
+interface ProcessingPanelProps {
   isPlaying: boolean;
   onPlay: () => void;
   onPause: () => void;
   onReset: () => void;
   onThemeToggle: () => void;
   onCsvUpload: (file: File) => void;
+  onModelUpload: (file: File) => void;
   onSaveModel: () => void;
   progress: number;
-  champion: any;
-  modelMetrics: any;
-  gameLogic: GameLogicProps;
+  champion: any; // replace with actual type
+  modelMetrics: any; // replace with actual type
+  gameLogic: any; // replace with actual type
   isServerProcessing: boolean;
-  serverStatus: 'online' | 'offline' | 'checking';
+  serverStatus: string;
   onToggleProcessing: () => void;
-  saveFullModel: () => Promise<void>;
-  loadFullModel: () => Promise<void>;
-  isProcessing?: boolean;
+  saveFullModel: () => void;
+  loadFullModel: () => void;
+  isProcessing: boolean;
 }
 
-const ProcessingPanel: React.FC<ProcessingPanelProps> = ({
+const ProcessingPanel = ({ 
   isPlaying,
   onPlay,
   onPause,
@@ -46,74 +40,71 @@ const ProcessingPanel: React.FC<ProcessingPanelProps> = ({
   onToggleProcessing,
   saveFullModel,
   loadFullModel,
-  isProcessing = false
-}) => {
-  const { toast } = useToast();
-
+  isProcessing
+}: ProcessingPanelProps) => {
   return (
-    <div className="space-y-4">
-      {isProcessing && (
-        <div className="p-4 bg-secondary rounded-lg">
-          <Progress value={progress} className="mb-2" />
-          <p className="text-sm text-muted-foreground text-center">
-            Processando jogada... {Math.round(progress)}%
-          </p>
+    <div className="space-y-4 p-4 border rounded-lg">
+      <div className="flex flex-wrap gap-4">
+        <div className="form-group">
+          <label htmlFor="csvUpload" className="block text-sm font-medium mb-1">
+            Upload CSV
+            <input
+              id="csvUpload"
+              type="file"
+              accept=".csv"
+              onChange={(e) => onCsvUpload(e.target.files?.[0])}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+            />
+          </label>
         </div>
-      )}
 
-      <ProcessingSelector
-        isServerProcessing={isServerProcessing}
-        onToggleProcessing={onToggleProcessing}
-        serverStatus={serverStatus}
-      />
+        <div className="form-group">
+          <label htmlFor="modelUpload" className="block text-sm font-medium mb-1">
+            Upload Modelo
+            <input
+              id="modelUpload"
+              type="file"
+              accept=".json"
+              onChange={(e) => onModelUpload(e.target.files?.[0])}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+            />
+          </label>
+        </div>
+      </div>
       
-      <GameMetrics 
-        progress={progress}
-        champion={champion}
-        modelMetrics={modelMetrics}
-      />
-      
-      <ControlPanel
-        isPlaying={isPlaying}
-        onPlay={() => {
-          toast({
-            title: "Iniciando jogo",
-            description: "Aguarde enquanto processamos a primeira jogada..."
-          });
-          onPlay();
-        }}
-        onPause={onPause}
-        onReset={onReset}
-        onThemeToggle={onThemeToggle}
-        onCsvUpload={onCsvUpload}
-        onModelUpload={onModelUpload}
-        onSaveModel={onSaveModel}
-        toggleInfiniteMode={gameLogic.toggleInfiniteMode}
-        toggleManualMode={gameLogic.toggleManualMode}
-        isInfiniteMode={gameLogic.isInfiniteMode}
-        isManualMode={gameLogic.isManualMode}
-        disabled={serverStatus === 'checking' || (isServerProcessing && serverStatus === 'offline') || isProcessing}
-      />
+      <div className="flex items-center justify-between">
+        <button
+          onClick={isPlaying ? onPause : onPlay}
+          className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
+        >
+          {isPlaying ? 'Pausar' : 'Jogar'}
+        </button>
+        <button
+          onClick={onReset}
+          className="px-4 py-2 text-white bg-red-600 rounded hover:bg-red-700"
+        >
+          Reiniciar
+        </button>
+        <button
+          onClick={onThemeToggle}
+          className="px-4 py-2 text-white bg-gray-600 rounded hover:bg-gray-700"
+        >
+          Trocar Tema
+        </button>
+      </div>
 
-      <Button
-        onClick={saveFullModel}
-        className="w-full"
-        variant="secondary"
-        disabled={isProcessing}
-      >
-        <Save className="inline-block mr-2" />
-        Salvar Modelo Completo
-      </Button>
+      {isServerProcessing && <p>Processando no servidor...</p>}
+      <div className="w-full bg-gray-200 h-2 rounded">
+        <div
+          className="bg-blue-600 h-full rounded"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
 
-      <Button
-        onClick={loadFullModel}
-        className="w-full"
-        variant="outline"
-        disabled={isProcessing}
-      >
-        <Download className="inline-block mr-2" />
-        Carregar Modelo Treinado
-      </Button>
+      <div>
+        <p>Campeão: {champion.name}</p>
+        <p>Métricas do Modelo: {JSON.stringify(modelMetrics)}</p>
+      </div>
     </div>
   );
 };
