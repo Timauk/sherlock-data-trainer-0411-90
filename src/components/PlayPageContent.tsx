@@ -3,6 +3,7 @@ import { useServerStatus } from '@/hooks/useServerStatus';
 import ProcessingPanel from './PlayPageContent/ProcessingPanel';
 import AnalysisPanel from './PlayPageContent/AnalysisPanel';
 import GameActions from './PlayPageContent/GameActions';
+import GameBoardSection from './PlayPageContent/GameBoardSection';
 import { useToast } from "@/hooks/use-toast";
 import { PlayPageContentProps } from '@/types/modelTypes';
 import { exportPredictionsToCSV } from '@/utils/exportUtils';
@@ -59,128 +60,6 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
     }
   };
 
-  const storeCurrentGame = async () => {
-    if (gameLogic.players && gameLogic.players.length > 0) {
-      try {
-        const predictions = gameLogic.players.map(player => ({
-          numbers: player.predictions || []
-        }));
-        
-        await fetch('http://localhost:3001/api/game/store', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            concurso: gameLogic.concursoNumber,
-            predictions,
-            players: gameLogic.players
-          })
-        });
-      } catch (error) {
-        console.error('Erro ao armazenar jogo:', error);
-      }
-    }
-  };
-
-  React.useEffect(() => {
-    if (gameLogic.concursoNumber > 0) {
-      storeCurrentGame();
-    }
-  }, [gameLogic.concursoNumber]);
-
-  const saveFullModel = async () => {
-    try {
-      const playersData = JSON.parse(localStorage.getItem('playersData') || '[]');
-      const evolutionHistory = JSON.parse(localStorage.getItem('evolutionHistory') || '[]');
-      
-      const response = await fetch('http://localhost:3001/api/model/save-full-model', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          playersData,
-          evolutionHistory
-        })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        toast({
-          title: "Modelo Completo Salvo",
-          description: `Modelo salvo com ${result.totalSamples} amostras totais.`,
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Erro ao Salvar Modelo Completo",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const loadFullModel = async () => {
-    try {
-      const [modelJson, modelWeights, metadataFile, weightSpecsFile] = await Promise.all([
-        new Promise<File>((resolve) => {
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = '.json';
-          input.onchange = (e) => {
-            const files = (e.target as HTMLInputElement).files;
-            if (files) resolve(files[0]);
-          };
-          input.click();
-        }),
-        new Promise<File>((resolve) => {
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = '.bin';
-          input.onchange = (e) => {
-            const files = (e.target as HTMLInputElement).files;
-            if (files) resolve(files[0]);
-          };
-          input.click();
-        }),
-        new Promise<File>((resolve) => {
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = '.json';
-          input.onchange = (e) => {
-            const files = (e.target as HTMLInputElement).files;
-            if (files) resolve(files[0]);
-          };
-          input.click();
-        }),
-        new Promise<File>((resolve) => {
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = '.json';
-          input.onchange = (e) => {
-            const files = (e.target as HTMLInputElement).files;
-            if (files) resolve(files[0]);
-          };
-          input.click();
-        })
-      ]);
-
-      onModelUpload(modelJson, modelWeights, metadataFile, weightSpecsFile);
-      toast({
-        title: "Modelo Carregado",
-        description: "O modelo treinado foi carregado com sucesso.",
-      });
-    } catch (error) {
-      toast({
-        title: "Erro ao Carregar Modelo",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
-        variant: "destructive"
-      });
-    }
-  };
-
   return (
     <div className="flex flex-col gap-4">
       <ProcessingPanel
@@ -199,9 +78,17 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         isServerProcessing={isServerProcessing}
         serverStatus={serverStatus}
         onToggleProcessing={() => setIsServerProcessing(prev => !prev)}
-        saveFullModel={saveFullModel}
-        loadFullModel={loadFullModel}
+        saveFullModel={gameLogic.saveFullModel}
+        loadFullModel={gameLogic.loadFullModel}
         isProcessing={isProcessing}
+      />
+
+      <GameBoardSection
+        players={gameLogic.players}
+        evolutionData={gameLogic.evolutionData}
+        boardNumbers={gameLogic.boardNumbers}
+        concursoNumber={gameLogic.concursoNumber}
+        onUpdatePlayer={gameLogic.onUpdatePlayer}
       />
       
       <AnalysisPanel
@@ -221,8 +108,8 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
       />
 
       <GameActions
-        onSaveFullModel={saveFullModel}
-        onLoadFullModel={loadFullModel}
+        onSaveFullModel={gameLogic.saveFullModel}
+        onLoadFullModel={gameLogic.loadFullModel}
         isProcessing={isProcessing}
       />
     </div>
