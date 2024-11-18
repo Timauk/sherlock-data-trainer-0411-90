@@ -82,7 +82,7 @@ const EnhancedLogDisplay: React.FC = () => {
       case 'success':
         return 'text-green-500';
       default:
-        return 'text-gray-700';
+        return 'text-gray-700 dark:text-gray-300';
     }
   };
 
@@ -96,7 +96,7 @@ const EnhancedLogDisplay: React.FC = () => {
         <select 
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="border rounded p-1"
+          className="border rounded p-1 dark:bg-gray-800 dark:border-gray-700"
         >
           <option value="all">Todos os Logs</option>
           <option value="action">Ações</option>
@@ -109,7 +109,7 @@ const EnhancedLogDisplay: React.FC = () => {
         </select>
       </div>
 
-      <ScrollArea className="h-[400px] rounded-md border p-4">
+      <ScrollArea className="h-[400px] rounded-md border p-4 dark:border-gray-700">
         {filteredLogs.map((log, index) => (
           <div key={index} className="mb-2 flex items-start gap-2">
             <span className="text-xs text-gray-500 whitespace-nowrap">
@@ -123,7 +123,7 @@ const EnhancedLogDisplay: React.FC = () => {
                 {log.message}
               </span>
               {log.details && (
-                <pre className="text-xs mt-1 bg-gray-100 p-2 rounded overflow-x-auto">
+                <pre className="text-xs mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto">
                   {JSON.stringify(log.details, null, 2)}
                 </pre>
               )}

@@ -24,8 +24,13 @@ class SystemLogger {
     this.logs.push(logEntry);
 
     // Dispatch custom event for real-time updates
-    const event = new CustomEvent('systemLog', { detail: logEntry });
-    window.dispatchEvent(event);
+    if (typeof window !== 'undefined') {
+      const event = new CustomEvent('systemLog', { detail: logEntry });
+      window.dispatchEvent(event);
+    }
+
+    // Also log to console for debugging
+    console.log(`[${type.toUpperCase()}] ${message}`, details || '');
   }
 
   getLogs(): LogEntry[] {
