@@ -39,7 +39,7 @@ export interface GameLogicProps {
   onUpdatePlayer: (playerId: number, newWeights: number[]) => void;
 }
 
-export interface PlayPageContentProps extends ModelUploadProps {
+export interface PlayPageContentProps {
   isPlaying: boolean;
   onPlay: () => void;
   onPause: () => void;
