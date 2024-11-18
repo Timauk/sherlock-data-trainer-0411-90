@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Trophy, Timer } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { systemLogger } from '@/utils/logging/systemLogger';
+import { useToast } from "@/hooks/use-toast";
 
 interface BoardDisplayProps {
   numbers: number[];
@@ -12,6 +13,7 @@ interface BoardDisplayProps {
 const BoardDisplay: React.FC<BoardDisplayProps> = ({ numbers, concursoNumber }) => {
   const [displayNumbers, setDisplayNumbers] = useState<number[]>([]);
   const [isUpdating, setIsUpdating] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (Array.isArray(numbers) && numbers.length > 0) {
@@ -22,15 +24,19 @@ const BoardDisplay: React.FC<BoardDisplayProps> = ({ numbers, concursoNumber }) 
         numbers,
         concursoNumber
       });
+
+      toast({
+        title: "Novo Concurso",
+        description: `Concurso #${concursoNumber} carregado com sucesso.`
+      });
       
-      // Reset updating state after animation
       const timer = setTimeout(() => {
         setIsUpdating(false);
       }, 500);
 
       return () => clearTimeout(timer);
     }
-  }, [numbers, concursoNumber]);
+  }, [numbers, concursoNumber, toast]);
 
   // Força re-render quando os números mudam
   useEffect(() => {
@@ -38,6 +44,20 @@ const BoardDisplay: React.FC<BoardDisplayProps> = ({ numbers, concursoNumber }) 
       setDisplayNumbers(numbers);
     }
   }, [numbers, displayNumbers]);
+
+  if (!numbers || numbers.length === 0) {
+    return (
+      <Card className="mb-4 p-4 bg-card">
+        <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+          <Trophy className="h-5 w-5 text-yellow-500" />
+          Aguardando dados do concurso...
+        </h3>
+        <div className="text-muted-foreground">
+          Carregando informações do jogo...
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className={`mb-4 p-4 bg-card transition-colors duration-300 ${isUpdating ? 'bg-green-50 dark:bg-green-900/10' : ''}`}>

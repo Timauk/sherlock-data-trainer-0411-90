@@ -26,22 +26,25 @@ const PlayPage: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const gameLogic = useGameLogic(csvData, trainedModel);
 
-  // Inicializa os jogadores quando o componente é montado
   useEffect(() => {
     if (!isInitialized && gameLogic) {
       gameLogic.initializePlayers();
+      setIsInitialized(true);
+      systemLogger.log("action", "Sistema inicializado com sucesso!");
     }
   }, [gameLogic, isInitialized]);
 
-  // Monitora mudanças no CSV e modelo
   useEffect(() => {
     if (csvData.length > 0 && trainedModel !== null) {
       setIsInitialized(true);
-      systemLogger.log("action", "Sistema inicializado com sucesso!");
-      // Força reinicialização dos jogadores quando dados são carregados
+      systemLogger.log("action", "Dados e modelo carregados com sucesso!");
+      toast({
+        title: "Sistema Inicializado",
+        description: "Dados e modelo carregados com sucesso!"
+      });
       gameLogic.initializePlayers();
     }
-  }, [csvData, trainedModel, gameLogic]);
+  }, [csvData, trainedModel, gameLogic, toast]);
 
   useGameInterval(
     isPlaying && !isProcessing && isInitialized,
@@ -69,8 +72,14 @@ const PlayPage: React.FC = () => {
           bolas: values.slice(2).map(Number)
         };
       });
+      
+      if (data.length === 0) {
+        throw new Error("Arquivo CSV vazio ou inválido");
+      }
+
       setCsvData(data.map(d => d.bolas));
       setCsvDates(data.map(d => d.data));
+      
       systemLogger.log("action", "CSV carregado e processado com sucesso!");
       toast({
         title: "CSV Carregado",
@@ -157,7 +166,6 @@ const PlayPage: React.FC = () => {
     }
   }, [trainedModel, toast]);
 
-  // Sempre renderiza o conteúdo principal, independente da inicialização
   return (
     <div className="p-6">
       <PlayPageHeader />
