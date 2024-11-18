@@ -39,13 +39,16 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const [boardNumbers, setBoardNumbers] = useState<number[]>([]);
   const [isManualMode, setIsManualMode] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize players when csvData or trainedModel changes
+  // Initialize players only once when csvData or trainedModel changes
   useEffect(() => {
-    if (csvData.length > 0 && trainedModel && players.length === 0) {
+    if (csvData.length > 0 && trainedModel && !isInitialized && players.length === 0) {
       initializePlayers();
+      setIsInitialized(true);
+      systemLogger.log('action', 'Jogadores inicializados uma única vez');
     }
-  }, [csvData, trainedModel, players.length, initializePlayers]);
+  }, [csvData, trainedModel, players.length, initializePlayers, isInitialized]);
 
   const addLog = useCallback((message: string, matches?: number) => {
     const logType = matches ? 'prediction' : 'action';
