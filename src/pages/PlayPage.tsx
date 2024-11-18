@@ -22,23 +22,41 @@ const PlayPage: React.FC = () => {
   const { theme, setTheme } = useTheme();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  const gameLogic = useGameLogic(csvData, trainedModel);
+  
+  const gameLogicHook = useGameLogic(csvData, trainedModel);
 
-  useEffect(() => {
-    if (!isInitialized && gameLogic) {
-      gameLogic.initializePlayers();
-      setIsInitialized(true);
-      systemLogger.log("action", "Sistema inicializado com sucesso!");
+  const saveFullModel = async () => {
+    if (trainedModel) {
+      await saveModelWithWeights(trainedModel);
+      systemLogger.log("action", "Modelo salvo com sucesso!");
     }
-  }, [gameLogic, isInitialized]);
+  };
 
-  useEffect(() => {
-    if (csvData.length > 0 && trainedModel !== null) {
-      setIsInitialized(true);
-      systemLogger.log("action", "Dados e modelo carregados com sucesso!");
-      gameLogic.initializePlayers();
+  const loadFullModel = async () => {
+    try {
+      const model = await loadModelWithWeights();
+      setTrainedModel(model);
+      systemLogger.log("action", "Modelo carregado com sucesso!");
+    } catch (error) {
+      systemLogger.log("action", "Erro ao carregar modelo", {}, 'error');
     }
-  }, [csvData, trainedModel, gameLogic]);
+  };
+
+  const onUpdatePlayer = (playerId: number, newWeights: number[]) => {
+    const updatedPlayers = gameLogicHook.players.map(player => 
+      player.id === playerId ? { ...player, weights: newWeights } : player
+    );
+    if ('setPlayers' in gameLogicHook) {
+      (gameLogicHook as any).setPlayers(updatedPlayers);
+    }
+  };
+
+  const gameLogic = {
+    ...gameLogicHook,
+    saveFullModel,
+    loadFullModel,
+    onUpdatePlayer
+  };
 
   useGameInterval(
     isPlaying && !isProcessing && isInitialized,
@@ -78,45 +96,21 @@ const PlayPage: React.FC = () => {
     }
   }, []);
 
-  const loadModel = useCallback(async (jsonFile: File, weightsFile: File, metadataFile: File, weightSpecsFile: File) => {
-    try {
-      setIsInitialized(false);
-      const { model, metadata } = await loadModelFiles(jsonFile, weightsFile, metadataFile, weightSpecsFile);
-      setTrainedModel(model);
-      await saveModelWithWeights(model);
-      systemLogger.log("action", "Modelo e metadata carregados com sucesso!");
-      if (metadata.playersData) {
-        gameLogic.initializePlayers();
-      }
-    } catch (error) {
-      systemLogger.log("action", `Erro ao carregar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, {}, 'error');
-      console.error("Detalhes do erro:", error);
-      setIsInitialized(false);
+  useEffect(() => {
+    if (!isInitialized && gameLogic) {
+      gameLogic.initializePlayers();
+      setIsInitialized(true);
+      systemLogger.log("action", "Sistema inicializado com sucesso!");
     }
-  }, [gameLogic]);
+  }, [gameLogic, isInitialized]);
 
-  const handlePlay = () => {
-    if (!isInitialized) {
-      systemLogger.log("action", "Sistema não inicializado. Carregue o CSV e o modelo antes de iniciar.", {}, 'warning');
-      return;
+  useEffect(() => {
+    if (csvData.length > 0 && trainedModel !== null) {
+      setIsInitialized(true);
+      systemLogger.log("action", "Dados e modelo carregados com sucesso!");
+      gameLogic.initializePlayers();
     }
-    setIsPlaying(true);
-    systemLogger.log("action", "Iniciando processamento dos jogos...");
-  };
-
-  const saveModel = useCallback(async () => {
-    if (trainedModel) {
-      try {
-        await saveModelWithWeights(trainedModel);
-        systemLogger.log("action", "Modelo salvo com sucesso!");
-      } catch (error) {
-        systemLogger.log("action", `Erro ao salvar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, {}, 'error');
-        console.error("Detalhes do erro:", error);
-      }
-    } else {
-      systemLogger.log("action", "Nenhum modelo para salvar.", {}, 'warning');
-    }
-  }, [trainedModel]);
+  }, [csvData, trainedModel, gameLogic]);
 
   return (
     <div className="p-6">
@@ -124,7 +118,7 @@ const PlayPage: React.FC = () => {
       <SpeedControl onSpeedChange={setGameSpeed} />
       <PlayPageContent
         isPlaying={isPlaying && !isProcessing}
-        onPlay={handlePlay}
+        onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onReset={() => {
           setIsPlaying(false);
@@ -133,8 +127,8 @@ const PlayPage: React.FC = () => {
         }}
         onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         onCsvUpload={loadCSV}
-        onModelUpload={loadModel}
-        onSaveModel={saveModel}
+        onModelUpload={loadModelFiles}
+        onSaveModel={saveFullModel}
         progress={progress}
         generation={gameLogic.generation}
         gameLogic={gameLogic}
