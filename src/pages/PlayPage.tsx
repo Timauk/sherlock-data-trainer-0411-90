@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import * as tf from '@tensorflow/tfjs';
-import { useToast } from "@/hooks/use-toast";
 import { useGameLogic } from '@/hooks/useGameLogic';
 import { PlayPageHeader } from '@/components/PlayPageHeader';
 import PlayPageContent from '@/components/PlayPageContent';
@@ -21,7 +20,6 @@ const PlayPage: React.FC = () => {
   const [csvDates, setCsvDates] = useState<Date[]>([]);
   const [trainedModel, setTrainedModel] = useState<tf.LayersModel | null>(null);
   const { theme, setTheme } = useTheme();
-  const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const gameLogic = useGameLogic(csvData, trainedModel);
@@ -38,13 +36,9 @@ const PlayPage: React.FC = () => {
     if (csvData.length > 0 && trainedModel !== null) {
       setIsInitialized(true);
       systemLogger.log("action", "Dados e modelo carregados com sucesso!");
-      toast({
-        title: "Sistema Inicializado",
-        description: "Dados e modelo carregados com sucesso!"
-      });
       gameLogic.initializePlayers();
     }
-  }, [csvData, trainedModel, gameLogic, toast]);
+  }, [csvData, trainedModel, gameLogic]);
 
   useGameInterval(
     isPlaying && !isProcessing && isInitialized,
@@ -52,10 +46,7 @@ const PlayPage: React.FC = () => {
     gameLogic.gameLoop,
     () => {
       setIsPlaying(false);
-      toast({
-        title: "Fim do Jogo",
-        description: "Todos os concursos foram processados",
-      });
+      systemLogger.log("action", "Todos os concursos foram processados");
     }
   );
 
@@ -81,20 +72,11 @@ const PlayPage: React.FC = () => {
       setCsvDates(data.map(d => d.data));
       
       systemLogger.log("action", "CSV carregado e processado com sucesso!");
-      toast({
-        title: "CSV Carregado",
-        description: `${data.length} registros foram carregados com sucesso.`
-      });
     } catch (error) {
       systemLogger.log("action", `Erro ao carregar CSV: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, {}, 'error');
       setIsInitialized(false);
-      toast({
-        title: "Erro ao Carregar CSV",
-        description: "Houve um erro ao processar o arquivo CSV",
-        variant: "destructive"
-      });
     }
-  }, [toast]);
+  }, []);
 
   const loadModel = useCallback(async (jsonFile: File, weightsFile: File, metadataFile: File, weightSpecsFile: File) => {
     try {
@@ -106,36 +88,20 @@ const PlayPage: React.FC = () => {
       if (metadata.playersData) {
         gameLogic.initializePlayers();
       }
-      toast({
-        title: "Modelo Carregado",
-        description: "O modelo e seus metadados foram carregados com sucesso.",
-      });
     } catch (error) {
       systemLogger.log("action", `Erro ao carregar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, {}, 'error');
       console.error("Detalhes do erro:", error);
-      toast({
-        title: "Erro ao Carregar Modelo",
-        description: "Certifique-se de selecionar os arquivos necessários: model.json e weights.bin",
-        variant: "destructive",
-      });
       setIsInitialized(false);
     }
-  }, [gameLogic, toast]);
+  }, [gameLogic]);
 
   const handlePlay = () => {
     if (!isInitialized) {
-      toast({
-        title: "Sistema não Inicializado",
-        description: "Por favor, carregue o CSV e o modelo antes de iniciar.",
-        variant: "destructive"
-      });
+      systemLogger.log("action", "Sistema não inicializado. Carregue o CSV e o modelo antes de iniciar.", {}, 'warning');
       return;
     }
     setIsPlaying(true);
-    toast({
-      title: "Iniciando Simulação",
-      description: "O processamento dos jogos começará em instantes..."
-    });
+    systemLogger.log("action", "Iniciando processamento dos jogos...");
   };
 
   const saveModel = useCallback(async () => {
@@ -143,28 +109,14 @@ const PlayPage: React.FC = () => {
       try {
         await saveModelWithWeights(trainedModel);
         systemLogger.log("action", "Modelo salvo com sucesso!");
-        toast({
-          title: "Modelo Salvo",
-          description: "O modelo atual foi salvo com sucesso.",
-        });
       } catch (error) {
         systemLogger.log("action", `Erro ao salvar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, {}, 'error');
         console.error("Detalhes do erro:", error);
-        toast({
-          title: "Erro ao Salvar Modelo",
-          description: "Ocorreu um erro ao salvar o modelo. Verifique o console para mais detalhes.",
-          variant: "destructive",
-        });
       }
     } else {
       systemLogger.log("action", "Nenhum modelo para salvar.", {}, 'warning');
-      toast({
-        title: "Nenhum Modelo",
-        description: "Não há nenhum modelo carregado para salvar.",
-        variant: "destructive",
-      });
     }
-  }, [trainedModel, toast]);
+  }, [trainedModel]);
 
   return (
     <div className="p-6">

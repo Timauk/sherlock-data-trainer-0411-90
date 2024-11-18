@@ -3,7 +3,6 @@ import { Card } from "@/components/ui/card";
 import { Trophy, Timer } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { systemLogger } from '@/utils/logging/systemLogger';
-import { useToast } from "@/hooks/use-toast";
 
 interface BoardDisplayProps {
   numbers: number[];
@@ -13,7 +12,6 @@ interface BoardDisplayProps {
 const BoardDisplay: React.FC<BoardDisplayProps> = ({ numbers, concursoNumber }) => {
   const [displayNumbers, setDisplayNumbers] = useState<number[]>([]);
   const [isUpdating, setIsUpdating] = useState(false);
-  const { toast } = useToast();
 
   useEffect(() => {
     if (Array.isArray(numbers) && numbers.length > 0) {
@@ -24,11 +22,6 @@ const BoardDisplay: React.FC<BoardDisplayProps> = ({ numbers, concursoNumber }) 
         numbers,
         concursoNumber
       });
-
-      toast({
-        title: "Novo Concurso",
-        description: `Concurso #${concursoNumber} carregado com sucesso.`
-      });
       
       const timer = setTimeout(() => {
         setIsUpdating(false);
@@ -36,7 +29,7 @@ const BoardDisplay: React.FC<BoardDisplayProps> = ({ numbers, concursoNumber }) 
 
       return () => clearTimeout(timer);
     }
-  }, [numbers, concursoNumber, toast]);
+  }, [numbers, concursoNumber]);
 
   // Força re-render quando os números mudam
   useEffect(() => {
