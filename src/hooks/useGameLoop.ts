@@ -55,19 +55,8 @@ export const useGameLoop = ({
 
       const currentBoardNumbers = [...csvData[concursoNumber]];
       
-      // Força atualização do estado com Promise.resolve
-      await Promise.resolve();
-      setBoardNumbers(currentBoardNumbers);
-      
-      systemLogger.log('action', `Game Loop - Processando concurso ${concursoNumber}`, {
-        numbers: currentBoardNumbers
-      });
-      
-      const currentDate = new Date();
-      const lunarPhase = getLunarPhase(currentDate);
-      const lunarPatterns = analyzeLunarPatterns([currentDate], [currentBoardNumbers]);
-
-      const playerResults = await Promise.all(
+      // 1. Primeiro faz as previsões dos jogadores
+      const playerPredictions = await Promise.all(
         players.map(async player => {
           const prediction = await makePrediction(
             trainedModel,
@@ -75,86 +64,41 @@ export const useGameLoop = ({
             player.weights,
             concursoNumber,
             setNeuralNetworkVisualization,
-            { lunarPhase, lunarPatterns },
-            { numbers: [[...currentBoardNumbers]], dates: [currentDate] }
+            { lunarPhase: getLunarPhase(new Date()), lunarPatterns: [] },
+            { numbers: [[...currentBoardNumbers]], dates: [new Date()] }
           );
-
-          const timeSeriesAnalyzer = new TimeSeriesAnalysis([[...currentBoardNumbers]]);
-          const arimaPredictor = timeSeriesAnalyzer.analyzeNumbers();
-          predictionMonitor.recordPrediction(prediction, currentBoardNumbers, arimaPredictor);
-
           return prediction;
         })
       );
 
-      let totalMatches = 0;
-      let randomMatches = 0;
-      let currentGameMatches = 0;
-      let currentGameRandomMatches = 0;
+      // 2. Registra as previsões
+      systemLogger.log('prediction', `Previsões realizadas para concurso ${concursoNumber}`);
 
+      // 3. Somente depois revela os números da banca
+      await new Promise(resolve => setTimeout(resolve, 100)); // Pequeno delay para simular ordem
+      setBoardNumbers(currentBoardNumbers);
+      
+      // 4. Calcula resultados
       const updatedPlayers = players.map((player, index) => {
-        const predictions = playerResults[index];
+        const predictions = playerPredictions[index];
         const matches = predictions.filter(num => currentBoardNumbers.includes(num)).length;
         
-        totalMatches += matches;
-        currentGameMatches += matches;
-
-        if (matches >= 15) {
-          showToast?.("Resultado Excepcional!", 
-            `Jogador ${player.id} acertou ${matches} números!`);
-        }
-
-        const randomPrediction = Array.from({ length: 15 }, () => Math.floor(Math.random() * 25) + 1);
-        const randomMatch = randomPrediction.filter(num => currentBoardNumbers.includes(num)).length;
-        randomMatches += randomMatch;
-        currentGameRandomMatches += randomMatch;
-
-        temporalAccuracyTracker.recordAccuracy(matches, 15);
-
-        const reward = calculateReward(matches);
-        
-        if (matches >= 11) {
-          const logMessage = logReward(matches, player.id);
-          addLog(logMessage, matches);
-        }
+        systemLogger.log('player', `Jogador ${player.id} fez ${matches} acertos`, {
+          predictions,
+          currentNumbers: currentBoardNumbers
+        });
 
         return {
           ...player,
-          score: player.score + reward,
+          score: player.score + calculateReward(matches),
           predictions,
           fitness: matches
         };
       });
 
-      // Força atualização do estado dos jogadores
-      await Promise.resolve();
+      // 5. Atualiza estado
       setPlayers(updatedPlayers);
-      
-      setEvolutionData(prev => [
-        ...prev,
-        ...updatedPlayers.map(player => ({
-          generation,
-          playerId: player.id,
-          score: player.score,
-          fitness: player.fitness
-        }))
-      ]);
-
-      const metrics = {
-        accuracy: totalMatches / (players.length * 15),
-        randomAccuracy: randomMatches / (players.length * 15),
-        totalPredictions: players.length * (concursoNumber + 1),
-        perGameAccuracy: currentGameMatches / (players.length * 15),
-        perGameRandomAccuracy: currentGameRandomMatches / (players.length * 15)
-      };
-
-      // Força atualização das métricas
-      await Promise.resolve();
-      setModelMetrics(metrics);
-      
-      // Incrementa o número do concurso
-      const nextConcurso = concursoNumber + 1;
-      setConcursoNumber(nextConcurso);
+      setConcursoNumber(concursoNumber + 1);
       setGameCount(prev => prev + 1);
 
       return true;
