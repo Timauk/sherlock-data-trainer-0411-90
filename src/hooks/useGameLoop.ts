@@ -54,9 +54,14 @@ export const useGameLoop = ({
       }
 
       const currentBoardNumbers = [...csvData[concursoNumber]];
-      console.log('Game Loop - Definindo números:', currentBoardNumbers, 'para concurso:', concursoNumber);
       
+      // Força atualização do estado com Promise.resolve
+      await Promise.resolve();
       setBoardNumbers(currentBoardNumbers);
+      
+      systemLogger.log('action', `Game Loop - Processando concurso ${concursoNumber}`, {
+        numbers: currentBoardNumbers
+      });
       
       const currentDate = new Date();
       const lunarPhase = getLunarPhase(currentDate);
@@ -121,6 +126,8 @@ export const useGameLoop = ({
         };
       });
 
+      // Força atualização do estado dos jogadores
+      await Promise.resolve();
       setPlayers(updatedPlayers);
       
       setEvolutionData(prev => [
@@ -141,8 +148,13 @@ export const useGameLoop = ({
         perGameRandomAccuracy: currentGameRandomMatches / (players.length * 15)
       };
 
+      // Força atualização das métricas
+      await Promise.resolve();
       setModelMetrics(metrics);
-      setConcursoNumber(concursoNumber + 1);
+      
+      // Incrementa o número do concurso
+      const nextConcurso = concursoNumber + 1;
+      setConcursoNumber(nextConcurso);
       setGameCount(prev => prev + 1);
 
       return true;
