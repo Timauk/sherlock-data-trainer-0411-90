@@ -53,13 +53,18 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   return (
     <div 
       onClick={() => onPlayerClick(player)}
-      className={`p-4 rounded-lg shadow cursor-pointer transition-all hover:shadow-lg
-        ${isTopPlayer ? 'border-2 border-yellow-500' : ''} ${nicheColor}`}
+      className={`relative p-4 rounded-lg shadow-md cursor-pointer transition-all duration-200 hover:shadow-lg
+        ${isTopPlayer ? 'ring-2 ring-yellow-500' : ''} ${nicheColor}`}
     >
+      {isTopPlayer && (
+        <div className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-white text-lg">
+          👑
+        </div>
+      )}
+      
       <div className="flex items-center justify-between mb-2">
         <h4 className="font-semibold text-lg">
           Jogador #{player.id}
-          {isTopPlayer && <span className="ml-2 text-yellow-600">👑</span>}
         </h4>
         <Badge variant={isTopPlayer ? "default" : "secondary"}>
           Score: {player.score.toFixed(0)}
@@ -81,8 +86,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         </p>
         <Button 
           onClick={(e) => onClonePlayer(player, e)}
-          className="w-full mt-2 bg-blue-600 hover:bg-blue-700"
-          variant="default"
+          className="w-full mt-2"
+          variant="secondary"
         >
           <Copy className="mr-2 h-4 w-4" />
           Clonar Jogador
