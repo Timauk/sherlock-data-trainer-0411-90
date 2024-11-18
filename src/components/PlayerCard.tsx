@@ -14,13 +14,13 @@ interface PlayerCardProps {
 const getNicheColor = (niche: number) => {
   switch (niche) {
     case 0: // Pares
-      return 'bg-blue-100 dark:bg-blue-900';
+      return 'bg-blue-500/20 dark:bg-blue-900/50';
     case 1: // Ímpares
-      return 'bg-green-100 dark:bg-green-900';
+      return 'bg-green-500/20 dark:bg-green-900/50';
     case 2: // Sequências
-      return 'bg-purple-100 dark:bg-purple-900';
+      return 'bg-purple-500/20 dark:bg-purple-900/50';
     case 3: // Geral
-      return 'bg-orange-100 dark:bg-orange-900';
+      return 'bg-orange-500/20 dark:bg-orange-900/50';
     default:
       return 'bg-card';
   }
@@ -53,7 +53,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   return (
     <div 
       onClick={() => onPlayerClick(player)}
-      className={`relative p-4 rounded-lg shadow-md cursor-pointer transition-all duration-200 hover:shadow-lg
+      className={`relative p-4 rounded-lg shadow-md cursor-pointer transition-all duration-200 hover:shadow-lg backdrop-blur-sm
         ${isTopPlayer ? 'ring-2 ring-yellow-500' : ''} ${nicheColor}`}
     >
       {isTopPlayer && (
@@ -63,7 +63,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       )}
       
       <div className="flex items-center justify-between mb-2">
-        <h4 className="font-semibold text-lg">
+        <h4 className="font-semibold text-lg text-foreground">
           Jogador #{player.id}
         </h4>
         <Badge variant={isTopPlayer ? "default" : "secondary"}>
@@ -72,16 +72,16 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       </div>
       
       <div className="space-y-2">
-        <p className="text-sm">
+        <p className="text-sm text-foreground">
           <span className="font-medium">Nicho:</span> {getNicheName(player.niche)}
         </p>
-        <p className="text-sm">
+        <p className="text-sm text-foreground">
           <span className="font-medium">Idade:</span> {player.age} gerações
         </p>
-        <p className="text-sm">
+        <p className="text-sm text-foreground">
           <span className="font-medium">Previsões:</span> {formatPredictions(player.predictions)}
         </p>
-        <p className="text-sm">
+        <p className="text-sm text-foreground">
           <span className="font-medium">Acertos:</span> {player.fitness}
         </p>
         <Button 
