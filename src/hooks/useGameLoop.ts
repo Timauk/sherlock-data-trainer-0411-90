@@ -59,8 +59,14 @@ export const useGameLoop = ({
             player.weights,
             concursoNumber,
             setNeuralNetworkVisualization,
-            { lunarPhase: getLunarPhase(new Date()), lunarPatterns: [] },
-            { numbers: [[...currentBoardNumbers]], dates: [new Date()] }
+            { 
+              lunarPhase: getLunarPhase(new Date()), 
+              lunarPatterns: {} 
+            },
+            { 
+              numbers: [[...currentBoardNumbers]], 
+              dates: [new Date()] 
+            }
           );
           return prediction;
         })
@@ -70,7 +76,7 @@ export const useGameLoop = ({
       systemLogger.log('prediction', `Previsões realizadas para concurso ${concursoNumber}`);
 
       // 3. Somente depois revela os números da banca
-      await new Promise(resolve => setTimeout(resolve, 500)); // Pequeno delay para simular ordem
+      await new Promise(resolve => setTimeout(resolve, 500));
       setBoardNumbers(currentBoardNumbers);
       
       // 4. Calcula resultados

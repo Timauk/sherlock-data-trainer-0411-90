@@ -7,6 +7,11 @@ interface SpecializedModelConfig {
   layers: number[];
 }
 
+interface TrainingOptions {
+  epochs?: number;
+  batchSize?: number;
+}
+
 class SuperSpecializedModel {
   private model: tf.LayersModel;
   private type: string;
@@ -32,7 +37,7 @@ class SuperSpecializedModel {
     model.add(tf.layers.dense({
       units: config.layers[0],
       activation: 'relu',
-      inputShape: [17] // Fixed input shape
+      inputShape: [17]
     }));
 
     for (let i = 1; i < config.layers.length; i++) {
@@ -60,14 +65,14 @@ class SuperSpecializedModel {
     return model;
   }
 
-  async train(data: number[][], labels: number[][]): Promise<void> {
+  async train(data: number[][], options: TrainingOptions = {}): Promise<void> {
     const xs = tf.tensor2d(data);
-    const ys = tf.tensor2d(labels);
+    const ys = tf.tensor2d(data);
 
     try {
       await this.model.fit(xs, ys, {
-        epochs: 50,
-        batchSize: 32,
+        epochs: options.epochs || 50,
+        batchSize: options.batchSize || 32,
         validationSplit: 0.2,
         callbacks: [
           tf.callbacks.earlyStopping({
