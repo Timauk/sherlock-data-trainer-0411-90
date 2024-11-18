@@ -21,6 +21,7 @@ interface GameLoopParams {
   setConcursoNumber: (num: number) => void;
   setGameCount: React.Dispatch<React.SetStateAction<number>>;
   setIsProcessing: (isProcessing: boolean) => void;
+  showToast: (title: string, description: string) => void;
 }
 
 export const useGameLoop = ({
@@ -38,6 +39,7 @@ export const useGameLoop = ({
   setConcursoNumber,
   setGameCount,
   setIsProcessing,
+  showToast
 }: GameLoopParams) => {
   return useCallback(async () => {
     if (!csvData || csvData.length === 0 || !trainedModel || concursoNumber >= csvData.length) {
@@ -121,5 +123,6 @@ export const useGameLoop = ({
     setConcursoNumber,
     setGameCount,
     setIsProcessing,
+    showToast,
   ]);
 };
