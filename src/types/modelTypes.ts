@@ -46,6 +46,7 @@ export interface PlayPageContentProps extends ModelUploadProps {
   onReset: () => void;
   onThemeToggle: () => void;
   onCsvUpload: (file: File) => void;
+  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile?: File, weightSpecsFile?: File) => void;
   onSaveModel: () => void;
   progress: number;
   generation: number;
