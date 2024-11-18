@@ -2,11 +2,8 @@ import { useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import { Player, ModelVisualization } from '@/types/gameTypes';
 import { makePrediction } from '@/utils/predictionUtils';
-import { calculateReward, logReward } from '@/utils/rewardSystem';
-import { getLunarPhase, analyzeLunarPatterns } from '@/utils/lunarCalculations';
-import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
-import { temporalAccuracyTracker } from '@/utils/prediction/temporalAccuracy';
-import { TimeSeriesAnalysis } from '@/utils/analysis/timeSeriesAnalysis';
+import { calculateReward } from '@/utils/rewardSystem';
+import { getLunarPhase } from '@/utils/lunarCalculations';
 import { systemLogger } from '@/utils/logging/systemLogger';
 
 interface GameLoopParams {
@@ -24,7 +21,6 @@ interface GameLoopParams {
   setConcursoNumber: (num: number) => void;
   setGameCount: React.Dispatch<React.SetStateAction<number>>;
   setIsProcessing: (isProcessing: boolean) => void;
-  showToast?: (title: string, description: string) => void;
 }
 
 export const useGameLoop = ({
@@ -42,17 +38,16 @@ export const useGameLoop = ({
   setConcursoNumber,
   setGameCount,
   setIsProcessing,
-  showToast
 }: GameLoopParams) => {
   return useCallback(async () => {
+    if (!csvData || csvData.length === 0 || !trainedModel || concursoNumber >= csvData.length) {
+      addLog("Aguardando início do jogo...");
+      return false;
+    }
+
     setIsProcessing(true);
     
     try {
-      if (!csvData || csvData.length === 0 || !trainedModel || concursoNumber >= csvData.length) {
-        addLog("Fim dos concursos disponíveis no CSV");
-        return false;
-      }
-
       const currentBoardNumbers = [...csvData[concursoNumber]];
       
       // 1. Primeiro faz as previsões dos jogadores
@@ -75,7 +70,7 @@ export const useGameLoop = ({
       systemLogger.log('prediction', `Previsões realizadas para concurso ${concursoNumber}`);
 
       // 3. Somente depois revela os números da banca
-      await new Promise(resolve => setTimeout(resolve, 100)); // Pequeno delay para simular ordem
+      await new Promise(resolve => setTimeout(resolve, 500)); // Pequeno delay para simular ordem
       setBoardNumbers(currentBoardNumbers);
       
       // 4. Calcula resultados
@@ -120,6 +115,5 @@ export const useGameLoop = ({
     setConcursoNumber,
     setGameCount,
     setIsProcessing,
-    showToast
   ]);
 };

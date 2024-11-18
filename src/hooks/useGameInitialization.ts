@@ -13,12 +13,12 @@ export const useGameInitialization = () => {
       
       // Alimenta os sistemas especializados com dados históricos
       await Promise.all([
-        specializedModels.pairs.train(csvData),
-        specializedModels.odds.train(csvData),
-        specializedModels.sequences.train(csvData),
-        specializedModels.primes.train(csvData),
-        specializedModels.fibonacci.train(csvData),
-        specializedModels.lunar.train(csvData)
+        specializedModels.pairs.train(csvData, { epochs: 50 }),
+        specializedModels.odds.train(csvData, { epochs: 50 }),
+        specializedModels.sequences.train(csvData, { epochs: 50 }),
+        specializedModels.primes.train(csvData, { epochs: 50 }),
+        specializedModels.fibonacci.train(csvData, { epochs: 50 }),
+        specializedModels.lunar.train(csvData, { epochs: 50 })
       ]);
 
       setIsSpecializedSystemsReady(true);
@@ -32,7 +32,7 @@ export const useGameInitialization = () => {
 
   const initializePlayers = useCallback(() => {
     if (!isSpecializedSystemsReady) {
-      systemLogger.log('warning', 'Tentativa de inicializar jogadores antes dos sistemas especializados');
+      systemLogger.log('warning', 'Aguardando inicialização dos sistemas especializados...');
       return;
     }
 
@@ -48,7 +48,7 @@ export const useGameInitialization = () => {
     }));
 
     setPlayers(newPlayers);
-    systemLogger.log('action', 'Jogadores inicializados após sistemas especializados');
+    systemLogger.log('action', 'Jogadores inicializados e prontos para começar');
   }, [isSpecializedSystemsReady]);
 
   return {
