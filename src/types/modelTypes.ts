@@ -2,12 +2,7 @@ import { LayersModel } from '@tensorflow/tfjs';
 import { ModelVisualization, Player } from './gameTypes';
 
 export interface ModelUploadProps {
-  onModelUpload: (
-    jsonFile: File,
-    weightsFile: File,
-    metadataFile?: File,
-    weightSpecsFile?: File
-  ) => void;
+  onModelUpload: (file: File) => void;
 }
 
 export interface GameLogicProps {
@@ -36,7 +31,7 @@ export interface GameLogicProps {
   isProcessing?: boolean;
   saveFullModel: () => Promise<void>;
   loadFullModel: () => Promise<void>;
-  onUpdatePlayer: (playerId: number, newWeights: number[]) => void;
+  onUpdatePlayer: (playerId: number) => void;
 }
 
 export interface PlayPageContentProps {
@@ -46,7 +41,7 @@ export interface PlayPageContentProps {
   onReset: () => void;
   onThemeToggle: () => void;
   onCsvUpload: (file: File) => void;
-  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile?: File, weightSpecsFile?: File) => void;
+  onModelUpload: (file: File) => void;
   onSaveModel: () => void;
   progress: number;
   generation: number;

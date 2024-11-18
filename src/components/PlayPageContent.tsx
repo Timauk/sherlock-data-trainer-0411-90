@@ -60,6 +60,10 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
     }
   };
 
+  const handleModelUpload = (file: File) => {
+    onModelUpload(file);
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <ProcessingPanel
@@ -69,7 +73,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         onReset={onReset}
         onThemeToggle={onThemeToggle}
         onCsvUpload={onCsvUpload}
-        onModelUpload={onModelUpload}
+        onModelUpload={handleModelUpload}
         onSaveModel={onSaveModel}
         progress={progress}
         champion={gameLogic.players[0]}
