@@ -18,13 +18,13 @@ export const saveTrainingHistory = async (modelId: string, metrics: any) => {
 
 export const getTrainingHistory = async (modelId: string) => {
   try {
-    const result = supabase
+    const { data, error } = await supabase
       .from('training_history')
       .select()
       .eq('model_id', modelId);
 
-    if (result.error) throw result.error;
-    return { data: result.data };
+    if (error) throw error;
+    return { data };
   } catch (error) {
     console.error('Error loading training history:', error);
     return { error };
