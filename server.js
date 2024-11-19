@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
-import NodeCache from 'node-cache';
+import { LRUCache } from 'lru-cache';
 import { logger } from './src/utils/logging/logger.js';
 import { cacheMiddleware } from './src/utils/performance/serverCache.js';
 import fs from 'fs';
@@ -13,6 +13,12 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3001;
+
+// Initialize LRU Cache with options
+const cache = new LRUCache({
+  max: 500, // Maximum number of items
+  ttl: 1000 * 60 * 5, // Items live for 5 minutes
+});
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
