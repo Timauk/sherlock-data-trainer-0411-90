@@ -17,11 +17,28 @@ export const loadModelFromDirectory = async (modelDir) => {
       }
     }
 
-    // Load model files
+    // Load and validate model files
     const modelJSON = JSON.parse(fs.readFileSync(path.join(modelDir, 'model.json'), 'utf8'));
     const weightSpecs = JSON.parse(fs.readFileSync(path.join(modelDir, 'weight-specs.json'), 'utf8'));
     const weightsBuffer = fs.readFileSync(path.join(modelDir, 'weights.bin'));
     const metadata = JSON.parse(fs.readFileSync(path.join(modelDir, 'metadata.json'), 'utf8'));
+
+    // Validate weight specs
+    if (!Array.isArray(weightSpecs) || weightSpecs.length === 0) {
+      throw new Error('Invalid weight specs format');
+    }
+
+    // Calculate expected total values
+    const totalValues = weightSpecs.reduce((sum, spec) => {
+      const shapeSize = spec.shape.reduce((a, b) => a * b, 1);
+      return sum + shapeSize;
+    }, 0);
+
+    // Validate weights buffer size
+    const expectedBufferSize = totalValues * 4; // 4 bytes per float32
+    if (weightsBuffer.length !== expectedBufferSize) {
+      throw new Error(`Invalid weights buffer size. Expected ${expectedBufferSize} bytes but got ${weightsBuffer.length}`);
+    }
 
     // Create and validate model artifacts
     const modelArtifacts = {
@@ -43,6 +60,12 @@ export const loadModelFromDirectory = async (modelDir) => {
     
     if (!model || !model.layers || model.layers.length === 0) {
       throw new Error('Invalid model structure');
+    }
+
+    // Validate input shape
+    const inputShape = model.inputs[0].shape;
+    if (!inputShape || inputShape[1] !== 17) {
+      throw new Error(`Invalid input shape: expected [..., 17] but got ${inputShape}`);
     }
 
     return { model, metadata };
