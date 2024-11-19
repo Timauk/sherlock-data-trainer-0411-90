@@ -2,7 +2,6 @@ import * as tf from '@tensorflow/tfjs';
 import { LoadedModel } from './modelLoader/types';
 import { readJsonFile, readMetadataFile, createWeightsFile } from './modelLoader/fileHandlers';
 import { getDefaultModelJson } from './modelLoader/modelStructure';
-import { useToast } from "@/hooks/use-toast";
 
 const validateTensorShapes = (modelJson: any) => {
   if (!modelJson.weightsManifest || !modelJson.weightsManifest[0].weights) {
@@ -23,6 +22,21 @@ const validateTensorShapes = (modelJson: any) => {
   }
 };
 
+const validateWeightsData = (weightsFile: File) => {
+  return new Promise<boolean>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const buffer = reader.result as ArrayBuffer;
+      if (!buffer || buffer.byteLength === 0) {
+        reject(new Error('Weights file is empty'));
+      }
+      resolve(true);
+    };
+    reader.onerror = () => reject(new Error('Failed to read weights file'));
+    reader.readAsArrayBuffer(weightsFile);
+  });
+};
+
 export const loadModelFiles = async (
   jsonFile: File,
   weightsFile: File,
@@ -32,7 +46,6 @@ export const loadModelFiles = async (
   try {
     let modelJson = await readJsonFile(jsonFile);
     
-    // Verify and use default if needed
     if (!modelJson.modelTopology || !modelJson.weightsManifest) {
       console.warn('Using default model structure');
       modelJson = getDefaultModelJson();
@@ -40,6 +53,9 @@ export const loadModelFiles = async (
 
     // Validate tensor shapes before loading
     validateTensorShapes(modelJson);
+
+    // Validate weights data
+    await validateWeightsData(weightsFile);
 
     // Create a new File with the correct name for weights
     const weightsFileWithCorrectName = createWeightsFile(weightsFile);
@@ -56,7 +72,10 @@ export const loadModelFiles = async (
       // Verify model structure matches expected architecture
       const expectedLayers = [256, 128, 15]; // Expected layer sizes
       const actualLayers = model.layers
-        .map(layer => (layer as any).units)
+        .map(layer => {
+          const config = (layer as any).getConfig();
+          return config?.units;
+        })
         .filter(units => typeof units === 'number');
       
       if (!expectedLayers.every((size, i) => actualLayers[i] === size)) {
