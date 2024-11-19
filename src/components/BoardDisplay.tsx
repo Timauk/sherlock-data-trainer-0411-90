@@ -3,20 +3,26 @@ import React from 'react';
 interface BoardDisplayProps {
   numbers: number[];
   concursoNumber: number;
+  totalGames?: number;
 }
 
-const BoardDisplay: React.FC<BoardDisplayProps> = ({ numbers, concursoNumber }) => {
+const BoardDisplay: React.FC<BoardDisplayProps> = ({ numbers, concursoNumber, totalGames = 0 }) => {
   const isSimulated = numbers.length === 0;
 
   return (
     <div className="mb-4">
-      <h3 className="text-lg font-semibold mb-2">
-        Quadro (Banca) - Concurso #{concursoNumber}
-        {isSimulated && (
-          <span className="ml-2 text-sm text-red-500 font-normal">
-            (Simulação)
-          </span>
-        )}
+      <h3 className="text-lg font-semibold mb-2 flex items-center gap-4">
+        <span>
+          Quadro (Banca) - Concurso #{concursoNumber}
+          {isSimulated && (
+            <span className="ml-2 text-sm text-red-500 font-normal">
+              (Simulação)
+            </span>
+          )}
+        </span>
+        <span className="text-sm font-normal text-muted-foreground">
+          Total de Jogos: {totalGames}
+        </span>
       </h3>
       <div className="bg-gray-100 p-4 rounded-lg">
         {numbers.length > 0 ? (

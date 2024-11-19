@@ -7,6 +7,7 @@ import { Player } from '@/types/gameTypes';
 interface GameBoardProps {
   boardNumbers: number[];
   concursoNumber: number;
+  totalGames?: number;
   players: Player[];
   evolutionData: Array<{
     generation: number;
@@ -19,14 +20,19 @@ interface GameBoardProps {
 
 const GameBoard: React.FC<GameBoardProps> = ({ 
   boardNumbers, 
-  concursoNumber, 
+  concursoNumber,
+  totalGames = 0,
   players, 
   evolutionData = [],
   onUpdatePlayer
 }) => {
   return (
     <div>
-      <BoardDisplay numbers={boardNumbers} concursoNumber={concursoNumber} />
+      <BoardDisplay 
+        numbers={boardNumbers} 
+        concursoNumber={concursoNumber}
+        totalGames={totalGames}
+      />
       <PlayerList players={players} onUpdatePlayer={onUpdatePlayer} />
       <EvolutionChart data={evolutionData} />
     </div>
