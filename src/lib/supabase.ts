@@ -1,13 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, enableIndexedDbPersistence, type PersistenceSettings } from 'firebase/firestore';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
-
-// Initialize Firebase separately if needed
-import { initializeApp } from 'firebase/app';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
 const firebaseConfig = {
   apiKey: process.env.VITE_FIREBASE_API_KEY,
@@ -20,13 +18,11 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+const db = getFirestore(app);
 
 // Enable offline persistence with proper configuration
 try {
-  enableIndexedDbPersistence(db, {
-    synchronizeTabs: true
-  }).catch((err) => {
+  enableIndexedDbPersistence(db).catch((err) => {
     if (err.code === 'failed-precondition') {
       console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
     } else if (err.code === 'unimplemented') {
@@ -36,3 +32,5 @@ try {
 } catch (err) {
   console.warn('Error enabling persistence:', err);
 }
+
+export { supabaseClient as supabase, db };
