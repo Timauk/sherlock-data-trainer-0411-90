@@ -26,7 +26,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
   const { status: serverStatus } = useServerStatus();
   const { toast } = useToast();
 
-  // Ensure we only use 80 players
+  // Ensure we only use 80 players consistently across all components
   const limitedPlayers = gameLogic.players.slice(0, 80);
 
   const handleExportCSV = async () => {
@@ -77,7 +77,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         progress={progress}
         champion={limitedPlayers[0]}
         modelMetrics={gameLogic.modelMetrics}
-        gameLogic={gameLogic}
+        gameLogic={{ ...gameLogic, players: limitedPlayers }}
         isServerProcessing={isServerProcessing}
         serverStatus={serverStatus}
         onToggleProcessing={() => setIsServerProcessing(prev => !prev)}
