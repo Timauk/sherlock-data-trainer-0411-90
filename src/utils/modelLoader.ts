@@ -1,9 +1,22 @@
 import * as tf from '@tensorflow/tfjs';
 import { LoadedModel } from './modelLoader/types';
-import { readJsonFile, readMetadataFile, createWeightsFile } from './modelLoader/fileHandlers';
+import { readJsonFile, readMetadataFile } from './modelLoader/fileHandlers';
 import { getDefaultModelJson } from './modelLoader/modelStructure';
 import { logger } from '../utils/logging/logger';
-import { useToast } from "@/hooks/use-toast";
+import { systemLogger } from './logging/systemLogger';
+
+const validateTrainingParameters = (modelJson: any) => {
+  const requiredParams = ['batchSize', 'epochs', 'optimizer'];
+  const missingParams = requiredParams.filter(param => 
+    !modelJson.trainingConfig || !modelJson.trainingConfig[param]
+  );
+
+  if (missingParams.length > 0) {
+    throw new Error(`Missing training parameters: ${missingParams.join(', ')}`);
+  }
+
+  return true;
+};
 
 const validateTensorShapes = (modelJson: any) => {
   if (!modelJson.weightsManifest || !modelJson.weightsManifest[0].weights) {
@@ -34,7 +47,6 @@ const validateWeightsData = async (weightsFile: File): Promise<ArrayBuffer> => {
       throw new Error('Weights file is empty');
     }
 
-    // Minimum expected size for our model architecture
     const expectedMinSize = 4352; // 17x256 minimum size
     if (buffer.byteLength < expectedMinSize) {
       throw new Error(`Weights file too small: expected at least ${expectedMinSize} bytes but got ${buffer.byteLength}`);
@@ -61,6 +73,16 @@ export const loadModelFiles = async (
     }
 
     let modelJson = await readJsonFile(jsonFile);
+    
+    // Validate training parameters
+    try {
+      validateTrainingParameters(modelJson);
+      logger.info('Training parameters validation passed');
+    } catch (error) {
+      systemLogger.log('model', 'Model not trained or missing training parameters', { error });
+      throw new Error('Model needs to be trained before loading. Please train the model first.');
+    }
+
     if (!modelJson.modelTopology || !modelJson.weightsManifest) {
       logger.warn('Using default model structure');
       modelJson = getDefaultModelJson();
@@ -72,11 +94,6 @@ export const loadModelFiles = async (
     const weightsBuffer = await validateWeightsData(weightsFile);
     logger.info('Weights data validation passed');
 
-    const weightsManifest = [{
-      paths: ['weights.bin'],
-      weights: modelJson.weightsManifest[0].weights,
-    }];
-
     const modelArtifacts = {
       modelTopology: modelJson.modelTopology,
       weightSpecs: modelJson.weightsManifest[0].weights,
@@ -84,12 +101,12 @@ export const loadModelFiles = async (
       format: 'layers-model',
       generatedBy: 'TensorFlow.js',
       convertedBy: null,
+      trainingConfig: modelJson.trainingConfig
     };
 
     try {
-      logger.info('Loading model from artifacts');
       const model = await tf.loadLayersModel(tf.io.fromMemory(modelArtifacts));
-
+      
       // Verify model structure
       const expectedLayers = [256, 128, 15];
       const actualLayers = model.layers
@@ -105,11 +122,11 @@ export const loadModelFiles = async (
       
       return { model, metadata };
     } catch (error) {
-      logger.error('Error in model loading/verification:', error);
+      systemLogger.log('model', 'Error loading model', { error });
       throw new Error(`Failed to load model: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   } catch (error) {
-    logger.error('Error in model loading process:', error);
+    systemLogger.log('model', 'Error in model loading process', { error });
     throw new Error(`Failed to load model: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };

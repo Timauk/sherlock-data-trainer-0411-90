@@ -9,6 +9,13 @@ export interface ModelMetadata {
     inputShape: number[];
     layers: number[];
   };
+  trainingConfig?: {
+    batchSize: number;
+    epochs: number;
+    optimizer: string;
+    learningRate?: number;
+    validationSplit?: number;
+  };
 }
 
 export interface LoadedModel {
