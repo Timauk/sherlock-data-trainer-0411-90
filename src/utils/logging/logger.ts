@@ -1,19 +1,16 @@
 import pino from 'pino';
 
-const transport = pino.transport({
-  targets: [
-    {
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        translateTime: 'SYS:standard',
-      },
-      level: 'info'
+const logger = pino({
+  level: 'debug',
+  browser: {
+    asObject: true,
+    write: {
+      info: (o) => console.log(o.msg),
+      error: (o) => console.error(o.msg),
+      debug: (o) => console.debug(o.msg),
+      warn: (o) => console.warn(o.msg)
     }
-  ]
+  }
 });
 
-export const logger = pino({
-  level: 'debug',
-  base: undefined,
-}, transport);
+export { logger };
