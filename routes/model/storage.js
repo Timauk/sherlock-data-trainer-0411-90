@@ -16,15 +16,20 @@ router.post('/', async (req, res) => {
     const { playersData, evolutionHistory } = req.body;
     
     if (!playersData || !evolutionHistory) {
-      logger.warn('Missing required data for saving model');
+      const errorDetails = {
+        missingPlayersData: !playersData,
+        missingEvolutionHistory: !evolutionHistory
+      };
+      logger.warn('Missing required data for saving model', errorDetails);
       return res.status(400).json({ 
         error: 'Missing required data',
-        details: 'playersData and evolutionHistory are required'
+        details: errorDetails
       });
     }
 
     const model = await getOrCreateModel();
     if (!model) {
+      logger.error('Failed to get or create model - model is null');
       throw new Error('Failed to get or create model');
     }
 
@@ -36,38 +41,54 @@ router.post('/', async (req, res) => {
     // Ensure directory exists
     if (!fs.existsSync(baseModelDir)) {
       fs.mkdirSync(baseModelDir, { recursive: true });
+      logger.info(`Created base model directory: ${baseModelDir}`);
     }
     fs.mkdirSync(modelDir);
+    logger.info(`Created model directory: ${modelDir}`);
 
     try {
-      // Get model artifacts
+      // Get model artifacts with detailed error handling
+      logger.info('Starting model artifacts save process...');
       const artifacts = await model.save(tf.io.withSaveHandler(async (modelArtifacts) => {
+        if (!modelArtifacts) {
+          throw new Error('Model artifacts are null or undefined');
+        }
+        logger.info('Model artifacts generated successfully');
         return modelArtifacts;
       }));
 
-      // Save model topology
+      // Save model topology with validation
       logger.info('Saving model topology...');
+      if (!artifacts.modelTopology) {
+        throw new Error('Model topology is missing from artifacts');
+      }
       fs.writeFileSync(
         path.join(modelDir, 'model.json'),
         JSON.stringify(artifacts.modelTopology)
       );
 
-      // Save weights as binary file
+      // Save weights as binary file with validation
       logger.info('Saving weights binary...');
+      if (!artifacts.weightData) {
+        throw new Error('Weight data is missing from artifacts');
+      }
       const weightsData = Buffer.from(artifacts.weightData);
       fs.writeFileSync(
         path.join(modelDir, 'weights.bin'),
         weightsData
       );
 
-      // Save weight specs
+      // Save weight specs with validation
       logger.info('Saving weight specs...');
+      if (!artifacts.weightSpecs) {
+        throw new Error('Weight specs are missing from artifacts');
+      }
       fs.writeFileSync(
         path.join(modelDir, 'weight-specs.json'),
         JSON.stringify(artifacts.weightSpecs)
       );
 
-      // Save metadata
+      // Save metadata with validation
       logger.info('Saving metadata...');
       const metadata = {
         timestamp: new Date().toISOString(),
@@ -102,8 +123,11 @@ router.post('/', async (req, res) => {
       const requiredFiles = ['model.json', 'weights.bin', 'weight-specs.json', 'metadata.json'];
       for (const file of requiredFiles) {
         const filePath = path.join(modelDir, file);
-        if (!fs.existsSync(filePath) || fs.statSync(filePath).size === 0) {
-          throw new Error(`File ${file} is missing or empty`);
+        if (!fs.existsSync(filePath)) {
+          throw new Error(`Required file ${file} is missing`);
+        }
+        if (fs.statSync(filePath).size === 0) {
+          throw new Error(`Required file ${file} is empty`);
         }
       }
 
