@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import { logger } from './logger';
 import { Player } from '@/types/gameTypes';
 
@@ -9,7 +7,9 @@ class CloneLogger {
 
   private constructor() {
     // Só configura o caminho se estiver rodando no Node.js
-    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+    if (typeof process !== 'undefined' && process.versions?.node) {
+      const fs = require('fs');
+      const path = require('path');
       this.logPath = path.join(process.cwd(), 'logs', 'cloning.log');
       this.ensureLogDirectory();
     }
@@ -23,9 +23,13 @@ class CloneLogger {
   }
 
   private ensureLogDirectory() {
-    const dir = path.dirname(this.logPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    if (typeof process !== 'undefined' && process.versions?.node) {
+      const fs = require('fs');
+      const path = require('path');
+      const dir = path.dirname(this.logPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
     }
   }
 
@@ -51,8 +55,9 @@ ${newPlayers.map(p => `- Clone #${p.id}: Score Inicial ${p.score}, Fitness Inici
     }, 'Clonagem realizada');
 
     // Se estiver rodando no Node.js, salva no arquivo
-    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+    if (typeof process !== 'undefined' && process.versions?.node) {
       try {
+        const fs = require('fs');
         fs.appendFileSync(this.logPath, logMessage + '\n');
       } catch (error) {
         logger.error('Erro ao salvar log de clonagem:', error);
@@ -61,8 +66,9 @@ ${newPlayers.map(p => `- Clone #${p.id}: Score Inicial ${p.score}, Fitness Inici
   }
 
   getCloneLogs(): string[] {
-    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+    if (typeof process !== 'undefined' && process.versions?.node) {
       try {
+        const fs = require('fs');
         if (fs.existsSync(this.logPath)) {
           const content = fs.readFileSync(this.logPath, 'utf-8');
           return content.split('\n').filter(line => line.trim());
