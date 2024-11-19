@@ -1,9 +1,8 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Upload } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 import CheckpointControls from './CheckpointControls';
 
 interface DataUploaderProps {
@@ -15,74 +14,11 @@ interface DataUploaderProps {
 const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload, onSaveModel }) => {
   const jsonFileRef = useRef<HTMLInputElement>(null);
   const weightsFileRef = useRef<HTMLInputElement>(null);
-  const [timeUntilCheckpoint, setTimeUntilCheckpoint] = useState(1800);
   const [savePath, setSavePath] = useState(localStorage.getItem('checkpointPath') || '');
   const { toast } = useToast();
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeUntilCheckpoint((prev) => {
-        if (prev <= 1) {
-          handleAutoSave();
-          return 1800;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  const handleAutoSave = async () => {
-    if (!savePath) {
-      toast({
-        title: "Erro no Checkpoint",
-        description: "Por favor, configure o diretório de salvamento primeiro!",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      const gameState = {
-        timestamp: new Date().toISOString(),
-        path: savePath
-      };
-
-      localStorage.setItem('gameCheckpoint', JSON.stringify(gameState));
-      
-      toast({
-        title: "Checkpoint Salvo",
-        description: "Recarregando página para limpar memória...",
-      });
-
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
-    } catch (error) {
-      toast({
-        title: "Erro ao Salvar",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-sm font-medium">
-          Próximo checkpoint em: {formatTime(timeUntilCheckpoint)}
-        </div>
-        <Progress value={(1800 - timeUntilCheckpoint) / 18} className="w-1/2" />
-      </div>
-
       <Tabs defaultValue="preparation" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="preparation">Preparação</TabsTrigger>
@@ -135,7 +71,7 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
           <CheckpointControls
             savePath={savePath}
             onSavePathChange={setSavePath}
-            onAutoSave={handleAutoSave}
+            onAutoSave={() => {}}
           />
         </TabsContent>
       </Tabs>
