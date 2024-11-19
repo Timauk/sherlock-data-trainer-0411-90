@@ -1,7 +1,7 @@
 import * as tf from '@tensorflow/tfjs';
 import { systemLogger } from './logging/systemLogger';
 
-export interface ModelMetadata {
+export interface ModelMetadata extends Record<string, unknown> {
   timestamp: string;
   architecture: string[];
   performance: {
