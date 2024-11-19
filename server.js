@@ -14,10 +14,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3001;
 
-// Configuração CORS mais permissiva para desenvolvimento
 app.use(cors());
-
-// Middlewares básicos
 app.use(express.json({ limit: '50mb' }));
 app.use(compression());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -27,16 +24,16 @@ app.use(cacheMiddleware);
 import { modelRouter } from './routes/model.js';
 import { checkpointRouter } from './routes/checkpoint.js';
 import { statusRouter } from './routes/status.js';
+import { processingRouter } from './routes/model/processing.js';
 
-// Rota de teste básica
 app.get('/test', (req, res) => {
   res.json({ message: 'Server is running' });
 });
 
-// Configuração das rotas
 app.use('/api/model', modelRouter);
 app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
+app.use('/api/processing', processingRouter);
 
 // Cria as pastas necessárias se não existirem
 import fs from 'fs';

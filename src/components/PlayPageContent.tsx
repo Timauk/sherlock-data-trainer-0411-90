@@ -3,7 +3,6 @@ import { useServerStatus } from '@/hooks/useServerStatus';
 import ProcessingPanel from './PlayPageContent/ProcessingPanel';
 import AnalysisPanel from './PlayPageContent/AnalysisPanel';
 import { useToast } from "@/hooks/use-toast";
-import * as tf from '@tensorflow/tfjs';
 
 interface PlayPageContentProps {
   isPlaying: boolean;
@@ -32,10 +31,42 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
   generation,
   gameLogic
 }) => {
-  const [isServerProcessing, setIsServerProcessing] = useState(false);
+  const [isServerProcessing, setIsServerProcessing] = useState(true);
   const { status: serverStatus } = useServerStatus();
   const { toast } = useToast();
   
+  const processGame = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/processing/process-game', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          inputData: gameLogic.currentInput,
+          generation,
+          playerWeights: gameLogic.playerWeights,
+          isInfiniteMode: gameLogic.isInfiniteMode,
+          isManualMode: gameLogic.isManualMode
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro no processamento do servidor');
+      }
+
+      const result = await response.json();
+      // Update game state with server response
+      gameLogic.updateGameState(result);
+    } catch (error) {
+      toast({
+        title: "Erro no Processamento",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive"
+      });
+    }
+  };
+
   const champion = gameLogic.players && gameLogic.players.length > 0 
     ? gameLogic.players.reduce((prev, current) => 
         (current.fitness > (prev?.fitness || 0)) ? current : prev, 
@@ -118,7 +149,10 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
     <div className="flex flex-col gap-4">
       <ProcessingPanel
         isPlaying={isPlaying}
-        onPlay={onPlay}
+        onPlay={async () => {
+          await processGame();
+          onPlay();
+        }}
         onPause={onPause}
         onReset={onReset}
         onThemeToggle={onThemeToggle}
@@ -126,18 +160,18 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         onModelUpload={onModelUpload}
         onSaveModel={onSaveModel}
         progress={progress}
-        champion={champion}
+        champion={gameLogic.champion}
         modelMetrics={gameLogic.modelMetrics}
         gameLogic={gameLogic}
         isServerProcessing={isServerProcessing}
         serverStatus={serverStatus}
         onToggleProcessing={() => setIsServerProcessing(prev => !prev)}
-        saveFullModel={saveFullModel}
-        loadFullModel={loadFullModel}
+        saveFullModel={gameLogic.saveFullModel}
+        loadFullModel={gameLogic.loadFullModel}
       />
       
       <AnalysisPanel
-        champion={champion}
+        champion={gameLogic.champion}
         trainedModel={gameLogic.trainedModel}
         boardNumbers={gameLogic.boardNumbers}
         isServerProcessing={isServerProcessing}
