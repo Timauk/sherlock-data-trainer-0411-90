@@ -16,7 +16,7 @@ const PORT = 3001;
 
 // Configuração CORS atualizada
 app.use(cors({
-  origin: '*', // Allowing all origins temporarily for development
+  origin: '*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -32,10 +32,12 @@ import { modelRouter } from './routes/model.js';
 import { checkpointRouter } from './routes/checkpoint.js';
 import { statusRouter } from './routes/status.js';
 
+// Configuração das rotas
 app.use('/api/model', modelRouter);
 app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
 
+// Error handler
 app.use((err, req, res, next) => {
   logger.error({
     err,
