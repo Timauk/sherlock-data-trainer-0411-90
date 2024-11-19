@@ -9,6 +9,7 @@ import { useGameInterval } from '@/hooks/useGameInterval';
 import { loadModelFiles } from '@/utils/modelLoader';
 import { loadModelWithWeights, saveModelWithWeights } from '@/utils/modelUtils';
 import { systemLogger } from '@/utils/logging/systemLogger';
+import { useToast } from "@/hooks/use-toast";
 
 const PlayPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -55,9 +56,15 @@ const PlayPage: React.FC = () => {
       const result = await loadModelFiles(file, weightsFile);
       if (result.model) {
         setTrainedModel(result.model);
+        systemLogger.log("action", "Modelo carregado com sucesso!");
       }
     } catch (error) {
-      systemLogger.log("action", "Erro ao carregar modelo", {}, 'error');
+      systemLogger.log("action", "Erro ao carregar modelo", { error }, 'error');
+      toast({
+        title: "Erro ao Carregar Modelo",
+        description: error instanceof Error ? error.message : "Falha ao carregar modelo",
+        variant: "destructive"
+      });
     }
   };
 

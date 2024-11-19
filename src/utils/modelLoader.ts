@@ -3,6 +3,7 @@ import { LoadedModel } from './modelLoader/types';
 import { readJsonFile, readMetadataFile, createWeightsFile } from './modelLoader/fileHandlers';
 import { getDefaultModelJson } from './modelLoader/modelStructure';
 import { logger } from '../utils/logging/logger';
+import { useToast } from "@/hooks/use-toast";
 
 const validateTensorShapes = (modelJson: any) => {
   if (!modelJson.weightsManifest || !modelJson.weightsManifest[0].weights) {
@@ -23,13 +24,18 @@ const validateTensorShapes = (modelJson: any) => {
 };
 
 const validateWeightsData = async (weightsFile: File): Promise<ArrayBuffer> => {
+  if (!weightsFile) {
+    throw new Error('No weights file provided');
+  }
+
   try {
     const buffer = await weightsFile.arrayBuffer();
     if (!buffer || buffer.byteLength === 0) {
       throw new Error('Weights file is empty');
     }
 
-    const expectedMinSize = 4352 * 4; // 17x256 floats minimum
+    // Minimum expected size for our model architecture
+    const expectedMinSize = 4352; // 17x256 minimum size
     if (buffer.byteLength < expectedMinSize) {
       throw new Error(`Weights file too small: expected at least ${expectedMinSize} bytes but got ${buffer.byteLength}`);
     }
@@ -37,7 +43,7 @@ const validateWeightsData = async (weightsFile: File): Promise<ArrayBuffer> => {
     return buffer;
   } catch (error) {
     logger.error('Error validating weights data:', error);
-    throw error;
+    throw new Error(`Failed to validate weights data: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
@@ -50,6 +56,10 @@ export const loadModelFiles = async (
   try {
     logger.info('Starting model loading process');
     
+    if (!jsonFile || !weightsFile) {
+      throw new Error('Missing required model files');
+    }
+
     let modelJson = await readJsonFile(jsonFile);
     if (!modelJson.modelTopology || !modelJson.weightsManifest) {
       logger.warn('Using default model structure');
