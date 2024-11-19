@@ -21,6 +21,7 @@ const PlayPage: React.FC = () => {
   const { theme, setTheme } = useTheme();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const { toast } = useToast();
   
   const gameLogicHook = useGameLogic(csvData, trainedModel);
 
