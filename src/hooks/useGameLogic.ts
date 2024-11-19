@@ -71,10 +71,16 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     const bestPlayers = selectBestPlayers(players);
     setGameCount(prev => prev + 1);
 
-    if (gameCount % 1000 === 0 && bestPlayers.length > 0) {
+    // Modificado para clonar apenas a cada 500 jogos
+    if (gameCount % 500 === 0 && bestPlayers.length > 0) {
       const champion = bestPlayers[0];
       const clones = cloneChampion(champion, players.length);
       setPlayers(clones);
+      
+      toast({
+        title: "Nova Geração Criada",
+        description: `Clonagem realizada após ${gameCount} jogos. Campeão: Jogador #${champion.id}`,
+      });
       
       if (trainedModel && championData) {
         try {
@@ -118,7 +124,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     if (bestPlayers.length > 0) {
       systemLogger.log('player', `Melhor jogador da geração ${generation}: Score ${bestPlayers[0].score}`);
     }
-  }, [players, generation, trainedModel, gameCount, championData, trainingData]);
+  }, [players, generation, trainedModel, gameCount, championData, trainingData, toast]);
 
   const updateFrequencyData = useCallback((newFrequencyData: { [key: string]: number[] }) => {
     setFrequencyData(newFrequencyData);
