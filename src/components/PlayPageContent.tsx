@@ -39,7 +39,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
           }))
         );
         
-        exportPredictionsToCSV(allPredictions, gameLogic.players);
+        exportPredictionsToCSV(allPredictions, gameLogic.players.slice(0, 80));
         toast({
           title: "Exportação Concluída",
           description: `${allGames.length} jogos foram exportados com sucesso.`,
@@ -60,6 +60,9 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
     }
   };
 
+  // Ensure we only pass the first 80 players to components
+  const limitedPlayers = gameLogic.players.slice(0, 80);
+
   return (
     <div className="flex flex-col gap-6">
       <ProcessingPanel
@@ -72,7 +75,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         onModelUpload={onModelUpload}
         onSaveModel={onSaveModel}
         progress={progress}
-        champion={gameLogic.players[0]}
+        champion={limitedPlayers[0]}
         modelMetrics={gameLogic.modelMetrics}
         gameLogic={gameLogic}
         isServerProcessing={isServerProcessing}
@@ -84,7 +87,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
       />
 
       <GameBoardSection
-        players={gameLogic.players}
+        players={limitedPlayers}
         evolutionData={gameLogic.evolutionData}
         boardNumbers={gameLogic.boardNumbers}
         concursoNumber={gameLogic.concursoNumber}
@@ -99,11 +102,11 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
       />
       
       <AnalysisPanel
-        champion={gameLogic.players[0]}
+        champion={limitedPlayers[0]}
         trainedModel={gameLogic.trainedModel}
         boardNumbers={gameLogic.boardNumbers}
         isServerProcessing={isServerProcessing}
-        players={gameLogic.players.slice(0, 80)} // Limit to first 80 players
+        players={limitedPlayers}
         generation={generation}
         evolutionData={gameLogic.evolutionData}
         dates={gameLogic.dates}

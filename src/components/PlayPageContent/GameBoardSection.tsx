@@ -24,6 +24,9 @@ const GameBoardSection = ({
   onModelUpload,
   onSaveModel
 }: GameBoardSectionProps) => {
+  // Ensure we only pass the first 80 players to GameBoard
+  const limitedPlayers = players.slice(0, 80);
+
   return (
     <div className="space-y-6">
       <div className="bg-card rounded-lg p-4 shadow-sm">
@@ -38,7 +41,7 @@ const GameBoardSection = ({
       <div className="bg-card rounded-lg p-4 shadow-sm">
         <h2 className="text-xl font-semibold mb-4">Tabuleiro do Jogo</h2>
         <GameBoard
-          players={players.slice(0, 80)} // Limit to first 80 players
+          players={limitedPlayers}
           evolutionData={evolutionData}
           boardNumbers={boardNumbers}
           concursoNumber={concursoNumber}
