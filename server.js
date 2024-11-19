@@ -14,14 +14,10 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3001;
 
-// Configuração CORS atualizada
-app.use(cors({
-  origin: '*',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// Configuração CORS mais permissiva para desenvolvimento
+app.use(cors());
 
+// Middlewares básicos
 app.use(express.json({ limit: '50mb' }));
 app.use(compression());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -32,7 +28,12 @@ import { modelRouter } from './routes/model.js';
 import { checkpointRouter } from './routes/checkpoint.js';
 import { statusRouter } from './routes/status.js';
 
-// Configuração das rotas - Movido para antes do error handler
+// Rota de teste básica
+app.get('/test', (req, res) => {
+  res.json({ message: 'Server is running' });
+});
+
+// Configuração das rotas
 app.use('/api/model', modelRouter);
 app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
@@ -54,7 +55,7 @@ tf.setBackend('cpu').then(() => {
   logger.info('TensorFlow.js backend configurado para CPU');
 });
 
-// Error handler - Movido para depois das rotas
+// Error handler
 app.use((err, req, res, next) => {
   logger.error({
     err,
