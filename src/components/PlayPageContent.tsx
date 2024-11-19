@@ -61,7 +61,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <ProcessingPanel
         isPlaying={isPlaying}
         onPlay={onPlay}
@@ -93,6 +93,9 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
             gameLogic.onUpdatePlayer(playerId, newWeights);
           }
         }}
+        onCsvUpload={onCsvUpload}
+        onModelUpload={onModelUpload}
+        onSaveModel={onSaveModel}
       />
       
       <AnalysisPanel
@@ -100,7 +103,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         trainedModel={gameLogic.trainedModel}
         boardNumbers={gameLogic.boardNumbers}
         isServerProcessing={isServerProcessing}
-        players={gameLogic.players}
+        players={gameLogic.players.slice(0, 80)} // Limit to first 80 players
         generation={generation}
         evolutionData={gameLogic.evolutionData}
         dates={gameLogic.dates}
