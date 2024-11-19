@@ -55,7 +55,9 @@ export const loadModelFiles = async (
 
       // Verify model structure matches expected architecture
       const expectedLayers = [256, 128, 15]; // Expected layer sizes
-      const actualLayers = model.layers.map(layer => layer.units).filter(units => units);
+      const actualLayers = model.layers
+        .map(layer => (layer as any).units)
+        .filter(units => typeof units === 'number');
       
       if (!expectedLayers.every((size, i) => actualLayers[i] === size)) {
         throw new Error('Model architecture does not match expected structure');
