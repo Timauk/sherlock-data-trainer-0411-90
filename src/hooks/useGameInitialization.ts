@@ -6,7 +6,7 @@ export const useGameInitialization = () => {
   const [players, setPlayers] = useState<Player[]>([]);
 
   const initializePlayers = () => {
-    // Create exactly 80 players
+    // Garantir exatamente 80 jogadores
     const initialPlayers: Player[] = Array.from({ length: 80 }, (_, index) => ({
       id: index + 1,
       name: `Jogador ${index + 1}`,
@@ -17,16 +17,22 @@ export const useGameInitialization = () => {
       predictions: [],
       history: [],
       age: 0,
-      niche: Math.floor(Math.random() * 4) // 0: pares, 1: ímpares, 2: sequências, 3: geral
+      niche: Math.floor(Math.random() * 4)
     }));
 
     setPlayers(initialPlayers);
-    systemLogger.log('action', 'Players initialized successfully');
+    systemLogger.log('action', 'Players initialized successfully', { playerCount: initialPlayers.length });
+  };
+
+  const updatePlayers = (newPlayers: Player[]) => {
+    // Garantir que nunca exceda 80 jogadores
+    const limitedPlayers = newPlayers.slice(0, 80);
+    setPlayers(limitedPlayers);
   };
 
   return {
     players,
-    setPlayers,
+    setPlayers: updatePlayers,
     initializePlayers
   };
 };

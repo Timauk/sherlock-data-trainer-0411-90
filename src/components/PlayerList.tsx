@@ -45,7 +45,10 @@ const PlayerList: React.FC<PlayerListProps> = ({
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [editedWeights, setEditedWeights] = useState<Weight[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const maxScore = Math.max(...players.map(p => p.score));
+  
+  // Garantir que apenas 80 jogadores sejam exibidos
+  const limitedPlayers = players.slice(0, 80);
+  const maxScore = Math.max(...limitedPlayers.map(p => p.score));
 
   useEffect(() => {
     if (selectedPlayer) {
@@ -99,9 +102,9 @@ const PlayerList: React.FC<PlayerListProps> = ({
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold mb-4">Jogadores ({players.length})</h2>
+      <h2 className="text-2xl font-bold mb-4">Jogadores ({limitedPlayers.length}/80)</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {players.map((player, index) => (
+        {limitedPlayers.map((player, index) => (
           <PlayerCard
             key={`${player.id}-${index}`}
             player={player}
