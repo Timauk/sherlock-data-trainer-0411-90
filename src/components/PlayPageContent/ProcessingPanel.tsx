@@ -52,7 +52,7 @@ const ProcessingPanel = ({
               id="csvUpload"
               type="file"
               accept=".csv"
-              onChange={(e) => onCsvUpload(e.target.files?.[0])}
+              onChange={(e) => e.target.files?.[0] && onCsvUpload(e.target.files[0])}
               className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
             />
           </label>
@@ -65,7 +65,7 @@ const ProcessingPanel = ({
               id="modelUpload"
               type="file"
               accept=".json"
-              onChange={(e) => onModelUpload(e.target.files?.[0])}
+              onChange={(e) => e.target.files?.[0] && onModelUpload(e.target.files[0])}
               className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
             />
           </label>
@@ -102,8 +102,8 @@ const ProcessingPanel = ({
       </div>
 
       <div>
-        <p>Campeão: {champion.name}</p>
-        <p>Métricas do Modelo: {JSON.stringify(modelMetrics)}</p>
+        {champion && <p>Campeão: {champion.name || 'Sem nome'}</p>}
+        {modelMetrics && <p>Métricas do Modelo: {JSON.stringify(modelMetrics)}</p>}
       </div>
     </div>
   );
