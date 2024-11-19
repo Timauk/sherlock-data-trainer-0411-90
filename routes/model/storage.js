@@ -11,6 +11,97 @@ const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
+// Add a GET route for loading the model
+router.get('/', async (req, res) => {
+  try {
+    const baseModelDir = path.join(__dirname, '..', '..', 'saved-models');
+    
+    // Check if base directory exists
+    if (!fs.existsSync(baseModelDir)) {
+      logger.error('Base model directory does not exist');
+      return res.status(404).json({ error: 'No models directory found' });
+    }
+
+    // Get the latest model directory
+    const modelDirs = fs.readdirSync(baseModelDir)
+      .filter(dir => dir.startsWith('model-'))
+      .sort((a, b) => {
+        const timeA = parseInt(a.split('-')[1]);
+        const timeB = parseInt(b.split('-')[1]);
+        return timeB - timeA;
+      });
+
+    if (modelDirs.length === 0) {
+      logger.error('No model directories found');
+      return res.status(404).json({ error: 'No saved models found' });
+    }
+
+    const latestModelDir = path.join(baseModelDir, modelDirs[0]);
+    logger.info(`Loading model from directory: ${latestModelDir}`);
+
+    // Verify all required files exist
+    const requiredFiles = ['model.json', 'weights.bin', 'weight-specs.json', 'metadata.json'];
+    for (const file of requiredFiles) {
+      const filePath = path.join(latestModelDir, file);
+      if (!fs.existsSync(filePath)) {
+        logger.error(`Required file ${file} is missing`);
+        return res.status(404).json({ error: `Required file ${file} is missing` });
+      }
+      if (fs.statSync(filePath).size === 0) {
+        logger.error(`Required file ${file} is empty`);
+        return res.status(400).json({ error: `Required file ${file} is empty` });
+      }
+    }
+
+    // Load model files
+    const modelJSON = JSON.parse(fs.readFileSync(path.join(latestModelDir, 'model.json'), 'utf8'));
+    const weightSpecs = JSON.parse(fs.readFileSync(path.join(latestModelDir, 'weight-specs.json'), 'utf8'));
+    const weightsBuffer = fs.readFileSync(path.join(latestModelDir, 'weights.bin'));
+    const metadata = JSON.parse(fs.readFileSync(path.join(latestModelDir, 'metadata.json'), 'utf8'));
+
+    // Create model artifacts
+    const modelArtifacts = {
+      modelTopology: modelJSON,
+      weightSpecs: weightSpecs,
+      weightData: weightsBuffer,
+      format: 'layers-model',
+      generatedBy: 'TensorFlow.js',
+      convertedBy: null
+    };
+
+    try {
+      // Load the model from artifacts
+      const model = await tf.loadLayersModel(tf.io.fromMemory(modelArtifacts));
+      logger.info('Model loaded successfully');
+
+      // Return success response with model info
+      res.json({
+        success: true,
+        modelInfo: {
+          timestamp: metadata.timestamp,
+          layers: model.layers.length,
+          totalParams: model.countParams(),
+          metadata: metadata
+        }
+      });
+    } catch (modelLoadError) {
+      logger.error('Error loading model from artifacts:', modelLoadError);
+      res.status(500).json({
+        error: 'Failed to load model from artifacts',
+        details: modelLoadError.message
+      });
+    }
+  } catch (error) {
+    logger.error('Error in load model route:', error);
+    res.status(500).json({
+      error: 'Failed to load model',
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// POST route for saving model
 router.post('/', async (req, res) => {
   try {
     const { playersData, evolutionHistory } = req.body;
