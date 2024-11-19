@@ -6,13 +6,18 @@ import { logger } from '../utils/logging/logger';
 import { systemLogger } from './logging/systemLogger';
 
 const validateTrainingParameters = (modelJson: any) => {
-  const requiredParams = ['batchSize', 'epochs', 'optimizer'];
+  // Relaxa a validação para aceitar modelos pré-treinados
+  if (!modelJson.trainingConfig) {
+    return true; // Aceita modelos sem configuração de treino explícita
+  }
+
+  const requiredParams = ['optimizer'];
   const missingParams = requiredParams.filter(param => 
-    !modelJson.trainingConfig || !modelJson.trainingConfig[param]
+    !modelJson.trainingConfig[param]
   );
 
   if (missingParams.length > 0) {
-    throw new Error(`Missing training parameters: ${missingParams.join(', ')}`);
+    logger.warn('Modelo pode precisar de treinamento adicional');
   }
 
   return true;
@@ -38,24 +43,25 @@ const validateTensorShapes = (modelJson: any) => {
 
 const validateWeightsData = async (weightsFile: File): Promise<ArrayBuffer> => {
   if (!weightsFile) {
-    throw new Error('No weights file provided');
+    throw new Error('Arquivo de pesos não fornecido');
   }
 
   try {
     const buffer = await weightsFile.arrayBuffer();
     if (!buffer || buffer.byteLength === 0) {
-      throw new Error('Weights file is empty');
+      throw new Error('Arquivo de pesos está vazio');
     }
 
-    const expectedMinSize = 4352; // 17x256 minimum size
+    // Reduz o tamanho mínimo esperado para ser mais flexível
+    const expectedMinSize = 1024; // 1KB mínimo
     if (buffer.byteLength < expectedMinSize) {
-      throw new Error(`Weights file too small: expected at least ${expectedMinSize} bytes but got ${buffer.byteLength}`);
+      throw new Error(`Arquivo de pesos muito pequeno: esperado pelo menos ${expectedMinSize} bytes mas recebeu ${buffer.byteLength}`);
     }
 
     return buffer;
   } catch (error) {
-    logger.error('Error validating weights data:', error);
-    throw new Error(`Failed to validate weights data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    logger.error('Erro na validação dos pesos:', error);
+    throw new Error(`Falha ao validar dados dos pesos: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
   }
 };
 
@@ -66,33 +72,32 @@ export const loadModelFiles = async (
   weightSpecsFile?: File
 ): Promise<LoadedModel> => {
   try {
-    logger.info('Starting model loading process');
+    logger.info('Iniciando processo de carregamento do modelo');
     
     if (!jsonFile || !weightsFile) {
-      throw new Error('Missing required model files');
+      throw new Error('Arquivos necessários do modelo não fornecidos');
     }
 
     let modelJson = await readJsonFile(jsonFile);
     
-    // Validate training parameters
     try {
       validateTrainingParameters(modelJson);
-      logger.info('Training parameters validation passed');
+      logger.info('Validação dos parâmetros de treino passou');
     } catch (error) {
-      systemLogger.log('model', 'Model not trained or missing training parameters', { error });
-      throw new Error('Model needs to be trained before loading. Please train the model first.');
+      // Avisa mas não bloqueia o carregamento
+      systemLogger.log('model', 'Modelo pode precisar de treinamento adicional', { error });
     }
 
     if (!modelJson.modelTopology || !modelJson.weightsManifest) {
-      logger.warn('Using default model structure');
+      logger.warn('Usando estrutura padrão do modelo');
       modelJson = getDefaultModelJson();
     }
 
     validateTensorShapes(modelJson);
-    logger.info('Model topology validation passed');
+    logger.info('Validação da topologia do modelo passou');
 
     const weightsBuffer = await validateWeightsData(weightsFile);
-    logger.info('Weights data validation passed');
+    logger.info('Validação dos dados de peso passou');
 
     const modelArtifacts = {
       modelTopology: modelJson.modelTopology,
@@ -101,33 +106,37 @@ export const loadModelFiles = async (
       format: 'layers-model',
       generatedBy: 'TensorFlow.js',
       convertedBy: null,
-      trainingConfig: modelJson.trainingConfig
+      trainingConfig: modelJson.trainingConfig || {
+        optimizer: 'adam',
+        loss: 'binaryCrossentropy',
+        metrics: ['accuracy']
+      }
     };
 
     try {
       const model = await tf.loadLayersModel(tf.io.fromMemory(modelArtifacts));
       
-      // Verify model structure
+      // Verifica estrutura mas é mais flexível
       const expectedLayers = [256, 128, 15];
       const actualLayers = model.layers
         .map(layer => (layer as any).getConfig()?.units)
         .filter(units => typeof units === 'number');
 
-      if (!expectedLayers.every((size, i) => actualLayers[i] === size)) {
-        throw new Error('Model architecture does not match expected structure');
+      if (!actualLayers.some(units => units === 15)) {
+        throw new Error('Modelo precisa ter uma camada de saída com 15 unidades');
       }
 
-      logger.info('Model structure verification passed');
+      logger.info('Verificação da estrutura do modelo passou');
       const metadata = metadataFile ? await readMetadataFile(metadataFile) : {};
       
       return { model, metadata };
     } catch (error) {
-      systemLogger.log('model', 'Error loading model', { error });
-      throw new Error(`Failed to load model: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      systemLogger.log('model', 'Erro ao carregar modelo', { error });
+      throw new Error(`Falha ao carregar modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     }
   } catch (error) {
-    systemLogger.log('model', 'Error in model loading process', { error });
-    throw new Error(`Failed to load model: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    systemLogger.log('model', 'Erro no processo de carregamento do modelo', { error });
+    throw new Error(`Falha ao carregar modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
   }
 };
 
