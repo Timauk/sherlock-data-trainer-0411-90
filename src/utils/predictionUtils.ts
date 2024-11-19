@@ -44,19 +44,16 @@ export async function makePrediction(
   const frequencyAnalysis = analyzeFrequency(historicalData.numbers);
   const patterns = analyzeAdvancedPatterns(historicalData.numbers, historicalData.dates);
   
-  // Integração com previsões ARIMA
-  const randomizedWeights = playerWeights.map((weight, index) => {
+  // Integração com previsões ARIMA e pesos do modelo
+  const weightedInput = enrichedInput.map((value, index) => {
     const lunarInfluence = lunarWeight * 0.2;
     const frequencyInfluence = getFrequencyInfluence(index + 1, frequencyAnalysis) * 0.3;
     const patternInfluence = patterns ? (patterns.consecutive + patterns.evenOdd) / 2 * 0.2 : 0;
     const arimaInfluence = arimaPredictor.includes(index + 1) ? 0.3 : 0;
-    const randomFactor = 1 + (Math.random() - 0.5) * 0.2;
     
-    return weight * (1 + lunarInfluence + frequencyInfluence + patternInfluence + arimaInfluence) * randomFactor;
+    return value * (1 + lunarInfluence + frequencyInfluence + patternInfluence + arimaInfluence) * 
+           (playerWeights[index % playerWeights.length] / 1000);
   });
-  
-  const weightedInput = enrichedInput.map((value, index) => 
-    value * (randomizedWeights[index % randomizedWeights.length] / 1000));
   
   const inputTensor = tf.tensor2d([weightedInput]);
   const predictions = trainedModel.predict(inputTensor) as tf.Tensor;
@@ -71,7 +68,7 @@ export async function makePrediction(
     weights: trainedModel.getWeights().map(w => Array.from(w.dataSync()))
   });
   
-  // Sistema de seleção com influência ARIMA
+  // Sistema de seleção baseado puramente nas previsões da rede neural
   const weightedNumbers = Array.from({ length: 25 }, (_, i) => {
     const number = i + 1;
     const baseWeight = result[i % result.length];
@@ -86,24 +83,16 @@ export async function makePrediction(
     };
   }).sort((a, b) => b.weight - a.weight);
   
-  const uniqueNumbers = new Set<number>();
-  let index = 0;
-  
-  while (uniqueNumbers.size < 10 && index < weightedNumbers.length) {
-    uniqueNumbers.add(weightedNumbers[index].number);
-    index++;
-  }
-  
-  while (uniqueNumbers.size < 15) {
-    const randomIndex = Math.floor(Math.random() * weightedNumbers.length);
-    const number = weightedNumbers[randomIndex].number;
-    uniqueNumbers.add(number);
-  }
+  // Seleciona os 15 números com maiores pesos
+  const selectedNumbers = weightedNumbers
+    .slice(0, 15)
+    .map(item => item.number)
+    .sort((a, b) => a - b);
   
   const endTime = performance.now();
   performanceMonitor.recordMetrics(result[0], endTime - startTime);
   
-  return Array.from(uniqueNumbers).sort((a, b) => a - b);
+  return selectedNumbers;
 }
 
 function getLunarPhaseWeight(phase: string): number {
@@ -130,7 +119,6 @@ function getFrequencyInfluence(number: number, frequency: Record<number, number>
 }
 
 function getLunarNumberInfluence(number: number, phase: string): number {
-  // Diferentes fases lunares podem favorecer diferentes ranges de números
   const ranges = {
     'Nova': [1, 6],
     'Crescente': [7, 12],
@@ -143,10 +131,6 @@ function getLunarNumberInfluence(number: number, phase: string): number {
     return 0.2;
   }
   return 0;
-}
-
-function getPatternInfluence(patterns: any): number {
-  return (patterns.consecutive + patterns.evenOdd) / 2;
 }
 
 function getNumberPatternInfluence(number: number, patterns: any): number {
