@@ -1,5 +1,7 @@
 import React from 'react';
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
 
 interface ProcessingPanelProps {
   isPlaying: boolean;
@@ -17,12 +19,12 @@ interface ProcessingPanelProps {
   isServerProcessing: boolean;
   serverStatus: string;
   onToggleProcessing: () => void;
-  saveFullModel: () => void;
-  loadFullModel: () => void;
+  saveFullModel: () => Promise<void>;
+  loadFullModel: () => Promise<void>;
   isProcessing: boolean;
 }
 
-const ProcessingPanel = ({ 
+const ProcessingPanel: React.FC<ProcessingPanelProps> = ({
   isPlaying,
   onPlay,
   onPause,
@@ -41,73 +43,117 @@ const ProcessingPanel = ({
   saveFullModel,
   loadFullModel,
   isProcessing
-}: ProcessingPanelProps) => {
+}) => {
   const { toast } = useToast();
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'csv' | 'model') => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      toast({
+        title: "Erro no Upload",
+        description: "Nenhum arquivo selecionado",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (type === 'csv') {
+      onCsvUpload(file);
+    } else {
+      onModelUpload(file);
+    }
+  };
 
   return (
     <div className="space-y-4 p-4 border rounded-lg">
       <div className="flex flex-wrap gap-4">
-        <div className="form-group">
-          <label htmlFor="csvUpload" className="block text-sm font-medium mb-1">
-            Upload CSV
-            <input
-              id="csvUpload"
-              type="file"
-              accept=".csv"
-              onChange={(e) => e.target.files?.[0] && onCsvUpload(e.target.files[0])}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
-            />
-          </label>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="modelUpload" className="block text-sm font-medium mb-1">
-            Upload Modelo
-            <input
-              id="modelUpload"
-              type="file"
-              accept=".json"
-              onChange={(e) => e.target.files?.[0] && onModelUpload(e.target.files[0])}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
-            />
-          </label>
-        </div>
-      </div>
-      
-      <div className="flex items-center justify-between">
-        <button
-          onClick={isPlaying ? onPause : onPlay}
-          className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
+        <Button
+          onClick={onPlay}
+          disabled={isPlaying || isProcessing}
+          variant="default"
         >
-          {isPlaying ? 'Pausar' : 'Jogar'}
-        </button>
-        <button
+          Iniciar
+        </Button>
+        
+        <Button
+          onClick={onPause}
+          disabled={!isPlaying || isProcessing}
+          variant="secondary"
+        >
+          Pausar
+        </Button>
+        
+        <Button
           onClick={onReset}
-          className="px-4 py-2 text-white bg-red-600 rounded hover:bg-red-700"
+          disabled={isProcessing}
+          variant="destructive"
         >
-          Reiniciar
-        </button>
-        <button
-          onClick={onThemeToggle}
-          className="px-4 py-2 text-white bg-gray-600 rounded hover:bg-gray-700"
-        >
-          Trocar Tema
-        </button>
+          Resetar
+        </Button>
+        
+        <Button onClick={onThemeToggle} variant="outline">
+          Alternar Tema
+        </Button>
       </div>
 
-      {isServerProcessing && <p>Processando no servidor...</p>}
-      <div className="w-full bg-gray-200 h-2 rounded">
-        <div
-          className="bg-blue-600 h-full rounded"
-          style={{ width: `${progress}%` }}
-        />
+      <div className="flex flex-wrap gap-4">
+        <div>
+          <input
+            type="file"
+            accept=".csv"
+            onChange={(e) => handleFileUpload(e, 'csv')}
+            className="hidden"
+            id="csvUpload"
+          />
+          <label htmlFor="csvUpload">
+            <Button variant="outline" asChild>
+              <span>Upload CSV</span>
+            </Button>
+          </label>
+        </div>
+
+        <div>
+          <input
+            type="file"
+            accept=".json"
+            onChange={(e) => handleFileUpload(e, 'model')}
+            className="hidden"
+            id="modelUpload"
+          />
+          <label htmlFor="modelUpload">
+            <Button variant="outline" asChild>
+              <span>Upload Modelo</span>
+            </Button>
+          </label>
+        </div>
+
+        <Button onClick={onSaveModel} variant="outline">
+          Salvar Modelo
+        </Button>
+      </div>
+
+      <Progress value={progress} className="w-full" />
+
+      <div>
+        {champion && (
+          <p>Campeão: {champion.name || 'Sem nome'} (ID: {champion.id || 'N/A'})</p>
+        )}
+        {modelMetrics && (
+          <pre className="text-sm bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto">
+            {JSON.stringify(modelMetrics, null, 2)}
+          </pre>
+        )}
       </div>
 
       <div>
-        {champion && <p>Campeão: {champion.name || 'Sem nome'}</p>}
-        {modelMetrics && (
-          <p>Métricas do Modelo: {JSON.stringify(modelMetrics)}</p>
-        )}
+        <p>Status do Servidor: {serverStatus}</p>
+        <Button
+          onClick={onToggleProcessing}
+          variant="outline"
+          disabled={isProcessing}
+        >
+          {isServerProcessing ? 'Parar Processamento' : 'Iniciar Processamento'}
+        </Button>
       </div>
     </div>
   );
