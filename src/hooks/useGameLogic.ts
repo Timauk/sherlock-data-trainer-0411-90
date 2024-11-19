@@ -6,7 +6,6 @@ import { useGameLoop } from './useGameLoop';
 import { useEvolutionLogic } from './useEvolutionLogic';
 import { ModelVisualization, Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
-import { cloneChampion } from '@/utils/playerEvolution';
 
 export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel | null) => {
   const { toast } = useToast();
@@ -23,6 +22,8 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     perGameRandomAccuracy: 0
   });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isInfiniteMode, setIsInfiniteMode] = useState(false);
+  const [isManualMode, setIsManualMode] = useState(false);
   const [championData, setChampionData] = useState<{
     player: Player;
     trainingData: number[][];
@@ -74,6 +75,14 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     setChampionData
   );
 
+  const toggleInfiniteMode = () => {
+    setIsInfiniteMode(prev => !prev);
+  };
+
+  const toggleManualMode = () => {
+    setIsManualMode(prev => !prev);
+  };
+
   return {
     players,
     generation,
@@ -96,6 +105,10 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
         player.id === playerId ? { ...player, weights: newWeights } : player
       );
       setPlayers(updatedPlayers);
-    }
+    },
+    toggleInfiniteMode,
+    toggleManualMode,
+    isInfiniteMode,
+    isManualMode
   };
 };
