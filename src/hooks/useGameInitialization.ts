@@ -14,7 +14,9 @@ export const useGameInitialization = () => {
       generation: 1,
       weights: Array(15).fill(1),
       predictions: [],
-      history: []
+      history: [],
+      age: 0,
+      niche: Math.floor(Math.random() * 4) // 0: pares, 1: ímpares, 2: sequências, 3: geral
     }));
 
     setPlayers(initialPlayers);

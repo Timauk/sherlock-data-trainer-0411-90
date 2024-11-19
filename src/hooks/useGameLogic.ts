@@ -13,6 +13,16 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const { players, setPlayers, initializePlayers } = useGameInitialization();
   const [generation, setGeneration] = useState(1);
   const [gameCount, setGameCount] = useState(0);
+  const [concursoNumber, setConcursoNumber] = useState(0);
+  const [boardNumbers, setBoardNumbers] = useState<number[]>([]);
+  const [modelMetrics, setModelMetrics] = useState({
+    accuracy: 0.5,
+    randomAccuracy: 0.3,
+    totalPredictions: 0,
+    perGameAccuracy: 0,
+    perGameRandomAccuracy: 0
+  });
+  const [isProcessing, setIsProcessing] = useState(false);
   const [championData, setChampionData] = useState<{
     player: Player;
     trainingData: number[][];
@@ -24,21 +34,8 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     fitness: number;
   }>>([]);
   const [neuralNetworkVisualization, setNeuralNetworkVisualization] = useState<ModelVisualization | null>(null);
-  const [modelMetrics, setModelMetrics] = useState({
-    accuracy: 0.5,
-    randomAccuracy: 0.3,
-    totalPredictions: 0,
-    perGameAccuracy: 0,
-    perGameRandomAccuracy: 0
-  });
-
-  // Initialize players only once when csvData or trainedModel changes
-  useEffect(() => {
-    if (csvData.length > 0 && trainedModel && players.length === 0) {
-      initializePlayers();
-      systemLogger.log('action', 'Jogadores inicializados uma única vez');
-    }
-  }, [csvData, trainedModel, players.length, initializePlayers]);
+  const [dates, setDates] = useState<Date[]>([]);
+  const [numbers, setNumbers] = useState<number[][]>([]);
 
   const addLog = useCallback((message: string, matches?: number) => {
     const logType = matches ? 'prediction' : 'action';
@@ -50,11 +47,16 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     setPlayers,
     csvData,
     trainedModel,
+    concursoNumber,
     generation,
     addLog,
     setNeuralNetworkVisualization,
     setEvolutionData,
+    setBoardNumbers,
+    setModelMetrics,
+    setConcursoNumber,
     setGameCount,
+    setIsProcessing,
     showToast: (title, description) => toast({ title, description })
   });
 
@@ -65,6 +67,9 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     setGeneration,
     setEvolutionData,
     trainedModel,
+    championData?.trainingData || [],
+    csvData,
+    concursoNumber,
     championData,
     setChampionData
   );
@@ -75,9 +80,22 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     evolutionData,
     neuralNetworkVisualization,
     modelMetrics,
+    boardNumbers,
+    concursoNumber,
+    dates,
+    numbers,
+    trainedModel,
     initializePlayers,
     gameLoop,
     evolveGeneration,
-    addLog
+    addLog,
+    saveFullModel: async () => {}, // Implement if needed
+    loadFullModel: async () => {}, // Implement if needed
+    onUpdatePlayer: (playerId: number, newWeights: number[]) => {
+      const updatedPlayers = players.map(player =>
+        player.id === playerId ? { ...player, weights: newWeights } : player
+      );
+      setPlayers(updatedPlayers);
+    }
   };
 };
