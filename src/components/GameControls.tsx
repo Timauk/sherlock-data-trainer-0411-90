@@ -61,21 +61,53 @@ const GameControls: React.FC<GameControlsProps> = ({
   useEffect(() => {
     // Verifica se GPU está disponível ao iniciar
     const checkGPU = async () => {
-      const backend = await tf.ready();
+      await tf.ready();
       setGpuEnabled(tf.getBackend() === 'webgl');
     };
     checkGPU();
   }, []);
 
+  const handlePlay = () => {
+    onPlay();
+    toast({
+      title: "Jogo Iniciado",
+      description: "O jogo está em execução",
+    });
+  };
+
+  const handlePause = () => {
+    onPause();
+    toast({
+      title: "Jogo Pausado",
+      description: "O jogo foi pausado",
+    });
+  };
+
+  const handleReset = () => {
+    onReset();
+    toast({
+      title: "Jogo Reiniciado",
+      description: "O jogo foi reiniciado",
+    });
+  };
+
   return (
     <div className="flex space-x-2 mb-4">
-      <Button onClick={onPlay} disabled={isPlaying}>
+      <Button 
+        onClick={handlePlay} 
+        disabled={isPlaying}
+        variant={isPlaying ? "secondary" : "default"}
+      >
         <Play className="mr-2 h-4 w-4" /> Iniciar
       </Button>
-      <Button onClick={onPause} disabled={!isPlaying}>
+      <Button 
+        onClick={handlePause} 
+        disabled={!isPlaying}
+        variant={!isPlaying ? "secondary" : "default"}
+      >
         <Pause className="mr-2 h-4 w-4" /> Pausar
       </Button>
-      <Button onClick={onReset}>
+      <Button onClick={handleReset}>
         <RotateCcw className="mr-2 h-4 w-4" /> Reiniciar
       </Button>
       <Button onClick={onThemeToggle}>
