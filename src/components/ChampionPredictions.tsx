@@ -53,11 +53,23 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
         { matches: 15, count: 1 }
       ];
       
+      // Fatores do campeão que influenciam as previsões
+      const championFactors = {
+        experience: champion.generation / 1000, // Experiência baseada na geração
+        performance: champion.score / 1000, // Performance histórica
+        consistency: champion.fitness / 15, // Consistência nos acertos
+        adaptability: champion.weights.reduce((a, b) => a + b, 0) / champion.weights.length // Média dos pesos
+      };
+      
       for (const target of targets) {
         for (let i = 0; i < target.count; i++) {
+          // Input enriquecido com informações do campeão
           const normalizedInput = [
             ...lastConcursoNumbers.slice(0, 15).map(n => n / 25),
-            champion.generation / 1000,
+            championFactors.experience,
+            championFactors.performance,
+            championFactors.consistency,
+            championFactors.adaptability,
             Date.now() / (1000 * 60 * 60 * 24 * 365)
           ];
           
@@ -65,11 +77,14 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
           const prediction = await trainedModel.predict(inputTensor) as tf.Tensor;
           const predictionArray = Array.from(await prediction.data());
           
+          // Pesos ajustados com base no conhecimento do campeão
           const weightedNumbers = Array.from({ length: 25 }, (_, idx) => ({
             number: idx + 1,
             weight: predictionArray[idx % predictionArray.length] * 
                    (champion.weights[idx % champion.weights.length] / 1000) *
-                   (target.matches / 15)
+                   (target.matches / 15) *
+                   (1 + championFactors.consistency) * // Bônus de consistência
+                   (1 + championFactors.experience * 0.2) // Bônus de experiência
           }));
           
           const selectedNumbers = weightedNumbers
@@ -78,7 +93,8 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
             .map(n => n.number)
             .sort((a, b) => a - b);
           
-          const estimatedAccuracy = (target.matches / 15) * 100;
+          const estimatedAccuracy = (target.matches / 15) * 100 * 
+                                  (1 + championFactors.performance * 0.1); // Ajuste baseado na performance
           
           newPredictions.push({
             numbers: selectedNumbers,
@@ -101,7 +117,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       
       toast({
         title: "Previsões Geradas",
-        description: `8 jogos foram gerados com diferentes objetivos de acertos! ${isServerProcessing ? '(Processado no servidor)' : '(Processado no navegador)'}`
+        description: `8 jogos foram gerados considerando experiência (${(championFactors.experience * 100).toFixed(1)}%), performance (${(championFactors.performance * 100).toFixed(1)}%) e consistência (${(championFactors.consistency * 100).toFixed(1)}%) do campeão! ${isServerProcessing ? '(Processado no servidor)' : '(Processado no navegador)'}`
       });
     } catch (error) {
       console.error("Erro ao gerar previsões:", error);
