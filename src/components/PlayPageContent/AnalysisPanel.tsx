@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import TotalFitnessChart from '../TotalFitnessChart';
 import AnalysisTabs from '../GameAnalysis/AnalysisTabs';
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 interface AnalysisPanelProps {
   champion: any;
@@ -40,42 +41,60 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
     totalFitness: data.fitness
   }));
 
-  // Pegar os últimos números do concurso
   const lastConcursoNumbers = numbers[numbers.length - 1] || [];
 
   return (
-    <Card className="p-6">
-      <div className="flex justify-end mb-4">
-        {onExportCSV && (
-          <Button 
-            variant="outline" 
-            onClick={onExportCSV}
-            className="ml-auto"
-          >
-            Exportar CSV
-          </Button>
-        )}
-      </div>
+    <div className="space-y-6">
+      <Card className="p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold">Análise do Jogo</h2>
+          {onExportCSV && (
+            <Button 
+              variant="outline" 
+              onClick={onExportCSV}
+              className="ml-auto"
+            >
+              Exportar CSV
+            </Button>
+          )}
+        </div>
+        
+        <AnalysisTabs
+          boardNumbers={boardNumbers}
+          concursoNumber={concursoNumber}
+          players={players}
+          evolutionData={evolutionData}
+          dates={dates}
+          numbers={numbers}
+          updateFrequencyData={() => {}}
+          modelMetrics={modelMetrics}
+          neuralNetworkVisualization={neuralNetworkVisualization}
+          champion={champion}
+          trainedModel={trainedModel}
+          lastConcursoNumbers={lastConcursoNumbers}
+        />
+      </Card>
+
+      <Separator className="my-8" />
       
-      <div className="mb-4">
-        <TotalFitnessChart fitnessData={fitnessData} />
+      <div className="space-y-8">
+        <Card className="p-6">
+          <h3 className="text-xl font-bold mb-4">Gráficos de Análise</h3>
+          <div className="space-y-8">
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Evolução do Fitness</h4>
+              <TotalFitnessChart fitnessData={fitnessData} />
+            </div>
+            {neuralNetworkVisualization && (
+              <div>
+                <h4 className="text-lg font-semibold mb-4">Visualização da Rede Neural</h4>
+                {neuralNetworkVisualization}
+              </div>
+            )}
+          </div>
+        </Card>
       </div>
-      
-      <AnalysisTabs
-        boardNumbers={boardNumbers}
-        concursoNumber={concursoNumber}
-        players={players}
-        evolutionData={evolutionData}
-        dates={dates}
-        numbers={numbers}
-        updateFrequencyData={() => {}}
-        modelMetrics={modelMetrics}
-        neuralNetworkVisualization={neuralNetworkVisualization}
-        champion={champion}
-        trainedModel={trainedModel}
-        lastConcursoNumbers={lastConcursoNumbers}
-      />
-    </Card>
+    </div>
   );
 };
 

@@ -3,6 +3,7 @@ import { useServerStatus } from '@/hooks/useServerStatus';
 import ProcessingPanel from './PlayPageContent/ProcessingPanel';
 import AnalysisPanel from './PlayPageContent/AnalysisPanel';
 import GameActions from './PlayPageContent/GameActions';
+import GameBoardSection from './PlayPageContent/GameBoardSection';
 import { useToast } from "@/hooks/use-toast";
 import { PlayPageContentProps } from '@/types/modelTypes';
 import { exportPredictionsToCSV } from '@/utils/exportUtils';
@@ -83,6 +84,21 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         saveFullModel={gameLogic.saveFullModel}
         loadFullModel={gameLogic.loadFullModel}
         isProcessing={isProcessing}
+      />
+
+      <GameBoardSection
+        players={limitedPlayers}
+        evolutionData={gameLogic.evolutionData}
+        boardNumbers={gameLogic.boardNumbers}
+        concursoNumber={gameLogic.concursoNumber}
+        onUpdatePlayer={(playerId: number, newWeights: number[]) => {
+          if (gameLogic.onUpdatePlayer) {
+            gameLogic.onUpdatePlayer(playerId, newWeights);
+          }
+        }}
+        onCsvUpload={onCsvUpload}
+        onModelUpload={onModelUpload}
+        onSaveModel={onSaveModel}
       />
       
       <AnalysisPanel
