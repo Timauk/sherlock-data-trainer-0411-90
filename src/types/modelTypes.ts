@@ -31,7 +31,7 @@ export interface GameLogicProps {
   isProcessing?: boolean;
   saveFullModel: () => Promise<void>;
   loadFullModel: () => Promise<void>;
-  onUpdatePlayer: (playerId: number) => void;
+  onUpdatePlayer: (playerId: number, newWeights: number[]) => void;
 }
 
 export interface PlayPageContentProps {
