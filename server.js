@@ -16,7 +16,7 @@ const PORT = 3001;
 
 // Configuração CORS atualizada
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:8080'],
+  origin: '*', // Allowing all origins temporarily for development
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -35,24 +35,6 @@ import { statusRouter } from './routes/status.js';
 app.use('/api/model', modelRouter);
 app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
-
-// Rota de status atualizada
-app.get('/api/status', (req, res) => {
-  try {
-    const healthInfo = {
-      status: 'online',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      version: '1.0.0'
-    };
-    logger.info(healthInfo, 'Health check');
-    res.json(healthInfo);
-  } catch (error) {
-    logger.error(error, 'Error in health check');
-    res.status(500).json({ status: 'error', message: error.message });
-  }
-});
 
 app.use((err, req, res, next) => {
   logger.error({
