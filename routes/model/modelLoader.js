@@ -10,10 +10,14 @@ export const loadModelFromDirectory = async (modelDir) => {
     for (const file of requiredFiles) {
       const filePath = path.join(modelDir, file);
       if (!fs.existsSync(filePath)) {
-        throw new Error(`Required file ${file} is missing`);
+        const error = new Error(`Required file ${file} is missing`);
+        logger.error('Model loading error:', error);
+        throw error;
       }
       if (fs.statSync(filePath).size === 0) {
-        throw new Error(`Required file ${file} is empty`);
+        const error = new Error(`Required file ${file} is empty`);
+        logger.error('Model loading error:', error);
+        throw error;
       }
     }
 
@@ -25,7 +29,9 @@ export const loadModelFromDirectory = async (modelDir) => {
 
     // Validate weight specs
     if (!Array.isArray(weightSpecs) || weightSpecs.length === 0) {
-      throw new Error('Invalid weight specs format');
+      const error = new Error('Invalid weight specs format');
+      logger.error('Model loading error:', error);
+      throw error;
     }
 
     // Calculate expected total values
@@ -37,7 +43,9 @@ export const loadModelFromDirectory = async (modelDir) => {
     // Validate weights buffer size
     const expectedBufferSize = totalValues * 4; // 4 bytes per float32
     if (weightsBuffer.length !== expectedBufferSize) {
-      throw new Error(`Invalid weights buffer size. Expected ${expectedBufferSize} bytes but got ${weightsBuffer.length}`);
+      const error = new Error(`Invalid weights buffer size. Expected ${expectedBufferSize} bytes but got ${weightsBuffer.length}`);
+      logger.error('Model loading error:', error);
+      throw error;
     }
 
     // Create and validate model artifacts
@@ -52,22 +60,29 @@ export const loadModelFromDirectory = async (modelDir) => {
 
     // Validate model topology
     if (!modelArtifacts.modelTopology || !modelArtifacts.modelTopology.model_config) {
-      throw new Error('Invalid model topology');
+      const error = new Error('Invalid model topology');
+      logger.error('Model loading error:', error);
+      throw error;
     }
 
     // Load and validate the model
     const model = await tf.loadLayersModel(tf.io.fromMemory(modelArtifacts));
     
     if (!model || !model.layers || model.layers.length === 0) {
-      throw new Error('Invalid model structure');
+      const error = new Error('Invalid model structure');
+      logger.error('Model loading error:', error);
+      throw error;
     }
 
     // Validate input shape
     const inputShape = model.inputs[0].shape;
     if (!inputShape || inputShape[1] !== 17) {
-      throw new Error(`Invalid input shape: expected [..., 17] but got ${inputShape}`);
+      const error = new Error(`Invalid input shape: expected [..., 17] but got ${inputShape}`);
+      logger.error('Model loading error:', error);
+      throw error;
     }
 
+    logger.info('Model loaded successfully');
     return { model, metadata };
   } catch (error) {
     logger.error('Error loading model:', error);
@@ -77,7 +92,9 @@ export const loadModelFromDirectory = async (modelDir) => {
 
 export const findLatestModelDir = (baseModelDir) => {
   if (!fs.existsSync(baseModelDir)) {
-    throw new Error('Base model directory does not exist');
+    const error = new Error('Base model directory does not exist');
+    logger.error('Model loading error:', error);
+    throw error;
   }
 
   const modelDirs = fs.readdirSync(baseModelDir)
@@ -89,7 +106,9 @@ export const findLatestModelDir = (baseModelDir) => {
     });
 
   if (modelDirs.length === 0) {
-    throw new Error('No saved models found');
+    const error = new Error('No saved models found');
+    logger.error('Model loading error:', error);
+    throw error;
   }
 
   return path.join(baseModelDir, modelDirs[0]);
