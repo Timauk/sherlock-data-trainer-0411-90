@@ -55,34 +55,25 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       
       for (const target of targets) {
         for (let i = 0; i < target.count; i++) {
-          const variationFactor = 0.05 + ((15 - target.matches) * 0.02);
-          
           const normalizedInput = [
-            ...lastConcursoNumbers.slice(0, 15).map(n => {
-              const variation = (Math.random() - 0.5) * variationFactor;
-              return (n / 25) * (1 + variation);
-            }),
-            (champion.generation + i) / 1000,
-            (Date.now() + i * 1000) / (1000 * 60 * 60 * 24 * 365)
+            ...lastConcursoNumbers.slice(0, 15).map(n => n / 25),
+            champion.generation / 1000,
+            Date.now() / (1000 * 60 * 60 * 24 * 365)
           ];
           
           const inputTensor = tf.tensor2d([normalizedInput]);
           const prediction = await trainedModel.predict(inputTensor) as tf.Tensor;
           const predictionArray = Array.from(await prediction.data());
           
-          const weightAdjustment = target.matches / 15;
           const weightedNumbers = Array.from({ length: 25 }, (_, idx) => ({
             number: idx + 1,
             weight: predictionArray[idx % predictionArray.length] * 
                    (champion.weights[idx % champion.weights.length] / 1000) *
-                   weightAdjustment *
-                   (1 + (Math.random() - 0.5) * 0.2)
+                   (target.matches / 15)
           }));
           
           const selectedNumbers = weightedNumbers
             .sort((a, b) => b.weight - a.weight)
-            .slice(0, 20)
-            .sort(() => Math.random() - 0.5)
             .slice(0, 15)
             .map(n => n.number)
             .sort((a, b) => a - b);
@@ -93,7 +84,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
             numbers: selectedNumbers,
             estimatedAccuracy,
             targetMatches: target.matches,
-            matchesWithSelected: 0 // Placeholder for matches with selected numbers
+            matchesWithSelected: 0
           });
 
           prediction.dispose();
@@ -101,7 +92,6 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
         }
       }
 
-      // Adiciona a comparação com os números selecionados
       const predictionsWithMatches = newPredictions.map(pred => ({
         ...pred,
         matchesWithSelected: pred.numbers.filter(n => selectedNumbers.includes(n)).length
