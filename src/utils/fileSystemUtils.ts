@@ -12,7 +12,10 @@ export const saveCheckpoint = async (data: any) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json'
       },
+      credentials: 'include',
+      mode: 'cors',
       body: JSON.stringify({
         ...data,
         modelState: data.trainedModel ? await data.trainedModel.save('indexeddb://checkpoint-model') : null,
@@ -38,7 +41,15 @@ export const saveCheckpoint = async (data: any) => {
 
 export const loadLastCheckpoint = async () => {
   try {
-    const response = await fetch('http://localhost:3001/api/checkpoint/latest');
+    const response = await fetch('http://localhost:3001/api/checkpoint/latest', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      },
+      credentials: 'include',
+      mode: 'cors'
+    });
+    
     if (!response.ok) {
       if (response.status === 404) return null;
       throw new Error('Erro ao carregar checkpoint');
@@ -46,7 +57,6 @@ export const loadLastCheckpoint = async () => {
     
     const checkpoint = await response.json();
     
-    // Carregar o modelo do IndexedDB se existir
     if (checkpoint.modelState) {
       try {
         const model = await tf.loadLayersModel('indexeddb://checkpoint-model');

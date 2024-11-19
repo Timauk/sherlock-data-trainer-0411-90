@@ -1,14 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Player } from '@/types/gameTypes';
 import * as tf from '@tensorflow/tfjs';
 import NumberSelector from './NumberSelector';
-import { Target, Star, Trophy } from 'lucide-react';
-import { predictionMetrics } from '@/utils/prediction/metricsSystem';
-import MetricsDisplay from './PredictionMetrics/MetricsDisplay';
-import PredictionsList from './PredictionMetrics/PredictionsList';
 
 interface ChampionPredictionsProps {
   champion: Player | undefined;
@@ -20,24 +16,14 @@ interface ChampionPredictionsProps {
 const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   champion,
   trainedModel,
-  lastConcursoNumbers = [],
+  lastConcursoNumbers,
   isServerProcessing = false
 }) => {
-  const [predictions, setPredictions] = useState<Array<{
-    numbers: number[];
-    estimatedAccuracy: number;
-    targetMatches: number;
-    matchesWithSelected: number;
-  }>>([]);
+  const [predictions, setPredictions] = useState<Array<{ numbers: number[], estimatedAccuracy: number, targetMatches: number, matchesWithSelected: number }>>([]);
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const { toast } = useToast();
 
   const handleNumbersSelected = (numbers: number[]) => {
-    if (!Array.isArray(numbers)) {
-      console.error("Invalid numbers array received");
-      return;
-    }
-    
     setSelectedNumbers(numbers);
     if (predictions.length > 0) {
       setPredictions(predictions.map(pred => ({
@@ -45,21 +31,6 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
         matchesWithSelected: pred.numbers.filter(n => numbers.includes(n)).length
       })));
     }
-  };
-
-  const calculateVariationFactor = (targetMatches: number, championFitness: number) => {
-    // Dynamic variation factor based on champion's fitness and target matches
-    const baseFactor = 0.05;
-    const matchAdjustment = (15 - targetMatches) * 0.02;
-    const fitnessAdjustment = championFitness ? (1 / championFitness) * 0.01 : 0;
-    return baseFactor + matchAdjustment + fitnessAdjustment;
-  };
-
-  const normalizeInput = (number: number, championWeight: number, targetMatches: number) => {
-    const baseNormalization = number / 25;
-    const weightInfluence = championWeight / 1000;
-    const targetAdjustment = targetMatches / 15;
-    return baseNormalization * (1 + weightInfluence * targetAdjustment);
   };
 
   const generatePredictions = async () => {
@@ -84,21 +55,19 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       
       for (const target of targets) {
         for (let i = 0; i < target.count; i++) {
-          const variationFactor = calculateVariationFactor(target.matches, champion.fitness);
+          const variationFactor = 0.05 + ((15 - target.matches) * 0.02);
           
-          // Using tf.tidy for automatic memory cleanup
-          const prediction = await tf.tidy(() => {
-            const normalizedInput = tf.tensor2d([
-              lastConcursoNumbers.slice(0, 15).map(n => 
-                normalizeInput(n, champion.weights[n % champion.weights.length], target.matches)
-              ),
-              [(champion.generation + i) / 1000],
-              [(Date.now() + i * 1000) / (1000 * 60 * 60 * 24 * 365)]
-            ]);
-            
-            return trainedModel.predict(normalizedInput) as tf.Tensor;
-          });
+          const normalizedInput = [
+            ...lastConcursoNumbers.slice(0, 15).map(n => {
+              const variation = (Math.random() - 0.5) * variationFactor;
+              return (n / 25) * (1 + variation);
+            }),
+            (champion.generation + i) / 1000,
+            (Date.now() + i * 1000) / (1000 * 60 * 60 * 24 * 365)
+          ];
           
+          const inputTensor = tf.tensor2d([normalizedInput]);
+          const prediction = await trainedModel.predict(inputTensor) as tf.Tensor;
           const predictionArray = Array.from(await prediction.data());
           
           const weightAdjustment = target.matches / 15;
@@ -106,11 +75,14 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
             number: idx + 1,
             weight: predictionArray[idx % predictionArray.length] * 
                    (champion.weights[idx % champion.weights.length] / 1000) *
-                   weightAdjustment
+                   weightAdjustment *
+                   (1 + (Math.random() - 0.5) * 0.2)
           }));
           
           const selectedNumbers = weightedNumbers
             .sort((a, b) => b.weight - a.weight)
+            .slice(0, 20)
+            .sort(() => Math.random() - 0.5)
             .slice(0, 15)
             .map(n => n.number)
             .sort((a, b) => a - b);
@@ -121,20 +93,15 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
             numbers: selectedNumbers,
             estimatedAccuracy,
             targetMatches: target.matches,
-            matchesWithSelected: 0
+            matchesWithSelected: 0 // Placeholder for matches with selected numbers
           });
 
-          predictionMetrics.recordPrediction(
-            selectedNumbers,
-            lastConcursoNumbers,
-            estimatedAccuracy / 100
-          );
-
-          // Ensure proper cleanup
           prediction.dispose();
+          inputTensor.dispose();
         }
       }
 
+      // Adiciona a comparação com os números selecionados
       const predictionsWithMatches = newPredictions.map(pred => ({
         ...pred,
         matchesWithSelected: pred.numbers.filter(n => selectedNumbers.includes(n)).length
@@ -144,33 +111,20 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       
       toast({
         title: "Previsões Geradas",
-        description: `8 jogos foram gerados com diferentes objetivos de acertos! ${
-          isServerProcessing ? '(Processado no servidor)' : '(Processado no navegador)'
-        }`
+        description: `8 jogos foram gerados com diferentes objetivos de acertos! ${isServerProcessing ? '(Processado no servidor)' : '(Processado no navegador)'}`
       });
     } catch (error) {
       console.error("Erro ao gerar previsões:", error);
       toast({
         title: "Erro",
-        description: "Erro ao gerar previsões: " + 
-          (error instanceof Error ? error.message : "Erro desconhecido"),
+        description: "Erro ao gerar previsões: " + (error instanceof Error ? error.message : "Erro desconhecido"),
         variant: "destructive"
       });
     }
   };
 
-  const metrics = predictionMetrics.getMetricsSummary();
-  const recentMatches = metrics.recentMetrics.map(m => m.matches);
-
   return (
     <div className="space-y-4">
-      <MetricsDisplay 
-        averageAccuracy={metrics.averageAccuracy}
-        successRate={metrics.successRate}
-        totalPredictions={metrics.totalPredictions}
-        recentMatches={recentMatches}
-      />
-
       <NumberSelector 
         onNumbersSelected={handleNumbersSelected} 
         predictions={predictions}
@@ -179,21 +133,50 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       <Card className="mt-4">
         <CardHeader>
           <CardTitle className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Trophy className="h-6 w-6 text-yellow-500" />
-              <span>Previsões do Campeão {isServerProcessing ? '(Servidor)' : '(Local)'}</span>
-            </div>
+            <span>Previsões do Campeão {isServerProcessing ? '(Servidor)' : '(Local)'}</span>
             <Button onClick={generatePredictions} className="bg-green-600 hover:bg-green-700">
-              <Target className="mr-2 h-4 w-4" />
               Gerar 8 Jogos
             </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <PredictionsList 
-            predictions={predictions}
-            selectedNumbers={selectedNumbers}
-          />
+          {predictions.length > 0 ? (
+            <div className="space-y-4">
+              {predictions.map((pred, idx) => (
+                <div key={idx} className="p-4 bg-gray-100 rounded-lg dark:bg-gray-800">
+                  <div className="font-semibold mb-2">
+                    Jogo {idx + 1} (Objetivo: {pred.targetMatches} acertos)
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {pred.numbers.map((num, numIdx) => (
+                      <span 
+                        key={numIdx} 
+                        className={`px-3 py-1 rounded-full ${
+                          selectedNumbers.includes(num) 
+                            ? 'bg-green-500 text-white' 
+                            : 'bg-blue-500 text-white'
+                        }`}
+                      >
+                        {num.toString().padStart(2, '0')}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <div>Estimativa de Acertos: {pred.estimatedAccuracy.toFixed(2)}%</div>
+                    {selectedNumbers.length === 15 && (
+                      <div className="mt-1 font-semibold text-green-600 dark:text-green-400">
+                        Acertos com sua seleção: {pred.matchesWithSelected}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-gray-500 dark:text-gray-400">
+              Clique no botão para gerar 8 previsões para o próximo concurso
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

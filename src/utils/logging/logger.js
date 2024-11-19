@@ -1,16 +1,32 @@
 import pino from 'pino';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const logger = pino({
-  level: 'debug',
-  browser: {
-    asObject: true,
-    write: {
-      info: (o) => console.log(o.msg),
-      error: (o) => console.error(o.msg),
-      debug: (o) => console.debug(o.msg),
-      warn: (o) => console.warn(o.msg)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const transport = pino.transport({
+  targets: [
+    {
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+        translateTime: 'SYS:standard',
+      },
+      level: 'info'
+    },
+    {
+      target: 'pino/file',
+      options: { 
+        destination: path.join(__dirname, '../../../logs/app.log'),
+        mkdir: true 
+      },
+      level: 'debug'
     }
-  }
+  ]
 });
 
-export { logger };
+export const logger = pino({
+  level: 'debug',
+  base: undefined,
+}, transport);

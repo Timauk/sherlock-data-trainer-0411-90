@@ -1,56 +1,31 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { systemLogger } from '@/utils/logging/systemLogger';
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
 
 interface LogEntry {
   timestamp: Date;
   type: string;
   message: string;
   details?: any;
-  severity?: 'info' | 'warning' | 'error' | 'success';
 }
 
 const EnhancedLogDisplay: React.FC = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filter, setFilter] = useState<string>('all');
-  const { toast } = useToast();
-
-  const handleError = useCallback((error: Error) => {
-    // Ignore server connection errors as they're handled by useServerStatus
-    if (error.message.includes('Failed to fetch')) {
-      return;
-    }
-    toast({
-      title: "Erro no Sistema de Logs",
-      description: error.message,
-      variant: "destructive"
-    });
-  }, [toast]);
 
   useEffect(() => {
-    try {
-      systemLogger.setErrorHandler(handleError);
+    const updateLogs = (event: CustomEvent<LogEntry>) => {
+      setLogs(prevLogs => [...prevLogs, event.detail]);
+    };
 
-      // Set up log event listener
-      const updateLogs = (event: CustomEvent<LogEntry>) => {
-        setLogs(prevLogs => [...prevLogs, event.detail]);
-      };
+    window.addEventListener('systemLog', updateLogs as EventListener);
+    setLogs(systemLogger.getLogs());
 
-      // Add event listener and initialize logs
-      window.addEventListener('systemLog', updateLogs as EventListener);
-      setLogs(systemLogger.getLogs());
-
-      // Cleanup
-      return () => {
-        window.removeEventListener('systemLog', updateLogs as EventListener);
-      };
-    } catch (error) {
-      console.error('Error in EnhancedLogDisplay:', error);
-      handleError(error as Error);
-    }
-  }, [handleError]);
+    return () => {
+      window.removeEventListener('systemLog', updateLogs as EventListener);
+    };
+  }, []);
 
   const getLogColor = (type: string) => {
     switch (type) {
@@ -73,19 +48,6 @@ const EnhancedLogDisplay: React.FC = () => {
     }
   };
 
-  const getSeverityColor = (severity?: string) => {
-    switch (severity) {
-      case 'error':
-        return 'text-red-500';
-      case 'warning':
-        return 'text-yellow-500';
-      case 'success':
-        return 'text-green-500';
-      default:
-        return 'text-gray-700 dark:text-gray-300';
-    }
-  };
-
   const filteredLogs = filter === 'all' 
     ? logs 
     : logs.filter(log => log.type === filter);
@@ -96,7 +58,7 @@ const EnhancedLogDisplay: React.FC = () => {
         <select 
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="border rounded p-1 dark:bg-gray-800 dark:border-gray-700"
+          className="border rounded p-1"
         >
           <option value="all">Todos os Logs</option>
           <option value="action">Ações</option>
@@ -109,7 +71,7 @@ const EnhancedLogDisplay: React.FC = () => {
         </select>
       </div>
 
-      <ScrollArea className="h-[400px] rounded-md border p-4 dark:border-gray-700">
+      <ScrollArea className="h-[400px] rounded-md border p-4">
         {filteredLogs.map((log, index) => (
           <div key={index} className="mb-2 flex items-start gap-2">
             <span className="text-xs text-gray-500 whitespace-nowrap">
@@ -119,11 +81,9 @@ const EnhancedLogDisplay: React.FC = () => {
               {log.type}
             </Badge>
             <div className="flex-1">
-              <span className={`text-sm ${getSeverityColor(log.severity)}`}>
-                {log.message}
-              </span>
+              <span className="text-sm">{log.message}</span>
               {log.details && (
-                <pre className="text-xs mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto">
+                <pre className="text-xs mt-1 bg-gray-100 p-2 rounded overflow-x-auto">
                   {JSON.stringify(log.details, null, 2)}
                 </pre>
               )}

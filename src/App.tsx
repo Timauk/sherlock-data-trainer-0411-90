@@ -1,39 +1,32 @@
-import React, { useEffect } from 'react';
-import { systemLogger } from './utils/logging/systemLogger';
-import { ThemeProvider } from "./components/theme-provider";
-import { Toaster } from "@/components/ui/toaster";
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ThemeProvider } from 'next-themes';
+import Header from './components/Header';
+import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
-import PlayPage from './pages/PlayPage';
 import TrainingPage from './pages/TrainingPage';
-import ImplementationPlanPage from './pages/ImplementationPlanPage';
+import PlayPage from './pages/PlayPage';
 import ManualPage from './pages/ManualPage';
-import Navigation from './components/Navigation';
 
 const queryClient = new QueryClient();
 
-const App = () => {
-  useEffect(() => {
-    systemLogger.log('system', 'Application initialized', { timestamp: new Date() }, 'info');
-  }, []);
-
+const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <ThemeProvider attribute="class">
         <Router>
-          <div className="min-h-screen bg-background text-foreground">
-            <Navigation />
-            <main className="container mx-auto px-4">
+          <div className="flex flex-col min-h-screen bg-background text-foreground">
+            <Header />
+            <main className="flex-grow container mx-auto px-4 py-8">
               <Routes>
                 <Route path="/" element={<HomePage />} />
-                <Route path="/play" element={<PlayPage />} />
                 <Route path="/training" element={<TrainingPage />} />
-                <Route path="/implementation" element={<ImplementationPlanPage />} />
+                <Route path="/play" element={<PlayPage />} />
                 <Route path="/manual" element={<ManualPage />} />
               </Routes>
             </main>
-            <Toaster />
+            <Footer />
           </div>
         </Router>
       </ThemeProvider>

@@ -1,96 +1,28 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from 'next-themes';
 import * as tf from '@tensorflow/tfjs';
+import { useToast } from "@/hooks/use-toast";
 import { useGameLogic } from '@/hooks/useGameLogic';
 import { PlayPageHeader } from '@/components/PlayPageHeader';
 import PlayPageContent from '@/components/PlayPageContent';
-import SpeedControl from '@/components/SpeedControl';
-import { useGameInterval } from '@/hooks/useGameInterval';
-import { loadModelFiles } from '@/utils/modelLoader';
-import { loadModelWithWeights, saveModelWithWeights } from '@/utils/modelUtils';
-import { systemLogger } from '@/utils/logging/systemLogger';
-import { useToast } from "@/hooks/use-toast";
+import { Slider } from "@/components/ui/slider";
 
 const PlayPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [gameSpeed, setGameSpeed] = useState(1000);
+  const [gameSpeed, setGameSpeed] = useState(1000); // Default 1 second
   const [csvData, setCsvData] = useState<number[][]>([]);
   const [csvDates, setCsvDates] = useState<Date[]>([]);
   const [trainedModel, setTrainedModel] = useState<tf.LayersModel | null>(null);
   const { theme, setTheme } = useTheme();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
   const { toast } = useToast();
-  
-  const gameLogicHook = useGameLogic(csvData, trainedModel);
 
-  const saveFullModel = async () => {
-    if (trainedModel) {
-      await saveModelWithWeights(trainedModel);
-      systemLogger.log("action", "Modelo salvo com sucesso!");
-    }
-  };
-
-  const loadFullModel = async () => {
-    try {
-      const model = await loadModelWithWeights();
-      setTrainedModel(model);
-      systemLogger.log("action", "Modelo carregado com sucesso!");
-    } catch (error) {
-      systemLogger.log("action", "Erro ao carregar modelo", {}, 'error');
-    }
-  };
-
-  const onUpdatePlayer = (playerId: number, newWeights: number[]) => {
-    const updatedPlayers = gameLogicHook.players.map(player => 
-      player.id === playerId ? { ...player, weights: newWeights } : player
-    );
-    if ('setPlayers' in gameLogicHook) {
-      (gameLogicHook as any).setPlayers(updatedPlayers);
-    }
-  };
-
-  const handleModelUpload = async (file: File) => {
-    try {
-      const weightsFile = new File([], 'weights.bin');
-      const result = await loadModelFiles(file, weightsFile);
-      if (result.model) {
-        setTrainedModel(result.model);
-        systemLogger.log("action", "Modelo carregado com sucesso!");
-      }
-    } catch (error) {
-      systemLogger.log("action", "Erro ao carregar modelo", { error }, 'error');
-      toast({
-        title: "Erro ao Carregar Modelo",
-        description: error instanceof Error ? error.message : "Falha ao carregar modelo",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const gameLogic = {
-    ...gameLogicHook,
-    saveFullModel,
-    loadFullModel,
-    onUpdatePlayer
-  };
-
-  useGameInterval(
-    isPlaying && !isProcessing && isInitialized,
-    gameSpeed,
-    gameLogic.gameLoop,
-    () => {
-      setIsPlaying(false);
-      systemLogger.log("action", "Todos os concursos foram processados");
-    }
-  );
+  const gameLogic = useGameLogic(csvData, trainedModel);
 
   const loadCSV = useCallback(async (file: File) => {
     try {
-      setIsInitialized(false);
       const text = await file.text();
-      const lines = text.trim().split('\n').slice(1);
+      const lines = text.trim().split('\n').slice(1); // Ignorar o cabeçalho
       const data = lines.map(line => {
         const values = line.split(',');
         return {
@@ -99,62 +31,146 @@ const PlayPage: React.FC = () => {
           bolas: values.slice(2).map(Number)
         };
       });
-      
-      if (data.length === 0) {
-        throw new Error("Arquivo CSV vazio ou inválido");
-      }
-
       setCsvData(data.map(d => d.bolas));
       setCsvDates(data.map(d => d.data));
-      
-      systemLogger.log("action", "CSV carregado e processado com sucesso!");
-      
-      if (gameLogic && gameLogic.initializePlayers) {
-        gameLogic.initializePlayers();
-      }
+      gameLogic.addLog("CSV carregado e processado com sucesso!");
+      gameLogic.addLog(`Número de registros carregados: ${data.length}`);
     } catch (error) {
-      systemLogger.log("action", `Erro ao carregar CSV: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, {}, 'error');
-      setIsInitialized(false);
+      gameLogic.addLog(`Erro ao carregar CSV: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     }
   }, [gameLogic]);
 
-  useEffect(() => {
-    if (!isInitialized && gameLogic && gameLogic.players.length === 0) {
-      gameLogic.initializePlayers();
-      setIsInitialized(true);
-      systemLogger.log("action", "Sistema inicializado com sucesso!");
+  const loadModel = useCallback(async (jsonFile: File, weightsFile: File) => {
+    try {
+      // Carrega o modelo usando os dois arquivos
+      const model = await tf.loadLayersModel(
+        tf.io.browserFiles([jsonFile, weightsFile])
+      );
+      setTrainedModel(model);
+      gameLogic.addLog("Modelo carregado com sucesso!");
+      toast({
+        title: "Modelo Carregado",
+        description: "O modelo foi carregado com sucesso.",
+      });
+    } catch (error) {
+      gameLogic.addLog(`Erro ao carregar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      console.error("Detalhes do erro:", error);
+      toast({
+        title: "Erro ao Carregar Modelo",
+        description: "Certifique-se de selecionar tanto o arquivo .json quanto o arquivo .weights.bin",
+        variant: "destructive",
+      });
     }
-  }, [gameLogic, isInitialized]);
+  }, [gameLogic, toast]);
+
+  const saveModel = useCallback(async () => {
+    if (trainedModel) {
+      try {
+        await trainedModel.save('downloads://modelo-atual');
+        gameLogic.addLog("Modelo salvo com sucesso!");
+        toast({
+          title: "Modelo Salvo",
+          description: "O modelo atual foi salvo com sucesso.",
+        });
+      } catch (error) {
+        gameLogic.addLog(`Erro ao salvar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+        console.error("Detalhes do erro:", error);
+        toast({
+          title: "Erro ao Salvar Modelo",
+          description: "Ocorreu um erro ao salvar o modelo. Verifique o console para mais detalhes.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      gameLogic.addLog("Nenhum modelo para salvar.");
+      toast({
+        title: "Nenhum Modelo",
+        description: "Não há nenhum modelo carregado para salvar.",
+        variant: "destructive",
+      });
+    }
+  }, [trainedModel, gameLogic, toast]);
+
+  const playGame = useCallback(() => {
+    if (!trainedModel || csvData.length === 0) {
+      gameLogic.addLog("Não é possível iniciar o jogo. Verifique se o modelo e os dados CSV foram carregados.");
+      return;
+    }
+    setIsPlaying(true);
+    gameLogic.addLog("Jogo iniciado.");
+    gameLogic.gameLoop();
+  }, [trainedModel, csvData, gameLogic]);
+
+  const pauseGame = useCallback(() => {
+    setIsPlaying(false);
+    gameLogic.addLog("Jogo pausado.");
+  }, [gameLogic]);
+
+  const resetGame = useCallback(() => {
+    setIsPlaying(false);
+    setProgress(0);
+    gameLogic.initializePlayers();
+    gameLogic.addLog("Jogo reiniciado.");
+  }, [gameLogic]);
 
   useEffect(() => {
-    if (csvData.length > 0 && trainedModel !== null && gameLogic.players.length === 0) {
-      setIsInitialized(true);
-      systemLogger.log("action", "Dados e modelo carregados com sucesso!");
-      gameLogic.initializePlayers();
+    let intervalId: NodeJS.Timeout;
+    if (isPlaying) {
+      intervalId = setInterval(() => {
+        gameLogic.gameLoop();
+        setProgress((prevProgress) => {
+          const newProgress = prevProgress + (100 / csvData.length);
+          if (newProgress >= 100) {
+            if (!gameLogic.isManualMode) {
+              gameLogic.evolveGeneration();
+            }
+            return gameLogic.isInfiniteMode ? 0 : 100;
+          }
+          return newProgress;
+        });
+      }, gameSpeed);
     }
-  }, [csvData, trainedModel, gameLogic]);
+    return () => clearInterval(intervalId);
+  }, [isPlaying, csvData, gameLogic, gameSpeed]);
+
+  const handleSpeedChange = (value: number[]) => {
+    const newSpeed = 2000 - value[0]; // Inverte a escala para que maior valor = mais rápido
+    setGameSpeed(newSpeed);
+    toast({
+      title: "Velocidade Ajustada",
+      description: `${newSpeed}ms por jogada`,
+    });
+  };
 
   return (
     <div className="p-6">
       <PlayPageHeader />
-      <SpeedControl onSpeedChange={setGameSpeed} />
+      <div className="mb-4 p-4 bg-background rounded-lg shadow">
+        <h3 className="text-lg font-semibold mb-2">Controle de Velocidade</h3>
+        <Slider
+          defaultValue={[1000]}
+          max={1900}
+          min={100}
+          step={100}
+          onValueChange={handleSpeedChange}
+          className="w-full"
+        />
+        <p className="text-sm text-muted-foreground mt-1">
+          Intervalo atual: {gameSpeed}ms
+        </p>
+      </div>
       <PlayPageContent
-        isPlaying={isPlaying && !isProcessing}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onReset={() => {
-          setIsPlaying(false);
-          gameLogic.initializePlayers();
-          systemLogger.log("action", "Jogo reiniciado - Estado inicial restaurado");
-        }}
+        isPlaying={isPlaying}
+        onPlay={playGame}
+        onPause={pauseGame}
+        onReset={resetGame}
         onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         onCsvUpload={loadCSV}
-        onModelUpload={handleModelUpload}
-        onSaveModel={saveFullModel}
+        onModelUpload={loadModel}
+        onSaveModel={saveModel}
         progress={progress}
         generation={gameLogic.generation}
         gameLogic={gameLogic}
-        isProcessing={isProcessing}
       />
     </div>
   );

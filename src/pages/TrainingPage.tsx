@@ -34,59 +34,15 @@ const TrainingPage: React.FC = () => {
   const startTraining = async () => {
     if (!trainingData) return;
 
-    // Create model with exact same architecture as in utils.js
-    const newModel = tf.sequential();
-    
-    newModel.add(tf.layers.dense({ 
-      units: 256, 
-      activation: 'relu', 
-      inputShape: [17],
-      kernelInitializer: 'glorotNormal',
-      kernelRegularizer: tf.regularizers.l1l2({ l1: 0, l2: 0.01 }),
-      useBias: true,
-      biasInitializer: 'zeros'
-    }));
-    
-    newModel.add(tf.layers.batchNormalization({
-      axis: -1,
-      momentum: 0.99,
-      epsilon: 0.001,
-      center: true,
-      scale: true
-    }));
-    
-    newModel.add(tf.layers.dropout({ rate: 0.3 }));
-    
-    newModel.add(tf.layers.dense({ 
-      units: 128, 
-      activation: 'relu',
-      kernelInitializer: 'glorotNormal',
-      kernelRegularizer: tf.regularizers.l1l2({ l1: 0, l2: 0.01 }),
-      useBias: true,
-      biasInitializer: 'zeros'
-    }));
-    
-    newModel.add(tf.layers.batchNormalization({
-      axis: -1,
-      momentum: 0.99,
-      epsilon: 0.001,
-      center: true,
-      scale: true
-    }));
-    
-    newModel.add(tf.layers.dense({ 
-      units: 15, 
-      activation: 'sigmoid',
-      kernelInitializer: 'glorotNormal',
-      useBias: true,
-      biasInitializer: 'zeros'
-    }));
+    const numeroDeBolas = trainingData[0].bolas.length;
 
-    newModel.compile({ 
-      optimizer: tf.train.adam(0.001),
-      loss: 'binaryCrossentropy',
-      metrics: ['accuracy']
-    });
+    const newModel = tf.sequential();
+    newModel.add(tf.layers.dense({ units: 128, activation: 'relu', inputShape: [numeroDeBolas + 2] }));
+    newModel.add(tf.layers.batchNormalization());
+    newModel.add(tf.layers.dense({ units: 128, activation: 'relu' }));
+    newModel.add(tf.layers.dense({ units: numeroDeBolas, activation: 'sigmoid' }));
+
+    newModel.compile({ optimizer: 'adam', loss: 'meanSquaredError' });
 
     const xs = tf.tensor2d(trainingData.map(d => [...d.bolas, d.numeroConcurso, d.dataSorteio]));
     const ys = tf.tensor2d(trainingData.map(d => d.bolas));
@@ -110,44 +66,12 @@ const TrainingPage: React.FC = () => {
   const saveModel = async () => {
     if (model) {
       try {
-        // Save model files with exact same structure
-        const saveResult = await model.save('downloads://model');
-        
-        // Create metadata file
-        const metadata = {
-          timestamp: new Date().toISOString(),
-          architecture: model.layers.map(layer => layer.getConfig()),
-          metrics: {
-            loss: logs[logs.length - 1]?.loss,
-            val_loss: logs[logs.length - 1]?.val_loss
-          },
-          totalSamples: trainingData?.length || 0
-        };
-        
-        // Save metadata
-        const metadataBlob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
-        const metadataUrl = URL.createObjectURL(metadataBlob);
-        const metadataLink = document.createElement('a');
-        metadataLink.href = metadataUrl;
-        metadataLink.download = 'metadata.json';
-        metadataLink.click();
-
-        // Save weight specs
-        const weightSpecs = model.weights.map(w => ({
-          name: w.name,
-          shape: w.shape,
-          dtype: w.dtype
-        }));
-        const weightSpecsBlob = new Blob([JSON.stringify(weightSpecs)], { type: 'application/json' });
-        const weightSpecsUrl = URL.createObjectURL(weightSpecsBlob);
-        const weightSpecsLink = document.createElement('a');
-        weightSpecsLink.href = weightSpecsUrl;
-        weightSpecsLink.download = 'weight-specs.json';
-        weightSpecsLink.click();
+        // Salva o modelo completo (arquitetura + pesos)
+        await model.save('downloads://modelo-aprendiz');
         
         toast({
-          title: "Modelo Salvo",
-          description: "O modelo e seus metadados foram salvos com sucesso!",
+          title: "Modelo Base Salvo",
+          description: "O modelo base e seus pesos foram salvos com sucesso.",
         });
       } catch (error) {
         toast({
@@ -195,7 +119,7 @@ const TrainingPage: React.FC = () => {
           className="w-full"
         >
           <Save className="inline-block mr-2" />
-          Salvar Modelo Treinado
+          Salvar Modelo Base
         </Button>
       </div>
 

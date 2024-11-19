@@ -1,30 +1,15 @@
 import { Player } from '../types/gameTypes';
 
 export const calculateFitness = (player: Player, boardNumbers: number[]): number => {
-  if (!Array.isArray(player.predictions) || !Array.isArray(boardNumbers)) {
-    return 0;
-  }
-
-  const matches = player.predictions.reduce((acc, prediction) => {
-    if (Array.isArray(prediction)) {
-      const matchingNumbers = prediction.filter((num): num is number => 
-        typeof num === 'number' && boardNumbers.includes(num)
-      );
-      return acc + matchingNumbers.length;
-    }
-    return acc;
-  }, 0);
-  
+  const matches = player.predictions.filter(num => boardNumbers.includes(num)).length;
   const consistencyBonus = calculateConsistencyBonus(player);
   const adaptabilityScore = calculateAdaptabilityScore(player);
-  const nicheBonus = calculateNicheBonus(player, boardNumbers);
   
-  return (matches * 2) + (consistencyBonus * 0.3) + 
-         (adaptabilityScore * 0.2) + (nicheBonus * 1.5);
+  return matches + (consistencyBonus * 0.2) + (adaptabilityScore * 0.1);
 };
 
 const calculateConsistencyBonus = (player: Player): number => {
-  if (!Array.isArray(player.predictions) || player.predictions.length < 2) return 0;
+  if (player.predictions.length < 2) return 0;
   
   let consistentPredictions = 0;
   for (let i = 1; i < player.predictions.length; i++) {
@@ -32,65 +17,31 @@ const calculateConsistencyBonus = (player: Player): number => {
     const curr = player.predictions[i];
     
     if (Array.isArray(prev) && Array.isArray(curr)) {
-      const intersection = prev.filter(num => 
-        typeof num === 'number' && curr.includes(num)
-      );
+      const intersection = (prev as number[]).filter(num => (curr as number[]).includes(num));
       if (intersection.length >= 10) consistentPredictions++;
     }
   }
   
-  return (consistentPredictions / Math.max(1, player.predictions.length - 1)) * 5;
+  return (consistentPredictions / (player.predictions.length - 1)) * 5;
 };
 
 const calculateAdaptabilityScore = (player: Player): number => {
-  if (!Array.isArray(player.predictions) || player.predictions.length < 5) return 0;
+  if (player.predictions.length < 5) return 0;
   
   const recentPredictions = player.predictions.slice(-5);
-  if (!recentPredictions.every(Array.isArray)) return 0;
+  if (!recentPredictions.every(pred => Array.isArray(pred))) return 0;
   
-  const uniqueNumbers = new Set(recentPredictions.flat());
-  return (uniqueNumbers.size / (25 * 0.6)) * 5;
-};
-
-const calculateNicheBonus = (player: Player, boardNumbers: number[]): number => {
-  if (!Array.isArray(boardNumbers)) return 0;
+  const validPredictions = recentPredictions.map(pred => pred as number[]);
+  const uniqueNumbers = new Set(validPredictions.flat());
   
-  switch (player.niche) {
-    case 0: // Pares
-      return boardNumbers.filter(n => n % 2 === 0).length * 0.5;
-    case 1: // Ímpares
-      return boardNumbers.filter(n => n % 2 !== 0).length * 0.5;
-    case 2: // Sequências
-      return findSequences(boardNumbers) * 1.2;
-    case 3: // Geral
-      return 0.3;
-    default:
-      return 0;
-  }
-};
-
-const findSequences = (numbers: number[]): number => {
-  if (!Array.isArray(numbers)) return 0;
-  
-  let sequences = 0;
-  const sorted = [...numbers].sort((a, b) => a - b);
-  
-  for (let i = 0; i < sorted.length - 2; i++) {
-    if (sorted[i + 1] === sorted[i] + 1 && sorted[i + 2] === sorted[i] + 2) {
-      sequences++;
-    }
-  }
-  
-  return sequences;
+  return (uniqueNumbers.size / (25 * 0.6)) * 5; // 60% de cobertura dos números possíveis
 };
 
 export const createMutatedClone = (player: Player, mutationRate: number = 0.1): Player => {
-  const adaptiveMutationRate = mutationRate * (1 + (player.age / 50));
-  
   const mutatedWeights = player.weights.map(weight => {
-    if (Math.random() < adaptiveMutationRate) {
-      const mutation = (Math.random() - 0.5) * 0.1;
-      return Math.max(0, Math.min(1, weight * (1 + mutation)));
+    if (Math.random() < mutationRate) {
+      const mutation = (Math.random() - 0.5) * 0.2; // Mutação de ±10%
+      return weight * (1 + mutation);
     }
     return weight;
   });
@@ -102,20 +53,16 @@ export const createMutatedClone = (player: Player, mutationRate: number = 0.1): 
     predictions: [],
     weights: mutatedWeights,
     fitness: 0,
-    generation: player.generation + 1,
-    age: 0,
-    niche: Math.random() < 0.9 ? player.niche : Math.floor(Math.random() * 4)
+    generation: player.generation + 1
   };
 };
 
 export const crossoverPlayers = (parent1: Player, parent2: Player): Player => {
-  const childWeights = parent1.weights.map((weight, index) => {
-    const useParent1 = Math.random() < (0.5 + (parent1.fitness > parent2.fitness ? 0.2 : -0.2));
-    return useParent1 ? weight : parent2.weights[index];
-  });
-
-  const preferredNiche = parent1.fitness > parent2.fitness ? 
-    parent1.niche : parent2.niche;
+  const crossoverPoint = Math.floor(Math.random() * parent1.weights.length);
+  const childWeights = [
+    ...parent1.weights.slice(0, crossoverPoint),
+    ...parent2.weights.slice(crossoverPoint)
+  ];
 
   return {
     id: Math.random(),
@@ -123,8 +70,6 @@ export const crossoverPlayers = (parent1: Player, parent2: Player): Player => {
     predictions: [],
     weights: childWeights,
     fitness: 0,
-    generation: Math.max(parent1.generation, parent2.generation) + 1,
-    age: 0,
-    niche: Math.random() < 0.8 ? preferredNiche : Math.floor(Math.random() * 4)
+    generation: Math.max(parent1.generation, parent2.generation) + 1
   };
 };

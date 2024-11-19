@@ -1,38 +1,32 @@
 import pino from 'pino';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-interface LogObject {
-  msg: string;
-  level: number;
-  time: number;
-  err?: Error;
-  details?: any;
-}
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const logger = pino({
-  level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
-  transport: {
-    target: 'pino-pretty',
-    options: {
-      colorize: true
-    }
-  },
-  browser: {
-    asObject: true,
-    write: {
-      info: (o: LogObject) => console.log(o.msg, o.details || ''),
-      error: (o: LogObject) => {
-        console.error(o.msg);
-        if (o.err) {
-          console.error('Error details:', o.err);
-        }
-        if (o.details) {
-          console.error('Additional details:', o.details);
-        }
+const transport = pino.transport({
+  targets: [
+    {
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+        translateTime: 'SYS:standard',
       },
-      debug: (o: LogObject) => console.debug(o.msg, o.details || ''),
-      warn: (o: LogObject) => console.warn(o.msg, o.details || '')
+      level: 'info'
+    },
+    {
+      target: 'pino/file',
+      options: { 
+        destination: path.join(__dirname, '../../../logs/app.log'),
+        mkdir: true 
+      },
+      level: 'debug'
     }
-  }
+  ]
 });
 
-export { logger };
+export const logger = pino({
+  level: 'debug',
+  base: undefined,
+}, transport);

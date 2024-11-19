@@ -24,15 +24,17 @@ export const saveModel = async (model: tf.LayersModel, name: string, metrics: an
 
 export const loadModel = async (modelId: string) => {
   try {
-    const { data, error } = await supabase
+    const result = supabase
       .from('models')
       .select()
-      .eq('id', modelId)
-      .single();
+      .eq('id', modelId);
 
-    if (error) throw error;
-    if (!data) throw new Error('Model not found');
+    if (result.error) throw result.error;
+    if (!result.data || result.data.length === 0) throw new Error('Model not found');
 
+    const data = result.data[0];
+
+    // Load model from local storage
     const model = await tf.loadLayersModel('localstorage://temp-model');
     return { model, data };
   } catch (error) {

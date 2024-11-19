@@ -1,23 +1,37 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Upload } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
 import CheckpointControls from './CheckpointControls';
 
 interface DataUploaderProps {
   onCsvUpload: (file: File) => void;
-  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile?: File, weightSpecsFile?: File) => void;
+  onModelUpload: (jsonFile: File, weightsFile: File) => void;
   onSaveModel: () => void;
 }
 
 const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload, onSaveModel }) => {
   const jsonFileRef = useRef<HTMLInputElement>(null);
   const weightsFileRef = useRef<HTMLInputElement>(null);
-  const metadataFileRef = useRef<HTMLInputElement>(null);
-  const weightSpecsFileRef = useRef<HTMLInputElement>(null);
-  const [savePath, setSavePath] = React.useState(localStorage.getItem('checkpointPath') || '');
+  const [timeUntilCheckpoint, setTimeUntilCheckpoint] = useState(1800);
+  const [savePath, setSavePath] = useState(localStorage.getItem('checkpointPath') || '');
   const { toast } = useToast();
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeUntilCheckpoint((prev) => {
+        if (prev <= 1) {
+          handleAutoSave();
+          return 1800;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const handleAutoSave = async () => {
     if (!savePath) {
@@ -54,23 +68,21 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
     }
   };
 
-  const validateFiles = () => {
-    const jsonFile = jsonFileRef.current?.files?.[0];
-    const weightsFile = weightsFileRef.current?.files?.[0];
-
-    if (!jsonFile || !weightsFile) {
-      toast({
-        title: "Arquivos Necessários",
-        description: "Por favor, selecione pelo menos os arquivos model.json e weights.bin",
-        variant: "destructive"
-      });
-      return false;
-    }
-    return true;
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-between items-center mb-4">
+        <div className="text-sm font-medium">
+          Próximo checkpoint em: {formatTime(timeUntilCheckpoint)}
+        </div>
+        <Progress value={(1800 - timeUntilCheckpoint) / 18} className="w-1/2" />
+      </div>
+
       <Tabs defaultValue="preparation" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="preparation">Preparação</TabsTrigger>
@@ -88,72 +100,35 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
               className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
           </div>
-          
-          <div className="space-y-4 p-4 border rounded-lg bg-secondary">
-            <h3 className="font-medium mb-2">Carregar Modelo:</h3>
-            
-            <div>
-              <label htmlFor="modelJsonInput" className="block mb-2">1. Arquivo do Modelo (JSON) *:</label>
-              <input
-                type="file"
-                id="modelJsonInput"
-                accept=".json"
-                ref={jsonFileRef}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="modelWeightsInput" className="block mb-2">2. Arquivo de Pesos (bin) *:</label>
-              <input
-                type="file"
-                id="modelWeightsInput"
-                accept=".bin"
-                ref={weightsFileRef}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="modelMetadataInput" className="block mb-2">3. Arquivo de Metadata (JSON) (opcional):</label>
-              <input
-                type="file"
-                id="modelMetadataInput"
-                accept=".json"
-                ref={metadataFileRef}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="weightSpecsInput" className="block mb-2">4. Arquivo de Especificações de Pesos (JSON) (opcional):</label>
-              <input
-                type="file"
-                id="weightSpecsInput"
-                accept=".json"
-                ref={weightSpecsFileRef}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
-            </div>
-
-            <Button 
-              onClick={() => {
-                if (validateFiles()) {
-                  const jsonFile = jsonFileRef.current?.files?.[0];
-                  const weightsFile = weightsFileRef.current?.files?.[0];
-                  const metadataFile = metadataFileRef.current?.files?.[0];
-                  const weightSpecsFile = weightSpecsFileRef.current?.files?.[0];
-                  
-                  if (jsonFile && weightsFile) {
-                    onModelUpload(jsonFile, weightsFile, metadataFile, weightSpecsFile);
-                  }
-                }
-              }}
-              className="w-full mt-4"
-            >
-              <Upload className="mr-2 h-4 w-4" /> Carregar Modelo
-            </Button>
+          <div>
+            <label htmlFor="modelJsonInput" className="block mb-2">Carregar Modelo Treinado (JSON):</label>
+            <input
+              type="file"
+              id="modelJsonInput"
+              accept=".json"
+              ref={jsonFileRef}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
           </div>
+          <div>
+            <label htmlFor="modelWeightsInput" className="block mb-2">Carregar Pesos do Modelo (bin):</label>
+            <input
+              type="file"
+              id="modelWeightsInput"
+              accept=".bin"
+              ref={weightsFileRef}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+          </div>
+          <Button onClick={() => {
+            const jsonFile = jsonFileRef.current?.files?.[0];
+            const weightsFile = weightsFileRef.current?.files?.[0];
+            if (jsonFile && weightsFile) {
+              onModelUpload(jsonFile, weightsFile);
+            }
+          }}>
+            <Upload className="mr-2 h-4 w-4" /> Carregar Modelo
+          </Button>
         </TabsContent>
 
         <TabsContent value="checkpoint">

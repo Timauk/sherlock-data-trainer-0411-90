@@ -1,66 +1,57 @@
-type LogEntry = {
+interface LogEntry {
   timestamp: Date;
-  type: string;
+  type: 'action' | 'prediction' | 'performance' | 'system' | 'lunar' | 'player' | 'checkpoint' | 'learning' | 'model';
   message: string;
   details?: any;
-  severity?: 'info' | 'warning' | 'error' | 'success';
-};
-
-type ErrorHandler = (error: Error) => void;
+}
 
 class SystemLogger {
+  private static instance: SystemLogger;
   private logs: LogEntry[] = [];
-  private errorHandler: ErrorHandler | null = null;
+  private maxLogs = 1000;
 
-  log(
-    type: string, 
-    message: string, 
-    details: Record<string, unknown> = {}, 
-    severity: 'info' | 'warning' | 'error' | 'success' = 'info'
-  ): void {
-    try {
-      const logEntry: LogEntry = {
-        timestamp: new Date(),
-        type,
-        message,
-        details,
-        severity
-      };
+  private constructor() {}
 
-      this.logs.push(logEntry);
-
-      if (typeof window !== 'undefined') {
-        const event = new CustomEvent('systemLog', { 
-          detail: logEntry 
-        });
-        window.dispatchEvent(event);
-      }
-
-      // Format console output
-      const prefix = `[${type.toUpperCase()}]`;
-      const detailsStr = details ? JSON.stringify(details) : '';
-      console.log(`${prefix} ${message}`, detailsStr);
-
-      // Handle errors automatically
-      if (severity === 'error' && this.errorHandler) {
-        this.errorHandler(new Error(message));
-      }
-    } catch (error) {
-      console.error('Error in SystemLogger:', error);
+  static getInstance(): SystemLogger {
+    if (!SystemLogger.instance) {
+      SystemLogger.instance = new SystemLogger();
     }
+    return SystemLogger.instance;
+  }
+
+  log(type: LogEntry['type'], message: string, details?: any) {
+    const entry: LogEntry = {
+      timestamp: new Date(),
+      type,
+      message,
+      details
+    };
+
+    this.logs.push(entry);
+    if (this.logs.length > this.maxLogs) {
+      this.logs = this.logs.slice(-this.maxLogs);
+    }
+
+    // Dispara evento para atualização da UI
+    const event = new CustomEvent('systemLog', { detail: entry });
+    window.dispatchEvent(event);
   }
 
   getLogs(): LogEntry[] {
-    return [...this.logs];
+    return this.logs;
   }
 
-  setErrorHandler(handler: ErrorHandler): void {
-    this.errorHandler = handler;
-  }
-
-  clearLogs(): void {
+  clearLogs() {
     this.logs = [];
+  }
+
+  getLogsByType(type: LogEntry['type']): LogEntry[] {
+    return this.logs.filter(log => log.type === type);
+  }
+
+  exportLogs(): string {
+    return JSON.stringify(this.logs, null, 2);
   }
 }
 
-export const systemLogger = new SystemLogger();
+export const systemLogger = SystemLogger.getInstance();

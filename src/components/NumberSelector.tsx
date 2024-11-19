@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2 } from 'lucide-react';
 
 interface NumberSelectorProps {
   onNumbersSelected: (numbers: number[]) => void;
@@ -28,15 +27,6 @@ const NumberSelector: React.FC<NumberSelectorProps> = ({ onNumbersSelected, pred
     }
   };
 
-  const clearSelection = () => {
-    setSelectedNumbers([]);
-    onNumbersSelected([]);
-    toast({
-      title: "Seleção Limpa",
-      description: "Todos os números foram desmarcados",
-    });
-  };
-
   const getMatchCount = (predictionNumbers: number[]) => {
     return predictionNumbers.filter(num => selectedNumbers.includes(num)).length;
   };
@@ -44,17 +34,7 @@ const NumberSelector: React.FC<NumberSelectorProps> = ({ onNumbersSelected, pred
   return (
     <Card className="w-full mb-4">
       <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle>Selecione 15 Números para Comparação</CardTitle>
-          <Button 
-            variant="outline" 
-            onClick={clearSelection}
-            className="flex items-center gap-2"
-          >
-            <Trash2 className="h-4 w-4" />
-            Limpar Seleção
-          </Button>
-        </div>
+        <CardTitle>Selecione 15 Números para Comparação</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-5 gap-2">

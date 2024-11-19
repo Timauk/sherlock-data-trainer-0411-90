@@ -14,16 +14,11 @@ export const useModelTraining = () => {
   const startTraining = useCallback(async (
     historicalData: number[][],
     dates: Date[],
-    lunarData: any[],
-    championKnowledge?: any
+    lunarData: any[]
   ) => {
     try {
       setIsTraining(true);
-      toast({
-        title: "Iniciando Treinamento",
-        description: "O modelo está sendo treinado. Por favor, aguarde...",
-        duration: 5000,
-      });
+      setProgress(0);
 
       // Sumarização de dados históricos
       const summaries = summarizeHistoricalData(historicalData, dates);
@@ -33,13 +28,8 @@ export const useModelTraining = () => {
       const models = await createEnsembleModels();
       setProgress(40);
 
-      // Treinamento dos modelos com mínimo de 50 épocas
-      await trainEnsemble(
-        models, 
-        historicalData, 
-        summaries, 
-        lunarData
-      );
+      // Treinamento dos modelos
+      await trainEnsemble(models, historicalData, summaries, lunarData);
       setProgress(90);
 
       // Salva os modelos
@@ -53,15 +43,13 @@ export const useModelTraining = () => {
       setProgress(100);
       toast({
         title: "Treinamento Concluído",
-        description: "Os modelos foram treinados e salvos com sucesso!",
-        duration: 3000,
+        description: "Os modelos foram treinados e salvos com sucesso!"
       });
     } catch (error) {
       toast({
         title: "Erro no Treinamento",
         description: error instanceof Error ? error.message : "Erro desconhecido",
-        variant: "destructive",
-        duration: 5000,
+        variant: "destructive"
       });
     } finally {
       setIsTraining(false);
