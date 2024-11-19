@@ -32,25 +32,10 @@ import { modelRouter } from './routes/model.js';
 import { checkpointRouter } from './routes/checkpoint.js';
 import { statusRouter } from './routes/status.js';
 
-// Configuração das rotas
+// Configuração das rotas - Movido para antes do error handler
 app.use('/api/model', modelRouter);
 app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
-
-// Error handler
-app.use((err, req, res, next) => {
-  logger.error({
-    err,
-    method: req.method,
-    url: req.url,
-    body: req.body
-  }, 'Error occurred');
-  
-  res.status(500).json({
-    error: 'Erro interno do servidor',
-    message: err.message
-  });
-});
 
 // Cria as pastas necessárias se não existirem
 import fs from 'fs';
@@ -67,6 +52,21 @@ const savedModelsDir = path.join(__dirname, 'saved-models');
 // Configuração do TensorFlow.js
 tf.setBackend('cpu').then(() => {
   logger.info('TensorFlow.js backend configurado para CPU');
+});
+
+// Error handler - Movido para depois das rotas
+app.use((err, req, res, next) => {
+  logger.error({
+    err,
+    method: req.method,
+    url: req.url,
+    body: req.body
+  }, 'Error occurred');
+  
+  res.status(500).json({
+    error: 'Erro interno do servidor',
+    message: err.message
+  });
 });
 
 // Gerenciamento de memória
