@@ -1,14 +1,20 @@
 import pino from 'pino';
 
+interface LogObject {
+  msg: string;
+  level: number;
+  time: number;
+}
+
 const logger = pino({
   level: 'debug',
   browser: {
     asObject: true,
     write: {
-      info: (o) => console.log(o.msg),
-      error: (o) => console.error(o.msg),
-      debug: (o) => console.debug(o.msg),
-      warn: (o) => console.warn(o.msg)
+      info: (o: LogObject) => console.log(o.msg),
+      error: (o: LogObject) => console.error(o.msg),
+      debug: (o: LogObject) => console.debug(o.msg),
+      warn: (o: LogObject) => console.warn(o.msg)
     }
   }
 });
