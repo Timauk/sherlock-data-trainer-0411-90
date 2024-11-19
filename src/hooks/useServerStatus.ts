@@ -8,7 +8,12 @@ export const useServerStatus = () => {
   const checkServerStatus = async () => {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000); // Reduced timeout to 2 seconds
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+        if (status !== 'offline') {
+          setStatus('offline');
+        }
+      }, 5000); // Increased timeout to 5 seconds
 
       const response = await fetch('http://localhost:3001/test', {
         method: 'GET',
@@ -16,7 +21,7 @@ export const useServerStatus = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        cache: 'no-store' // Prevent caching
+        cache: 'no-store'
       });
 
       clearTimeout(timeoutId);
@@ -26,25 +31,33 @@ export const useServerStatus = () => {
           setStatus('online');
         }
       } else {
-        throw new Error('Server response not ok');
+        if (status !== 'offline') {
+          setStatus('offline');
+        }
       }
     } catch (error) {
+      // Only update status if it's not already offline
       if (status !== 'offline') {
         setStatus('offline');
+      }
+
+      // Avoid showing error toast for AbortError
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error('Server status check error:', error);
       }
     }
   };
 
   useEffect(() => {
-    const checkAndNotify = async () => {
-      await checkServerStatus();
-    };
-
-    checkAndNotify();
-    const interval = setInterval(checkAndNotify, 3000); // Check every 3 seconds
+    checkServerStatus();
     
-    return () => clearInterval(interval);
-  }, []); // Remove status dependency to prevent loops
+    // Check every 10 seconds instead of 3
+    const interval = setInterval(checkServerStatus, 10000);
+    
+    return () => {
+      clearInterval(interval);
+    };
+  }, []); 
 
   return { status };
 };
