@@ -7,6 +7,10 @@ import { logger } from './src/utils/logging/logger.js';
 import { cacheMiddleware } from './src/utils/performance/serverCache.js';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3001;
