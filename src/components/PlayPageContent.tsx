@@ -60,10 +60,6 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
     }
   };
 
-  const handleModelUpload = (file: File) => {
-    onModelUpload(file);
-  };
-
   return (
     <div className="flex flex-col gap-4">
       <ProcessingPanel
@@ -73,7 +69,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         onReset={onReset}
         onThemeToggle={onThemeToggle}
         onCsvUpload={onCsvUpload}
-        onModelUpload={handleModelUpload}
+        onModelUpload={onModelUpload}
         onSaveModel={onSaveModel}
         progress={progress}
         champion={gameLogic.players[0]}
@@ -92,7 +88,11 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         evolutionData={gameLogic.evolutionData}
         boardNumbers={gameLogic.boardNumbers}
         concursoNumber={gameLogic.concursoNumber}
-        onUpdatePlayer={gameLogic.onUpdatePlayer}
+        onUpdatePlayer={(playerId: number) => {
+          if (gameLogic.onUpdatePlayer) {
+            gameLogic.onUpdatePlayer(playerId);
+          }
+        }}
       />
       
       <AnalysisPanel
