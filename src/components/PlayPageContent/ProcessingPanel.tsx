@@ -11,9 +11,9 @@ interface ProcessingPanelProps {
   onModelUpload: (file: File) => void;
   onSaveModel: () => void;
   progress: number;
-  champion: any; // replace with actual type
-  modelMetrics: any; // replace with actual type
-  gameLogic: any; // replace with actual type
+  champion: any;
+  modelMetrics: any;
+  gameLogic: any;
   isServerProcessing: boolean;
   serverStatus: string;
   onToggleProcessing: () => void;
@@ -42,6 +42,8 @@ const ProcessingPanel = ({
   loadFullModel,
   isProcessing
 }: ProcessingPanelProps) => {
+  const { toast } = useToast();
+
   return (
     <div className="space-y-4 p-4 border rounded-lg">
       <div className="flex flex-wrap gap-4">
@@ -103,7 +105,9 @@ const ProcessingPanel = ({
 
       <div>
         {champion && <p>Campeão: {champion.name || 'Sem nome'}</p>}
-        {modelMetrics && <p>Métricas do Modelo: {JSON.stringify(modelMetrics)}</p>}
+        {modelMetrics && (
+          <p>Métricas do Modelo: {JSON.stringify(modelMetrics)}</p>
+        )}
       </div>
     </div>
   );
