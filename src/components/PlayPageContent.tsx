@@ -26,6 +26,9 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
   const { status: serverStatus } = useServerStatus();
   const { toast } = useToast();
 
+  // Ensure we only use 80 players
+  const limitedPlayers = gameLogic.players.slice(0, 80);
+
   const handleExportCSV = async () => {
     try {
       const response = await fetch('http://localhost:3001/api/game/all');
@@ -39,7 +42,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
           }))
         );
         
-        exportPredictionsToCSV(allPredictions, gameLogic.players.slice(0, 80));
+        exportPredictionsToCSV(allPredictions, limitedPlayers);
         toast({
           title: "Exportação Concluída",
           description: `${allGames.length} jogos foram exportados com sucesso.`,
@@ -59,9 +62,6 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
       });
     }
   };
-
-  // Ensure we only pass the first 80 players to components
-  const limitedPlayers = gameLogic.players.slice(0, 80);
 
   return (
     <div className="flex flex-col gap-6">

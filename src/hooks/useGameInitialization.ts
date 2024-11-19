@@ -6,6 +6,7 @@ export const useGameInitialization = () => {
   const [players, setPlayers] = useState<Player[]>([]);
 
   const initializePlayers = () => {
+    // Create exactly 80 players
     const initialPlayers: Player[] = Array.from({ length: 80 }, (_, index) => ({
       id: index + 1,
       name: `Jogador ${index + 1}`,

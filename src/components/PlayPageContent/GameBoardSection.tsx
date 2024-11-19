@@ -10,7 +10,7 @@ interface GameBoardSectionProps {
   boardNumbers: number[];
   concursoNumber: number;
   onCsvUpload: (file: File) => void;
-  onModelUpload: (jsonFile: File, weightsFile: File, metadataFile?: File, weightSpecsFile?: File) => void;
+  onModelUpload: (file: File) => void;
   onSaveModel: () => void;
 }
 
