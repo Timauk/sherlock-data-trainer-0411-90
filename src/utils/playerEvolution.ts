@@ -1,5 +1,6 @@
 import { Player } from '../types/gameTypes';
 import * as tf from '@tensorflow/tfjs';
+import { cloneLogger } from './logging/cloneLogger';
 
 export const cloneChampion = (champion: Player, totalPlayers: number): Player[] => {
   const clones: Player[] = [];
@@ -23,6 +24,9 @@ export const cloneChampion = (champion: Player, totalPlayers: number): Player[] 
       generation: champion.generation + 1
     });
   }
+
+  // Registra o evento de clonagem
+  cloneLogger.logCloneEvent(champion, clones, champion.generation + 1);
   
   return clones;
 };
