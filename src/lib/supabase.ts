@@ -1,40 +1,33 @@
-// Temporary local storage implementation to replace Supabase
-export const supabase = {
-  from: (table: string) => ({
-    select: (columns: string = '*') => {
-      const data = localStorage.getItem(table);
-      const items = data ? JSON.parse(data) : [];
-      
-      return {
-        data: items,
-        error: null,
-        eq: (field: string, value: any) => {
-          const filtered = items.filter((item: any) => item[field] === value);
-          return {
-            data: filtered,
-            error: null,
-            single: () => ({
-              data: filtered.length > 0 ? filtered[0] : null,
-              error: null
-            })
-          };
-        }
-      };
-    },
-    insert: async (data: any) => {
-      const existing = localStorage.getItem(table);
-      const items = existing ? JSON.parse(existing) : [];
-      const newItem = {
-        id: crypto.randomUUID(),
-        ...data
-      };
-      items.push(newItem);
-      localStorage.setItem(table, JSON.stringify(items));
-      return { data: newItem, error: null };
-    },
-    update: async (data: any) => {
-      localStorage.setItem(table, JSON.stringify(data));
-      return { data, error: null };
-    }
-  })
+import { initializeApp } from 'firebase/app';
+import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID",
+  measurementId: "YOUR_MEASUREMENT_ID"
 };
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Enable offline persistence with proper configuration
+try {
+  enableIndexedDbPersistence(db, {
+    synchronizeTabs: true,
+    experimentalForceOwningTab: true
+  }).catch((err) => {
+    if (err.code === 'failed-precondition') {
+      console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+    } else if (err.code === 'unimplemented') {
+      console.warn('The current browser does not support persistence.');
+    }
+  });
+} catch (err) {
+  console.warn('Error enabling persistence:', err);
+}
+
+export { db };
