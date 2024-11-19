@@ -8,52 +8,43 @@ export const useServerStatus = () => {
   const checkServerStatus = async () => {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 2000); // Reduced timeout to 2 seconds
 
       const response = await fetch('http://localhost:3001/test', {
         method: 'GET',
         signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
+        },
+        cache: 'no-store' // Prevent caching
       });
 
       clearTimeout(timeoutId);
       
       if (response.ok) {
-        const data = await response.json();
-        if (data.message === 'Server is running') {
-          if (status !== 'online') {
-            setStatus('online');
-            toast({
-              title: "Servidor Conectado",
-              description: "Conexão estabelecida com sucesso.",
-            });
-          }
-        } else {
-          throw new Error('Resposta inesperada do servidor');
+        if (status !== 'online') {
+          setStatus('online');
         }
       } else {
-        throw new Error('Resposta do servidor não ok');
+        throw new Error('Server response not ok');
       }
     } catch (error) {
       if (status !== 'offline') {
         setStatus('offline');
-        toast({
-          title: "Servidor Desconectado",
-          description: "Verifique se o servidor está rodando em localhost:3001",
-          variant: "destructive",
-        });
       }
     }
   };
 
   useEffect(() => {
-    checkServerStatus();
-    const interval = setInterval(checkServerStatus, 5000);
-    return () => clearInterval(interval);
-  }, [status]); // Add status as dependency to prevent unnecessary toasts
+    const checkAndNotify = async () => {
+      await checkServerStatus();
+    };
 
-  return { status, checkServerStatus };
+    checkAndNotify();
+    const interval = setInterval(checkAndNotify, 3000); // Check every 3 seconds
+    
+    return () => clearInterval(interval);
+  }, []); // Remove status dependency to prevent loops
+
+  return { status };
 };
