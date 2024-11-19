@@ -1,32 +1,49 @@
 import pino from 'pino';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import compression from 'compression';
+import NodeCache from 'node-cache';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Verificar se estamos no ambiente Node.js
+const isNode = typeof process !== 'undefined' && 
+               process.versions != null && 
+               process.versions.node != null;
 
-const transport = pino.transport({
-  targets: [
-    {
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        translateTime: 'SYS:standard',
+let logger;
+
+if (isNode) {
+  // Configuração para Node.js
+  const transport = pino.transport({
+    targets: [
+      {
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          translateTime: 'SYS:standard',
+        },
+        level: 'info'
       },
-      level: 'info'
-    },
-    {
-      target: 'pino/file',
-      options: { 
-        destination: path.join(__dirname, '../../../logs/app.log'),
-        mkdir: true 
-      },
-      level: 'debug'
-    }
-  ]
-});
+      {
+        target: 'pino/file',
+        options: { 
+          destination: './logs/app.log',
+          mkdir: true 
+        },
+        level: 'debug'
+      }
+    ]
+  });
 
-export const logger = pino({
-  level: 'debug',
-  base: undefined,
-}, transport);
+  logger = pino({
+    level: 'debug',
+    base: undefined,
+  }, transport);
+} else {
+  // Configuração para navegador
+  logger = {
+    debug: console.debug,
+    info: console.info,
+    warn: console.warn,
+    error: console.error
+  };
+}
+
+export { logger };

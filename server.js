@@ -1,15 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
-import { fileURLToPath } from 'url';
-import path from 'path';
 import NodeCache from 'node-cache';
 import * as tf from '@tensorflow/tfjs';
 import { logger } from './src/utils/logging/logger.js';
 import { cacheMiddleware } from './src/utils/performance/serverCache.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import fs from 'fs';
+import path from 'path';
 
 const app = express();
 const PORT = 3001;
@@ -36,7 +33,6 @@ app.use('/api/status', statusRouter);
 app.use('/api/processing', processingRouter);
 
 // Cria as pastas necessárias se não existirem
-import fs from 'fs';
 const checkpointsDir = path.join(__dirname, 'checkpoints');
 const logsDir = path.join(__dirname, 'logs');
 const savedModelsDir = path.join(__dirname, 'saved-models');
