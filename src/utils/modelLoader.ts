@@ -2,7 +2,7 @@ import * as tf from '@tensorflow/tfjs';
 import { LoadedModel } from './modelLoader/types';
 import { readJsonFile, readMetadataFile, createWeightsFile } from './modelLoader/fileHandlers';
 import { getDefaultModelJson } from './modelLoader/modelStructure';
-import { logger } from '../../src/utils/logging/logger.js';
+import { logger } from '../utils/logging/logger';
 
 const validateTensorShapes = (modelJson: any) => {
   if (!modelJson.weightsManifest || !modelJson.weightsManifest[0].weights) {
@@ -15,7 +15,6 @@ const validateTensorShapes = (modelJson: any) => {
       throw new Error(`Invalid shape for weight ${weight.name}`);
     }
     
-    // Validate expected tensor sizes
     const expectedSize = weight.shape.reduce((a: number, b: number) => a * b, 1);
     if (expectedSize === 0) {
       throw new Error(`Invalid tensor size for ${weight.name}: shape results in 0 values`);
@@ -24,27 +23,22 @@ const validateTensorShapes = (modelJson: any) => {
 };
 
 const validateWeightsData = async (weightsFile: File): Promise<ArrayBuffer> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const buffer = reader.result as ArrayBuffer;
-      if (!buffer || buffer.byteLength === 0) {
-        reject(new Error('Weights file is empty'));
-        return;
-      }
+  try {
+    const buffer = await weightsFile.arrayBuffer();
+    if (!buffer || buffer.byteLength === 0) {
+      throw new Error('Weights file is empty');
+    }
 
-      // Verify the buffer size matches expected tensor shapes
-      const expectedMinSize = 4352 * 4; // 17x256 floats, 4 bytes each
-      if (buffer.byteLength < expectedMinSize) {
-        reject(new Error(`Weights file too small: expected at least ${expectedMinSize} bytes but got ${buffer.byteLength}`));
-        return;
-      }
+    const expectedMinSize = 4352 * 4; // 17x256 floats minimum
+    if (buffer.byteLength < expectedMinSize) {
+      throw new Error(`Weights file too small: expected at least ${expectedMinSize} bytes but got ${buffer.byteLength}`);
+    }
 
-      resolve(buffer);
-    };
-    reader.onerror = () => reject(new Error('Failed to read weights file'));
-    reader.readAsArrayBuffer(weightsFile);
-  });
+    return buffer;
+  } catch (error) {
+    logger.error('Error validating weights data:', error);
+    throw error;
+  }
 };
 
 export const loadModelFiles = async (
@@ -54,26 +48,25 @@ export const loadModelFiles = async (
   weightSpecsFile?: File
 ): Promise<LoadedModel> => {
   try {
-    let modelJson = await readJsonFile(jsonFile);
+    logger.info('Starting model loading process');
     
+    let modelJson = await readJsonFile(jsonFile);
     if (!modelJson.modelTopology || !modelJson.weightsManifest) {
       logger.warn('Using default model structure');
       modelJson = getDefaultModelJson();
     }
 
-    // Validate tensor shapes before loading
     validateTensorShapes(modelJson);
+    logger.info('Model topology validation passed');
 
-    // Validate and get weights data
     const weightsBuffer = await validateWeightsData(weightsFile);
+    logger.info('Weights data validation passed');
 
-    // Create weights manifest
     const weightsManifest = [{
       paths: ['weights.bin'],
       weights: modelJson.weightsManifest[0].weights,
     }];
 
-    // Create model artifacts
     const modelArtifacts = {
       modelTopology: modelJson.modelTopology,
       weightSpecs: modelJson.weightsManifest[0].weights,
@@ -84,35 +77,33 @@ export const loadModelFiles = async (
     };
 
     try {
+      logger.info('Loading model from artifacts');
       const model = await tf.loadLayersModel(tf.io.fromMemory(modelArtifacts));
 
-      // Verify model structure matches expected architecture
-      const expectedLayers = [256, 128, 15]; // Expected layer sizes
+      // Verify model structure
+      const expectedLayers = [256, 128, 15];
       const actualLayers = model.layers
-        .map(layer => {
-          const config = (layer as any).getConfig();
-          return config?.units;
-        })
+        .map(layer => (layer as any).getConfig()?.units)
         .filter(units => typeof units === 'number');
-      
+
       if (!expectedLayers.every((size, i) => actualLayers[i] === size)) {
         throw new Error('Model architecture does not match expected structure');
       }
 
+      logger.info('Model structure verification passed');
       const metadata = metadataFile ? await readMetadataFile(metadataFile) : {};
       
       return { model, metadata };
     } catch (error) {
-      logger.error('Error loading model:', error);
+      logger.error('Error in model loading/verification:', error);
       throw new Error(`Failed to load model: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   } catch (error) {
-    logger.error('Error loading model:', error);
+    logger.error('Error in model loading process:', error);
     throw new Error(`Failed to load model: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
-// Helper function to verify tensor dimensions
 export const verifyTensorDimensions = (tensor: tf.Tensor, expectedShape: number[]) => {
   const actualShape = tensor.shape;
   if (actualShape.length !== expectedShape.length) {
