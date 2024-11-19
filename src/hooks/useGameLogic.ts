@@ -25,30 +25,20 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   }>>([]);
   const [neuralNetworkVisualization, setNeuralNetworkVisualization] = useState<ModelVisualization | null>(null);
   const [modelMetrics, setModelMetrics] = useState({
-    accuracy: 0,
-    randomAccuracy: 0,
+    accuracy: 0.5,
+    randomAccuracy: 0.3,
     totalPredictions: 0,
+    perGameAccuracy: 0,
+    perGameRandomAccuracy: 0
   });
-  const [dates, setDates] = useState<Date[]>([]);
-  const [numbers, setNumbers] = useState<number[][]>([]);
-  const [frequencyData, setFrequencyData] = useState<{ [key: string]: number[] }>({});
-  const [updateInterval, setUpdateInterval] = useState(10);
-  const [isInfiniteMode, setIsInfiniteMode] = useState(false);
-  const [concursoNumber, setConcursoNumber] = useState(0);
-  const [trainingData, setTrainingData] = useState<number[][]>([]);
-  const [boardNumbers, setBoardNumbers] = useState<number[]>([]);
-  const [isManualMode, setIsManualMode] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
 
   // Initialize players only once when csvData or trainedModel changes
   useEffect(() => {
-    if (csvData.length > 0 && trainedModel && !isInitialized && players.length === 0) {
+    if (csvData.length > 0 && trainedModel && players.length === 0) {
       initializePlayers();
-      setIsInitialized(true);
       systemLogger.log('action', 'Jogadores inicializados uma única vez');
     }
-  }, [csvData, trainedModel, players.length, initializePlayers, isInitialized]);
+  }, [csvData, trainedModel, players.length, initializePlayers]);
 
   const addLog = useCallback((message: string, matches?: number) => {
     const logType = matches ? 'prediction' : 'action';
@@ -60,16 +50,11 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     setPlayers,
     csvData,
     trainedModel,
-    concursoNumber,
-    setEvolutionData,
     generation,
     addLog,
     setNeuralNetworkVisualization,
-    setBoardNumbers,
-    setModelMetrics,
-    setConcursoNumber,
+    setEvolutionData,
     setGameCount,
-    setIsProcessing,
     showToast: (title, description) => toast({ title, description })
   });
 
@@ -80,44 +65,9 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     setGeneration,
     setEvolutionData,
     trainedModel,
-    trainingData,
-    csvData,
-    concursoNumber,
     championData,
     setChampionData
   );
-
-  const updateFrequencyData = useCallback((newFrequencyData: { [key: string]: number[] }) => {
-    setFrequencyData(newFrequencyData);
-    
-    if (trainedModel && players.length > 0) {
-      const frequencyFeatures = Object.values(newFrequencyData).flat();
-      setTrainingData(prev => {
-        const lastEntry = prev[prev.length - 1];
-        if (lastEntry) {
-          return [...prev.slice(0, -1), [...lastEntry, ...frequencyFeatures]];
-        }
-        return prev;
-      });
-    }
-  }, [trainedModel, players]);
-
-  const toggleManualMode = useCallback(() => {
-    setIsManualMode(prev => {
-      const newMode = !prev;
-      systemLogger.log('action', newMode ? 
-        "Modo Manual Ativado - Clonagem automática desativada" : 
-        "Modo Manual Desativado - Clonagem automática reativada"
-      );
-      return newMode;
-    });
-  }, []);
-
-  const clonePlayer = useCallback((player: Player) => {
-    const clones = cloneChampion(player, 1);
-    setPlayers(prevPlayers => [...prevPlayers, ...clones]);
-    systemLogger.log('player', `Novo clone do Jogador #${player.id} criado`);
-  }, []);
 
   return {
     players,
@@ -128,21 +78,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     initializePlayers,
     gameLoop,
     evolveGeneration,
-    addLog,
-    toggleInfiniteMode: useCallback(() => setIsInfiniteMode(prev => !prev), []),
-    dates,
-    numbers,
-    updateFrequencyData,
-    isInfiniteMode,
-    boardNumbers,
-    concursoNumber,
-    trainedModel,
-    gameCount,
-    isManualMode,
-    toggleManualMode,
-    clonePlayer,
-    isProcessing,
-    setIsProcessing,
-    setPlayers
+    addLog
   };
 };

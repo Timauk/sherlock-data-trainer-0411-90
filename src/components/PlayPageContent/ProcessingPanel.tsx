@@ -66,6 +66,37 @@ const ProcessingPanel: React.FC<ProcessingPanelProps> = ({
 
   return (
     <div className="space-y-4 p-4 border rounded-lg">
+      <div className="flex flex-col gap-4">
+        {champion && (
+          <div className="bg-card p-4 rounded-lg shadow-sm">
+            <h3 className="text-lg font-semibold mb-2">Campeão Atual</h3>
+            <p className="text-sm text-muted-foreground">
+              {champion.name} (ID: {champion.id})
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Pontuação: {champion.score.toFixed(2)}
+            </p>
+          </div>
+        )}
+
+        {modelMetrics && (
+          <div className="bg-card p-4 rounded-lg shadow-sm">
+            <h3 className="text-lg font-semibold mb-2">Métricas do Modelo</h3>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Precisão: {(modelMetrics.accuracy * 100).toFixed(2)}%
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Precisão Aleatória: {(modelMetrics.randomAccuracy * 100).toFixed(2)}%
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Total de Previsões: {modelMetrics.totalPredictions}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="flex flex-wrap gap-4">
         <Button
           onClick={onPlay}
