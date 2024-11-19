@@ -62,6 +62,11 @@ const savedModelsDir = path.join(__dirname, 'saved-models');
   }
 });
 
+// Configuração do TensorFlow.js
+tf.setBackend('cpu').then(() => {
+  logger.info('TensorFlow.js backend configurado para CPU');
+});
+
 // Gerenciamento de memória
 setInterval(() => {
   if (global.gc) {
