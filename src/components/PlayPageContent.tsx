@@ -88,9 +88,9 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         evolutionData={gameLogic.evolutionData}
         boardNumbers={gameLogic.boardNumbers}
         concursoNumber={gameLogic.concursoNumber}
-        onUpdatePlayer={(playerId: number) => {
+        onUpdatePlayer={(playerId: number, newWeights: number[]) => {
           if (gameLogic.onUpdatePlayer) {
-            gameLogic.onUpdatePlayer(playerId);
+            gameLogic.onUpdatePlayer(playerId, newWeights);
           }
         }}
       />
