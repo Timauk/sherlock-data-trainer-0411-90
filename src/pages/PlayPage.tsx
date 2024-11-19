@@ -3,26 +3,27 @@ import { useTheme } from 'next-themes';
 import * as tf from '@tensorflow/tfjs';
 import { useToast } from "@/hooks/use-toast";
 import { useGameLogic } from '@/hooks/useGameLogic';
+import { useGameControls } from '@/hooks/useGameControls';
 import { PlayPageHeader } from '@/components/PlayPageHeader';
 import PlayPageContent from '@/components/PlayPageContent';
-import { Slider } from "@/components/ui/slider";
+import SpeedControl from '@/components/SpeedControl';
 
 const PlayPage: React.FC = () => {
-  const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [gameSpeed, setGameSpeed] = useState(1000); // Default 1 second
+  const [gameSpeed, setGameSpeed] = useState(1000);
   const [csvData, setCsvData] = useState<number[][]>([]);
   const [csvDates, setCsvDates] = useState<Date[]>([]);
   const [trainedModel, setTrainedModel] = useState<tf.LayersModel | null>(null);
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
+  const { isPlaying, playGame, pauseGame, resetGame } = useGameControls();
 
   const gameLogic = useGameLogic(csvData, trainedModel);
 
   const loadCSV = useCallback(async (file: File) => {
     try {
       const text = await file.text();
-      const lines = text.trim().split('\n').slice(1); // Ignorar o cabeçalho
+      const lines = text.trim().split('\n').slice(1);
       const data = lines.map(line => {
         const values = line.split(',');
         return {
@@ -42,7 +43,6 @@ const PlayPage: React.FC = () => {
 
   const loadModel = useCallback(async (jsonFile: File, weightsFile: File) => {
     try {
-      // Carrega o modelo usando os dois arquivos
       const model = await tf.loadLayersModel(
         tf.io.browserFiles([jsonFile, weightsFile])
       );
@@ -91,43 +91,9 @@ const PlayPage: React.FC = () => {
     }
   }, [trainedModel, gameLogic, toast]);
 
-  const handleRetraining = async () => {
-    if (!trainedModel || csvData.length === 0) return;
-    
-    setIsPlaying(false); // Pause the game
-    toast({
-      title: "Retreinamento Iniciado",
-      description: "O jogo foi pausado para retreinar o modelo com os dados acumulados.",
-    });
-
-    try {
-      const response = await fetch('http://localhost:3001/api/model/retrain', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          historicalData: csvData,
-          totalGames: gameLogic.gameCount
-        }),
-      });
-
-      if (!response.ok) throw new Error('Falha no retreinamento');
-      
-      const result = await response.json();
-      
-      toast({
-        title: "Retreinamento Concluído",
-        description: `Modelo retreinado com ${result.totalSamples} amostras. Precisão: ${(result.accuracy * 100).toFixed(2)}%`,
-      });
-      
-    } catch (error) {
-      toast({
-        title: "Erro no Retreinamento",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
-        variant: "destructive",
-      });
-    }
+  const handleSpeedChange = (value: number[]) => {
+    const newSpeed = 2000 - value[0];
+    setGameSpeed(newSpeed);
   };
 
   useEffect(() => {
@@ -137,12 +103,6 @@ const PlayPage: React.FC = () => {
         gameLogic.gameLoop();
         setProgress((prevProgress) => {
           const newProgress = prevProgress + (100 / csvData.length);
-          
-          // Check for retraining condition
-          if (gameLogic.gameCount > 0 && gameLogic.gameCount % 1000 === 0) {
-            handleRetraining();
-          }
-          
           if (newProgress >= 100) {
             if (!gameLogic.isManualMode) {
               gameLogic.evolveGeneration();
@@ -154,34 +114,12 @@ const PlayPage: React.FC = () => {
       }, gameSpeed);
     }
     return () => clearInterval(intervalId);
-  }, [isPlaying, csvData, gameLogic, gameSpeed, handleRetraining]);
-
-  const handleSpeedChange = (value: number[]) => {
-    const newSpeed = 2000 - value[0]; // Inverte a escala para que maior valor = mais rápido
-    setGameSpeed(newSpeed);
-    toast({
-      title: "Velocidade Ajustada",
-      description: `${newSpeed}ms por jogada`,
-    });
-  };
+  }, [isPlaying, csvData, gameLogic, gameSpeed]);
 
   return (
     <div className="p-6">
       <PlayPageHeader />
-      <div className="mb-4 p-4 bg-background rounded-lg shadow">
-        <h3 className="text-lg font-semibold mb-2">Controle de Velocidade</h3>
-        <Slider
-          defaultValue={[1000]}
-          max={1900}
-          min={100}
-          step={100}
-          onValueChange={handleSpeedChange}
-          className="w-full"
-        />
-        <p className="text-sm text-muted-foreground mt-1">
-          Intervalo atual: {gameSpeed}ms
-        </p>
-      </div>
+      <SpeedControl gameSpeed={gameSpeed} onSpeedChange={handleSpeedChange} />
       <PlayPageContent
         isPlaying={isPlaying}
         onPlay={playGame}
