@@ -11,10 +11,19 @@ const Navigation = () => {
           </Link>
           <div className="flex gap-4">
             <Link to="/" className="hover:text-primary">
+              Home
+            </Link>
+            <Link to="/play" className="hover:text-primary">
               Play
             </Link>
             <Link to="/training" className="hover:text-primary">
               Training
+            </Link>
+            <Link to="/implementation" className="hover:text-primary">
+              Implementation
+            </Link>
+            <Link to="/manual" className="hover:text-primary">
+              Manual
             </Link>
           </div>
         </div>

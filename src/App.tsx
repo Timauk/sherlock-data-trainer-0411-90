@@ -4,8 +4,11 @@ import { ThemeProvider } from "./components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import HomePage from './pages/HomePage';
 import PlayPage from './pages/PlayPage';
 import TrainingPage from './pages/TrainingPage';
+import ImplementationPlanPage from './pages/ImplementationPlanPage';
+import ManualPage from './pages/ManualPage';
 import Navigation from './components/Navigation';
 
 const queryClient = new QueryClient();
@@ -23,8 +26,11 @@ const App = () => {
             <Navigation />
             <main className="container mx-auto px-4">
               <Routes>
-                <Route path="/" element={<PlayPage />} />
+                <Route path="/" element={<HomePage />} />
+                <Route path="/play" element={<PlayPage />} />
                 <Route path="/training" element={<TrainingPage />} />
+                <Route path="/implementation" element={<ImplementationPlanPage />} />
+                <Route path="/manual" element={<ManualPage />} />
               </Routes>
             </main>
             <Toaster />

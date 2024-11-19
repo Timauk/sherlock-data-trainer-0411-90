@@ -67,6 +67,78 @@ const ProcessingPanel: React.FC<ProcessingPanelProps> = ({
   return (
     <div className="space-y-4 p-4 border rounded-lg">
       <div className="flex flex-col gap-4">
+        {/* File Upload Controls */}
+        <div className="flex flex-wrap gap-4">
+          <div>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={(e) => handleFileUpload(e, 'csv')}
+              className="hidden"
+              id="csvUpload"
+            />
+            <label htmlFor="csvUpload">
+              <Button variant="outline" asChild>
+                <span>Upload CSV</span>
+              </Button>
+            </label>
+          </div>
+
+          <div>
+            <input
+              type="file"
+              accept=".json"
+              onChange={(e) => handleFileUpload(e, 'model')}
+              className="hidden"
+              id="modelUpload"
+            />
+            <label htmlFor="modelUpload">
+              <Button variant="outline" asChild>
+                <span>Upload Modelo</span>
+              </Button>
+            </label>
+          </div>
+
+          <Button onClick={onSaveModel} variant="outline">
+            Salvar Modelo
+          </Button>
+        </div>
+
+        {/* Game Controls */}
+        <div className="flex flex-wrap gap-4">
+          <Button
+            onClick={onPlay}
+            disabled={isPlaying || isProcessing}
+            variant="default"
+          >
+            Iniciar
+          </Button>
+          
+          <Button
+            onClick={onPause}
+            disabled={!isPlaying || isProcessing}
+            variant="secondary"
+          >
+            Pausar
+          </Button>
+          
+          <Button
+            onClick={onReset}
+            disabled={isProcessing}
+            variant="destructive"
+          >
+            Resetar
+          </Button>
+          
+          <Button onClick={onThemeToggle} variant="outline">
+            Alternar Tema
+          </Button>
+        </div>
+
+        {/* Progress and Status */}
+        <Progress value={progress} className="w-full" />
+
+        {/* Champion Info */}
         {champion && (
           <div className="bg-card p-4 rounded-lg shadow-sm">
             <h3 className="text-lg font-semibold mb-2">Campeão Atual</h3>
@@ -74,11 +146,12 @@ const ProcessingPanel: React.FC<ProcessingPanelProps> = ({
               {champion.name} (ID: {champion.id})
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Pontuação: {champion.score.toFixed(2)}
+              Pontuação: {champion.score?.toFixed(2)}
             </p>
           </div>
         )}
 
+        {/* Model Metrics */}
         {modelMetrics && (
           <div className="bg-card p-4 rounded-lg shadow-sm">
             <h3 className="text-lg font-semibold mb-2">Métricas do Modelo</h3>
@@ -95,96 +168,18 @@ const ProcessingPanel: React.FC<ProcessingPanelProps> = ({
             </div>
           </div>
         )}
-      </div>
 
-      <div className="flex flex-wrap gap-4">
-        <Button
-          onClick={onPlay}
-          disabled={isPlaying || isProcessing}
-          variant="default"
-        >
-          Iniciar
-        </Button>
-        
-        <Button
-          onClick={onPause}
-          disabled={!isPlaying || isProcessing}
-          variant="secondary"
-        >
-          Pausar
-        </Button>
-        
-        <Button
-          onClick={onReset}
-          disabled={isProcessing}
-          variant="destructive"
-        >
-          Resetar
-        </Button>
-        
-        <Button onClick={onThemeToggle} variant="outline">
-          Alternar Tema
-        </Button>
-      </div>
-
-      <div className="flex flex-wrap gap-4">
+        {/* Server Status */}
         <div>
-          <input
-            type="file"
-            accept=".csv"
-            onChange={(e) => handleFileUpload(e, 'csv')}
-            className="hidden"
-            id="csvUpload"
-          />
-          <label htmlFor="csvUpload">
-            <Button variant="outline" asChild>
-              <span>Upload CSV</span>
-            </Button>
-          </label>
+          <p>Status do Servidor: {serverStatus}</p>
+          <Button
+            onClick={onToggleProcessing}
+            variant="outline"
+            disabled={isProcessing}
+          >
+            {isServerProcessing ? 'Parar Processamento' : 'Iniciar Processamento'}
+          </Button>
         </div>
-
-        <div>
-          <input
-            type="file"
-            accept=".json"
-            onChange={(e) => handleFileUpload(e, 'model')}
-            className="hidden"
-            id="modelUpload"
-          />
-          <label htmlFor="modelUpload">
-            <Button variant="outline" asChild>
-              <span>Upload Modelo</span>
-            </Button>
-          </label>
-        </div>
-
-        <Button onClick={onSaveModel} variant="outline">
-          Salvar Modelo
-        </Button>
-      </div>
-
-      <Progress value={progress} className="w-full" />
-
-      <div>
-        {champion && (
-          <p>Campeão: {champion.name || 'Sem nome'} (ID: {champion.id || 'N/A'})</p>
-        )}
-        {modelMetrics && (
-          <pre className="text-sm bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto">
-            {JSON.stringify(modelMetrics, null, 2)}
-          </pre>
-        )}
-      </div>
-
-      <div>
-        <p>Status do Servidor: {serverStatus}</p>
-        <Button
-          onClick={onToggleProcessing}
-          variant="outline"
-          disabled={isProcessing}
-        >
-          {isServerProcessing ? 'Parar Processamento' : 'Iniciar Processamento'}
-        </Button>
       </div>
     </div>
   );
