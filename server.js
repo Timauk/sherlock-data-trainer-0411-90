@@ -26,7 +26,7 @@ app.use(compression());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cacheMiddleware);
 
-// Rotas
+// Routes
 import { modelRouter } from './routes/model.js';
 import { checkpointRouter } from './routes/checkpoint.js';
 import { statusRouter } from './routes/status.js';
@@ -41,7 +41,7 @@ app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
 app.use('/api/processing', processingRouter);
 
-// Cria as pastas necessárias se não existirem
+// Create necessary directories if they don't exist
 const checkpointsDir = path.join(__dirname, 'checkpoints');
 const logsDir = path.join(__dirname, 'logs');
 const savedModelsDir = path.join(__dirname, 'saved-models');
@@ -52,14 +52,15 @@ const savedModelsDir = path.join(__dirname, 'saved-models');
   }
 });
 
-// Configuração do TensorFlow.js - Removida a inicialização direta
+// TensorFlow.js configuration using web version
 let tfBackend = null;
 try {
   const tf = await import('@tensorflow/tfjs');
+  await tf.setBackend('cpu');
   tfBackend = 'cpu';
-  logger.info('TensorFlow.js backend configurado para CPU');
+  logger.info('TensorFlow.js web backend configured for CPU');
 } catch (error) {
-  logger.warn('TensorFlow.js não pôde ser carregado:', error);
+  logger.warn('TensorFlow.js could not be loaded:', error);
 }
 
 // Error handler
@@ -72,21 +73,21 @@ app.use((err, req, res, next) => {
   }, 'Error occurred');
   
   res.status(500).json({
-    error: 'Erro interno do servidor',
+    error: 'Internal server error',
     message: err.message
   });
 });
 
-// Gerenciamento de memória
+// Memory management
 setInterval(() => {
   if (global.gc) {
     global.gc();
   }
-}, 300000); // Limpa a cada 5 minutos
+}, 300000); // Clean every 5 minutes
 
 app.listen(PORT, () => {
-  logger.info(`Servidor rodando em http://localhost:${PORT}`);
-  logger.info(`Diretório de checkpoints: ${checkpointsDir}`);
-  logger.info(`Diretório de logs: ${logsDir}`);
-  logger.info(`Diretório de modelos salvos: ${savedModelsDir}`);
+  logger.info(`Server running at http://localhost:${PORT}`);
+  logger.info(`Checkpoints directory: ${checkpointsDir}`);
+  logger.info(`Logs directory: ${logsDir}`);
+  logger.info(`Saved models directory: ${savedModelsDir}`);
 });
