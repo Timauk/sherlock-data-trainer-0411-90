@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
-import { LRUCache } from 'lru-cache';
+import NodeCache from 'node-cache';
 import { logger } from './src/utils/logging/logger.js';
 import { cacheMiddleware } from './src/utils/performance/serverCache.js';
 import fs from 'fs';
@@ -14,19 +14,13 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3001;
 
-// Initialize LRU Cache with options
-const cache = new LRUCache({
-  max: 500, // Maximum number of items
-  ttl: 1000 * 60 * 5, // Items live for 5 minutes
-});
-
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(compression());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cacheMiddleware);
 
-// Routes
+// Rotas
 import { modelRouter } from './routes/model.js';
 import { checkpointRouter } from './routes/checkpoint.js';
 import { statusRouter } from './routes/status.js';
@@ -41,7 +35,7 @@ app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
 app.use('/api/processing', processingRouter);
 
-// Create necessary directories if they don't exist
+// Cria as pastas necessárias se não existirem
 const checkpointsDir = path.join(__dirname, 'checkpoints');
 const logsDir = path.join(__dirname, 'logs');
 const savedModelsDir = path.join(__dirname, 'saved-models');
@@ -52,15 +46,14 @@ const savedModelsDir = path.join(__dirname, 'saved-models');
   }
 });
 
-// TensorFlow.js configuration using web version
+// Configuração do TensorFlow.js - Removida a inicialização direta
 let tfBackend = null;
 try {
   const tf = await import('@tensorflow/tfjs');
-  await tf.setBackend('cpu');
   tfBackend = 'cpu';
-  logger.info('TensorFlow.js web backend configured for CPU');
+  logger.info('TensorFlow.js backend configurado para CPU');
 } catch (error) {
-  logger.warn('TensorFlow.js could not be loaded:', error);
+  logger.warn('TensorFlow.js não pôde ser carregado:', error);
 }
 
 // Error handler
@@ -73,21 +66,21 @@ app.use((err, req, res, next) => {
   }, 'Error occurred');
   
   res.status(500).json({
-    error: 'Internal server error',
+    error: 'Erro interno do servidor',
     message: err.message
   });
 });
 
-// Memory management
+// Gerenciamento de memória
 setInterval(() => {
   if (global.gc) {
     global.gc();
   }
-}, 300000); // Clean every 5 minutes
+}, 300000); // Limpa a cada 5 minutos
 
 app.listen(PORT, () => {
-  logger.info(`Server running at http://localhost:${PORT}`);
-  logger.info(`Checkpoints directory: ${checkpointsDir}`);
-  logger.info(`Logs directory: ${logsDir}`);
-  logger.info(`Saved models directory: ${savedModelsDir}`);
+  logger.info(`Servidor rodando em http://localhost:${PORT}`);
+  logger.info(`Diretório de checkpoints: ${checkpointsDir}`);
+  logger.info(`Diretório de logs: ${logsDir}`);
+  logger.info(`Diretório de modelos salvos: ${savedModelsDir}`);
 });
