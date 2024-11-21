@@ -6,6 +6,7 @@ import { Player } from '@/types/gameTypes';
 import * as tf from '@tensorflow/tfjs';
 import NumberSelector from './NumberSelector';
 import { decisionTreeSystem } from '../../src/utils/learning/decisionTree.js';
+import PredictionsList from './PredictionsList';
 
 interface ChampionPredictionsProps {
   champion: Player | undefined;
@@ -20,7 +21,13 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   lastConcursoNumbers,
   isServerProcessing = false
 }) => {
-  const [predictions, setPredictions] = useState<Array<{ numbers: number[], estimatedAccuracy: number, targetMatches: number, matchesWithSelected: number, isGoodDecision: boolean }>>([]);
+  const [predictions, setPredictions] = useState<Array<{
+    numbers: number[];
+    estimatedAccuracy: number;
+    targetMatches: number;
+    matchesWithSelected: number;
+    isGoodDecision: boolean;
+  }>>([]);
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const { toast } = useToast();
 
@@ -56,15 +63,14 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       
       // Fatores do campeão que influenciam as previsões
       const championFactors = {
-        experience: champion.generation / 1000, // Experiência baseada na geração
-        performance: champion.score / 1000, // Performance histórica
-        consistency: champion.fitness / 15, // Consistência nos acertos
-        adaptability: champion.weights.reduce((a, b) => a + b, 0) / champion.weights.length // Média dos pesos
+        experience: champion.generation / 1000,
+        performance: champion.score / 1000,
+        consistency: champion.fitness / 15,
+        adaptability: champion.weights.reduce((a, b) => a + b, 0) / champion.weights.length
       };
       
       for (const target of targets) {
         for (let i = 0; i < target.count; i++) {
-          // Input enriquecido com informações do campeão
           const normalizedInput = [
             ...lastConcursoNumbers.slice(0, 15).map(n => n / 25),
             championFactors.experience,
@@ -78,40 +84,37 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
           const prediction = await trainedModel.predict(inputTensor) as tf.Tensor;
           const predictionArray = Array.from(await prediction.data());
           
-          // Pesos ajustados com base no conhecimento do campeão
-          const weightedNumbers = Array.from({ length: 25 }, (_, idx) => ({
+          let weightedNumbers = Array.from({ length: 25 }, (_, idx) => ({
             number: idx + 1,
             weight: predictionArray[idx % predictionArray.length] * 
                    (champion.weights[idx % champion.weights.length] / 1000) *
                    (target.matches / 15) *
-                   (1 + championFactors.consistency) * // Bônus de consistência
-                   (1 + championFactors.experience * 0.2) // Bônus de experiência
+                   (1 + championFactors.consistency) *
+                   (1 + championFactors.experience * 0.2)
           }));
           
-          const selectedNumbers = weightedNumbers
+          let selectedNumbers = weightedNumbers
             .sort((a, b) => b.weight - a.weight)
             .slice(0, 15)
             .map(n => n.number)
             .sort((a, b) => a - b);
           
           const estimatedAccuracy = (target.matches / 15) * 100 * 
-                                  (1 + championFactors.performance * 0.1); // Ajuste baseado na performance
+                                  (1 + championFactors.performance * 0.1);
           
-          // Adiciona validação da árvore de decisão
-          const lunarPhase = 'Crescente'; // Exemplo de fase lunar, pode ser alterado conforme necessário
+          const lunarPhase = 'Crescente';
           const isGoodDecision = decisionTreeSystem.predict(selectedNumbers, lunarPhase);
           
           if (!isGoodDecision) {
-            // Ajusta os pesos se a árvore de decisão indicar que não é uma boa escolha
             selectedNumbers = weightedNumbers
-              .slice(15, 30) // Pega os próximos 15 números mais prováveis
+              .slice(15, 30)
               .map(item => item.number)
               .sort((a, b) => a - b);
           }
 
           newPredictions.push({
             numbers: selectedNumbers,
-            estimatedAccuracy: estimatedAccuracy * (isGoodDecision ? 1.2 : 0.8), // Ajusta a confiança
+            estimatedAccuracy: estimatedAccuracy * (isGoodDecision ? 1.2 : 0.8),
             targetMatches: target.matches,
             matchesWithSelected: 0,
             isGoodDecision
@@ -161,37 +164,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
         </CardHeader>
         <CardContent>
           {predictions.length > 0 ? (
-            <div className="space-y-4">
-              {predictions.map((pred, idx) => (
-                <div key={idx} className="p-4 bg-gray-100 rounded-lg dark:bg-gray-800">
-                  <div className="font-semibold mb-2">
-                    Jogo {idx + 1} (Objetivo: {pred.targetMatches} acertos) - Decisão Boa: {pred.isGoodDecision ? 'Sim' : 'Não'}
-                  </div>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {pred.numbers.map((num, numIdx) => (
-                      <span 
-                        key={numIdx} 
-                        className={`px-3 py-1 rounded-full ${
-                          selectedNumbers.includes(num) 
-                            ? 'bg-green-500 text-white' 
-                            : 'bg-blue-500 text-white'
-                        }`}
-                      >
-                        {num.toString().padStart(2, '0')}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    <div>Estimativa de Acertos: {pred.estimatedAccuracy.toFixed(2)}%</div>
-                    {selectedNumbers.length === 15 && (
-                      <div className="mt-1 font-semibold text-green-600 dark:text-green-400">
-                        Acertos com sua seleção: {pred.matchesWithSelected}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <PredictionsList predictions={predictions} selectedNumbers={selectedNumbers} />
           ) : (
             <div className="text-center text-gray-500 dark:text-gray-400">
               Clique no botão para gerar 8 previsões para o próximo concurso
