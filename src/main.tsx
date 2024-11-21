@@ -11,7 +11,18 @@ if (!root) {
 }
 
 // Initialize TensorFlow before rendering
-initTensorFlow().then(() => {
+initTensorFlow().then((success) => {
+  if (!success) {
+    console.error('Failed to initialize TensorFlow.js');
+  }
+  ReactDOM.createRoot(root).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+}).catch(error => {
+  console.error('Critical error initializing TensorFlow.js:', error);
+  // Still render the app, as some features might work without TensorFlow
   ReactDOM.createRoot(root).render(
     <React.StrictMode>
       <App />
