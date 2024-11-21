@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Player } from '@/types/gameTypes';
 import * as tf from '@tensorflow/tfjs';
 import NumberSelector from './NumberSelector';
+import { decisionTreeSystem } from '../../src/utils/learning/decisionTree.js';
 
 interface ChampionPredictionsProps {
   champion: Player | undefined;
@@ -19,7 +20,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   lastConcursoNumbers,
   isServerProcessing = false
 }) => {
-  const [predictions, setPredictions] = useState<Array<{ numbers: number[], estimatedAccuracy: number, targetMatches: number, matchesWithSelected: number }>>([]);
+  const [predictions, setPredictions] = useState<Array<{ numbers: number[], estimatedAccuracy: number, targetMatches: number, matchesWithSelected: number, isGoodDecision: boolean }>>([]);
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const { toast } = useToast();
 
@@ -96,11 +97,24 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
           const estimatedAccuracy = (target.matches / 15) * 100 * 
                                   (1 + championFactors.performance * 0.1); // Ajuste baseado na performance
           
+          // Adiciona validação da árvore de decisão
+          const lunarPhase = 'Crescente'; // Exemplo de fase lunar, pode ser alterado conforme necessário
+          const isGoodDecision = decisionTreeSystem.predict(selectedNumbers, lunarPhase);
+          
+          if (!isGoodDecision) {
+            // Ajusta os pesos se a árvore de decisão indicar que não é uma boa escolha
+            selectedNumbers = weightedNumbers
+              .slice(15, 30) // Pega os próximos 15 números mais prováveis
+              .map(item => item.number)
+              .sort((a, b) => a - b);
+          }
+
           newPredictions.push({
             numbers: selectedNumbers,
-            estimatedAccuracy,
+            estimatedAccuracy: estimatedAccuracy * (isGoodDecision ? 1.2 : 0.8), // Ajusta a confiança
             targetMatches: target.matches,
-            matchesWithSelected: 0
+            matchesWithSelected: 0,
+            isGoodDecision
           });
 
           prediction.dispose();
@@ -151,7 +165,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
               {predictions.map((pred, idx) => (
                 <div key={idx} className="p-4 bg-gray-100 rounded-lg dark:bg-gray-800">
                   <div className="font-semibold mb-2">
-                    Jogo {idx + 1} (Objetivo: {pred.targetMatches} acertos)
+                    Jogo {idx + 1} (Objetivo: {pred.targetMatches} acertos) - Decisão Boa: {pred.isGoodDecision ? 'Sim' : 'Não'}
                   </div>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {pred.numbers.map((num, numIdx) => (

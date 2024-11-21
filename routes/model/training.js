@@ -1,6 +1,7 @@
 import express from 'express';
 import * as tf from '@tensorflow/tfjs';
 import { analyzePatterns, enrichDataWithPatterns } from './utils.js';
+import { decisionTreeSystem } from '../../src/utils/learning/decisionTree.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -72,12 +73,26 @@ async function backupModel(model, totalGames) {
 
 router.post('/train', async (req, res) => {
   try {
-    const { trainingData, playersKnowledge } = req.body;
+    const { trainingData, playersKnowledge, lunarPhase } = req.body;
     const model = await getOrCreateModel();
     
     totalSamples += trainingData.length;
     
     const combinedData = playersKnowledge ? [...trainingData, ...playersKnowledge] : trainingData;
+    
+    // Adiciona dados à árvore de decisão
+    if (playersKnowledge) {
+      playersKnowledge.forEach(data => {
+        const numbers = data.slice(0, 15);
+        const matches = data.slice(-1)[0];
+        decisionTreeSystem.addPlayerDecision(
+          { id: 'knowledge' },
+          numbers,
+          matches,
+          lunarPhase
+        );
+      });
+    }
     
     const patterns = analyzePatterns(combinedData);
     const enhancedData = enrichDataWithPatterns(combinedData, patterns);
@@ -98,6 +113,9 @@ router.post('/train', async (req, res) => {
       ]
     });
     
+    // Obtém insights da árvore de decisão
+    const treeInsights = decisionTreeSystem.getInsights();
+    
     res.json({
       loss: result.history.loss[result.history.loss.length - 1],
       accuracy: result.history.acc[result.history.acc.length - 1],
@@ -106,7 +124,8 @@ router.post('/train', async (req, res) => {
         layers: model.layers.length,
         totalParams: model.countParams(),
         combinedSamples: combinedData.length,
-        patternsFound: patterns.length
+        patternsFound: patterns.length,
+        treeInsights
       }
     });
     
