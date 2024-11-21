@@ -7,6 +7,7 @@ import { performanceMonitor } from "@/utils/performance/performanceMonitor";
 import { modelMonitoring } from "@/utils/monitoring/modelMonitoring";
 import { feedbackSystem } from "@/utils/prediction/feedbackSystem";
 import DiagnosticResults from './DiagnosticResults';
+import DiagnosticReport from './DiagnosticReport';
 import ConnectionStatus from './SystemDiagnostics/ConnectionStatus';
 import { SystemStatus, SpecializedModelsStatus, DataQualityMetrics, AnalysisStatus } from '@/types/monitoring';
 
@@ -118,33 +119,37 @@ const SystemDiagnostics = () => {
   }, []);
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex justify-between items-center">
-          Diagnóstico do Sistema
-          <button 
-            onClick={runDiagnostics}
-            className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-            disabled={isRunning}
-          >
-            {isRunning ? 'Atualizando...' : 'Atualizar'}
-          </button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ConnectionStatus />
-        
-        {isRunning && (
-          <div className="mb-4">
-            <Progress value={progress} className="mb-2" />
-            <p className="text-sm text-muted-foreground">
-              Executando diagnóstico... {progress.toFixed(0)}%
-            </p>
-          </div>
-        )}
-        <DiagnosticResults results={results} />
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="flex justify-between items-center">
+            Diagnóstico do Sistema
+            <button 
+              onClick={runDiagnostics}
+              className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+              disabled={isRunning}
+            >
+              {isRunning ? 'Atualizando...' : 'Atualizar'}
+            </button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ConnectionStatus />
+          
+          {isRunning && (
+            <div className="mb-4">
+              <Progress value={progress} className="mb-2" />
+              <p className="text-sm text-muted-foreground">
+                Executando diagnóstico... {progress.toFixed(0)}%
+              </p>
+            </div>
+          )}
+          <DiagnosticResults results={results} />
+        </CardContent>
+      </Card>
+
+      <DiagnosticReport />
+    </div>
   );
 };
 
