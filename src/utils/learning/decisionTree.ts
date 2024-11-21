@@ -1,4 +1,4 @@
-import { DecisionTree } from 'decision-tree';
+import * as tf from '@tensorflow/tfjs';
 import { Player } from '@/types/gameTypes';
 import { logger } from '../logging/logger';
 
@@ -13,15 +13,41 @@ interface PlayerDecision {
 }
 
 class PlayerDecisionTree {
-  private tree: any;
+  private model: tf.Sequential | null = null;
   private trainingData: PlayerDecision[] = [];
   
-  private features = [
-    'lunarPhase',
-    'evenCount',
-    'primeCount',
-    'sequentialCount'
-  ];
+  constructor() {
+    this.initModel();
+  }
+
+  private async initModel() {
+    this.model = tf.sequential();
+    
+    // Camada de entrada com 4 features
+    this.model.add(tf.layers.dense({
+      units: 16,
+      activation: 'relu',
+      inputShape: [4]
+    }));
+    
+    // Camada oculta
+    this.model.add(tf.layers.dense({
+      units: 8,
+      activation: 'relu'
+    }));
+    
+    // Camada de saída (classificação binária)
+    this.model.add(tf.layers.dense({
+      units: 1,
+      activation: 'sigmoid'
+    }));
+
+    this.model.compile({
+      optimizer: tf.train.adam(0.01),
+      loss: 'binaryCrossentropy',
+      metrics: ['accuracy']
+    });
+  }
 
   addPlayerDecision(player: Player, numbers: number[], matches: number, lunarPhase: string) {
     const decision: PlayerDecision = {
@@ -35,7 +61,7 @@ class PlayerDecisionTree {
     };
 
     this.trainingData.push(decision);
-    this.trainTree();
+    this.trainModel();
 
     logger.info(`Added new decision from player ${player.id} with ${matches} matches`);
   }
@@ -56,33 +82,63 @@ class PlayerDecisionTree {
     return count;
   }
 
-  private trainTree() {
-    if (this.trainingData.length < 10) return; // Aguarda dados suficientes
+  private async trainModel() {
+    if (!this.model || this.trainingData.length < 10) return;
 
-    this.tree = new DecisionTree(this.trainingData, 'success', this.features);
+    const features = this.trainingData.map(d => [
+      d.evenCount / 15,
+      d.primeCount / 15,
+      d.sequentialCount / 14,
+      d.lunarPhase === 'Crescente' ? 1 : 0
+    ]);
+
+    const labels = this.trainingData.map(d => d.success ? 1 : 0);
+
+    const xs = tf.tensor2d(features);
+    const ys = tf.tensor2d(labels, [labels.length, 1]);
+
+    await this.model.fit(xs, ys, {
+      epochs: 10,
+      batchSize: 32,
+      shuffle: true
+    });
+
+    xs.dispose();
+    ys.dispose();
+
     logger.info(`Decision tree retrained with ${this.trainingData.length} samples`);
   }
 
-  predict(numbers: number[], lunarPhase: string): boolean {
-    if (!this.tree) return true; // Retorna true se ainda não há árvore treinada
+  async predict(numbers: number[], lunarPhase: string): Promise<boolean> {
+    if (!this.model) {
+      await this.initModel();
+      return true;
+    }
 
-    const decision = {
-      lunarPhase,
-      evenCount: numbers.filter(n => n % 2 === 0).length,
-      primeCount: numbers.filter(n => this.isPrime(n)).length,
-      sequentialCount: this.countSequential(numbers)
-    };
+    const features = tf.tensor2d([[
+      numbers.filter(n => n % 2 === 0).length / 15,
+      numbers.filter(n => this.isPrime(n)).length / 15,
+      this.countSequential(numbers) / 14,
+      lunarPhase === 'Crescente' ? 1 : 0
+    ]]);
 
-    return this.tree.predict(decision);
+    const prediction = this.model.predict(features) as tf.Tensor;
+    const result = await prediction.data();
+
+    features.dispose();
+    prediction.dispose();
+
+    return result[0] > 0.5;
   }
 
   getInsights(): string[] {
-    if (!this.tree) return [];
+    if (!this.model) return [];
     
-    return this.features.map(feature => {
-      const importance = this.tree.importance(feature);
-      return `${feature}: ${(importance * 100).toFixed(2)}% importance`;
-    });
+    return [
+      `Total de amostras: ${this.trainingData.length}`,
+      `Taxa de sucesso: ${(this.trainingData.filter(d => d.success).length / this.trainingData.length * 100).toFixed(2)}%`,
+      `Média de acertos: ${(this.trainingData.reduce((acc, d) => acc + d.matches, 0) / this.trainingData.length).toFixed(2)}`
+    ];
   }
 }
 
