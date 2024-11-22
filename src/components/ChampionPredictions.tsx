@@ -62,16 +62,26 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
         { matches: 15, count: 1 }
       ];
       
-      // Fatores do campeão que influenciam as previsões
+      // Fatores técnicos do campeão
       const championFactors = {
         experience: champion.generation / 1000,
         performance: champion.score / 1000,
         consistency: champion.fitness / 15,
         adaptability: champion.weights.reduce((a, b) => a + b, 0) / champion.weights.length
       };
+
+      // Análise de frequência dos últimos números
+      const frequencyMap = new Map<number, number>();
+      for (let i = 1; i <= 25; i++) {
+        frequencyMap.set(i, 0);
+      }
+      lastConcursoNumbers.forEach(num => {
+        frequencyMap.set(num, (frequencyMap.get(num) || 0) + 1);
+      });
       
       for (const target of targets) {
         for (let i = 0; i < target.count; i++) {
+          // Entrada normalizada com fatores técnicos
           const normalizedInput = [
             ...lastConcursoNumbers.slice(0, 15).map(n => n / 25),
             championFactors.experience,
@@ -85,49 +95,62 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
           const prediction = await trainedModel.predict(inputTensor) as tf.Tensor;
           const predictionArray = Array.from(await prediction.data());
           
-          let weightedNumbers = Array.from({ length: 25 }, (_, idx) => ({
-            number: idx + 1,
-            weight: predictionArray[idx % predictionArray.length] * 
-                   (champion.weights[idx % champion.weights.length] / 1000) *
-                   (target.matches / 15) *
-                   (1 + championFactors.consistency) *
-                   (1 + championFactors.experience * 0.2)
-          }));
+          // Pesos técnicos para cada número
+          let weightedNumbers = Array.from({ length: 25 }, (_, idx) => {
+            const number = idx + 1;
+            const frequency = frequencyMap.get(number) || 0;
+            const baseWeight = predictionArray[idx % predictionArray.length];
+            const frequencyWeight = frequency / Math.max(...Array.from(frequencyMap.values()));
+            const championWeight = champion.weights[idx % champion.weights.length] / 1000;
+            
+            return {
+              number,
+              weight: baseWeight * 
+                     (1 + frequencyWeight) * 
+                     (1 + championWeight) * 
+                     (1 + championFactors.consistency) * 
+                     (target.matches / 15)
+            };
+          });
           
+          // Ordenação por peso e seleção dos números
+          weightedNumbers.sort((a, b) => b.weight - a.weight);
+          
+          // Garantir que não pegue os mesmos números de outras previsões
+          const existingNumbers = new Set(newPredictions.flatMap(p => p.numbers));
           let selectedNumbers = weightedNumbers
-            .sort((a, b) => b.weight - a.weight)
+            .filter(n => !existingNumbers.has(n.number))
             .slice(0, 15)
             .map(n => n.number)
             .sort((a, b) => a - b);
           
+          // Se não tiver números suficientes, pega os próximos disponíveis
+          if (selectedNumbers.length < 15) {
+            const remaining = weightedNumbers
+              .filter(n => !selectedNumbers.includes(n.number))
+              .slice(0, 15 - selectedNumbers.length)
+              .map(n => n.number);
+            selectedNumbers = [...selectedNumbers, ...remaining].sort((a, b) => a - b);
+          }
+          
           const estimatedAccuracy = (target.matches / 15) * 100 * 
                                   (1 + championFactors.performance * 0.1);
           
-          const lunarPhase = 'Crescente';
           // Usando ambos os sistemas de decisão
-          const classicDecision = decisionTreeSystem.predict(selectedNumbers, lunarPhase);
-          const tfDecision = await tfDecisionTree.predict(selectedNumbers, lunarPhase);
-          
-          // Considera uma boa decisão se ambos os sistemas concordarem
+          const classicDecision = decisionTreeSystem.predict(selectedNumbers, 'Crescente');
+          const tfDecision = await tfDecisionTree.predict(selectedNumbers, 'Crescente');
           const isGoodDecision = classicDecision && tfDecision;
-          
-          if (!isGoodDecision) {
-            selectedNumbers = weightedNumbers
-              .slice(15, 30)
-              .map(item => item.number)
-              .sort((a, b) => a - b);
-          }
 
           newPredictions.push({
             numbers: selectedNumbers,
             estimatedAccuracy: estimatedAccuracy * (isGoodDecision ? 1.2 : 0.8),
             targetMatches: target.matches,
-            matchesWithSelected: 0,
+            matchesWithSelected: selectedNumbers.filter(n => selectedNumbers.includes(n)).length,
             isGoodDecision
           });
 
           // Adiciona a decisão ao histórico de treinamento do TF
-          tfDecisionTree.addDecision(selectedNumbers, lunarPhase, isGoodDecision);
+          tfDecisionTree.addDecision(selectedNumbers, 'Crescente', isGoodDecision);
 
           prediction.dispose();
           inputTensor.dispose();
