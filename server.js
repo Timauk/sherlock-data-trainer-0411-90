@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
 import NodeCache from 'node-cache';
-import * as tf from '@tensorflow/tfjs';
+import * as tf from '@tensorflow/tfjs-node';
 import { logger } from './src/utils/logging/logger.js';
 import { cacheMiddleware } from './src/utils/performance/serverCache.js';
 import fs from 'fs';
