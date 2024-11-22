@@ -16,9 +16,15 @@ for /f "tokens=5" %%a in ('netstat -aon ^| find ":3001"') do taskkill /F /PID %%
 :: Verifica se as dependências estão instaladas
 if not exist "node_modules" (
     echo Instalando dependencias...
-    npm install
+    call npm install
+    if %ERRORLEVEL% NEQ 0 (
+        echo Erro ao instalar dependencias!
+        pause
+        exit
+    )
 ) else (
-    echo Dependencias ja instaladas.
+    echo Verificando atualizacoes das dependencias...
+    call npm install
 )
 
 :: Verifica se a pasta checkpoints existe, se não, cria
@@ -30,6 +36,24 @@ if not exist "checkpoints" (
     echo Pasta checkpoints ja existe.
 )
 
+:: Verifica se a pasta logs existe, se não, cria
+if not exist "logs" (
+    echo Criando pasta logs...
+    mkdir logs
+    echo Pasta logs criada com sucesso!
+) else (
+    echo Pasta logs ja existe.
+)
+
+:: Verifica se a pasta saved-models existe, se não, cria
+if not exist "saved-models" (
+    echo Criando pasta saved-models...
+    mkdir saved-models
+    echo Pasta saved-models criada com sucesso!
+) else (
+    echo Pasta saved-models ja existe.
+)
+
 :: Inicia o servidor em uma nova janela
 echo Iniciando servidor Node.js...
 start cmd /k "node --watch server.js"
@@ -37,8 +61,8 @@ start cmd /k "node --watch server.js"
 :: Aguarda 5 segundos para garantir que o servidor iniciou
 timeout /t 5 /nobreak
 
-:: Inicia a aplicação React
+:: Inicia a aplicação React e abre o navegador
 echo Iniciando aplicacao React...
-start cmd /k "npm run dev"
+start cmd /k "npm run dev -- --open"
 
 echo Ambiente de desenvolvimento iniciado com sucesso!
