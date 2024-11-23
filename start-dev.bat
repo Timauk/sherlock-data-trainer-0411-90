@@ -13,19 +13,9 @@ if %ERRORLEVEL% NEQ 0 (
 echo Liberando porta 3001...
 for /f "tokens=5" %%a in ('netstat -aon ^| find ":3001"') do taskkill /F /PID %%a 2>nul
 
-:: Verifica se as dependências estão instaladas
-if not exist "node_modules" (
-    echo Instalando dependencias...
-    call npm install
-    if %ERRORLEVEL% NEQ 0 (
-        echo Erro ao instalar dependencias!
-        pause
-        exit
-    )
-) else (
-    echo Verificando atualizacoes das dependencias...
-    call npm install
-)
+:: Força a atualização das dependências
+echo Atualizando dependencias...
+call npm install --force
 
 :: Verifica se a pasta checkpoints existe, se não, cria
 if not exist "checkpoints" (
