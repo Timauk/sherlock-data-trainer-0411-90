@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
 import NodeCache from 'node-cache';
-import * as tf from '@tensorflow/tfjs-node';
+import * as tf from '@tensorflow/tfjs';
 import { logger } from './src/utils/logging/logger.js';
 import { cacheMiddleware } from './src/utils/performance/serverCache.js';
 import fs from 'fs';
@@ -48,8 +48,10 @@ const savedModelsDir = path.join(__dirname, 'saved-models');
 });
 
 // Configuração do TensorFlow.js
-tf.setBackend('cpu').then(() => {
-  logger.info('TensorFlow.js backend configurado para CPU');
+tf.ready().then(() => {
+  logger.info('TensorFlow.js inicializado com sucesso');
+}).catch(error => {
+  logger.error('Erro ao inicializar TensorFlow.js:', error);
 });
 
 // Error handler
