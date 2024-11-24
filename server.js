@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
 import NodeCache from 'node-cache';
-import * as tf from '@tensorflow/tfjs';
+import * as tf from '@tensorflow/tfjs-node';
 import { logger } from './src/utils/logging/logger.js';
 import { cacheMiddleware } from './src/utils/performance/serverCache.js';
 import fs from 'fs';
@@ -13,8 +13,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
+// Configurações básicas
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(compression());
@@ -54,7 +55,7 @@ tf.ready().then(() => {
   logger.error('Erro ao inicializar TensorFlow.js:', error);
 });
 
-// Error handler
+// Error handler global
 app.use((err, req, res, next) => {
   logger.error({
     err,
