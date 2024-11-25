@@ -15,8 +15,18 @@ router.post('/process-game', async (req, res) => {
       isManualMode 
     } = req.body;
 
-    if (!inputData) {
-      throw new Error('Input data is required');
+    if (!inputData || !Array.isArray(inputData)) {
+      logger.error('Dados de entrada inválidos ou ausentes');
+      return res.status(400).json({ 
+        error: 'Dados de entrada são obrigatórios e devem ser um array' 
+      });
+    }
+
+    if (!playerWeights || !Array.isArray(playerWeights)) {
+      logger.error('Pesos do jogador inválidos ou ausentes');
+      return res.status(400).json({ 
+        error: 'Pesos do jogador são obrigatórios e devem ser um array' 
+      });
     }
 
     // Process game logic
@@ -42,32 +52,47 @@ async function processGameLogic(
   isInfiniteMode,
   isManualMode
 ) {
-  // Game processing logic here
-  const model = await getOrCreateModel();
-  const patterns = analyzePatterns([inputData]);
-  
-  if (!patterns || patterns.length === 0) {
-    throw new Error('Failed to analyze patterns from input data');
-  }
-
-  const enhancedInput = enrichDataWithPatterns([inputData], patterns)[0];
-  
-  if (!enhancedInput) {
-    throw new Error('Failed to enhance input data with patterns');
-  }
-
-  const prediction = await model.predict(tf.tensor2d([enhancedInput]));
-  const result = Array.from(await prediction.data());
-
-  return {
-    prediction: result,
-    patterns,
-    generation: generation + 1,
-    modelMetrics: {
-      layers: model.layers.length,
-      totalParams: model.countParams()
+  try {
+    // Game processing logic here
+    const model = await getOrCreateModel();
+    
+    if (!model) {
+      throw new Error('Modelo não pôde ser inicializado');
     }
-  };
+
+    const patterns = analyzePatterns([inputData]);
+    
+    if (!patterns || patterns.length === 0) {
+      throw new Error('Falha ao analisar padrões dos dados de entrada');
+    }
+
+    const enhancedInput = enrichDataWithPatterns([inputData], patterns)[0];
+    
+    if (!enhancedInput) {
+      throw new Error('Falha ao enriquecer dados de entrada com padrões');
+    }
+
+    const tensor = tf.tensor2d([enhancedInput]);
+    const prediction = await model.predict(tensor);
+    const result = Array.from(await prediction.data());
+
+    // Cleanup
+    tensor.dispose();
+    prediction.dispose();
+
+    return {
+      prediction: result,
+      patterns,
+      generation: generation + 1,
+      modelMetrics: {
+        layers: model.layers.length,
+        totalParams: model.countParams()
+      }
+    };
+  } catch (error) {
+    logger.error('Erro no processamento do jogo:', error);
+    throw error;
+  }
 }
 
 export { router as processingRouter };

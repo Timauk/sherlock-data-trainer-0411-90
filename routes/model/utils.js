@@ -4,54 +4,66 @@ let globalModel = null;
 let totalSamples = 0;
 
 export async function getOrCreateModel() {
-  if (!globalModel) {
-    globalModel = tf.sequential();
-    
-    globalModel.add(tf.layers.dense({ 
-      units: 256, 
-      activation: 'relu', 
-      inputShape: [17],
-      kernelInitializer: 'glorotNormal',
-      kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
-    }));
-    globalModel.add(tf.layers.batchNormalization());
-    globalModel.add(tf.layers.dropout({ rate: 0.3 }));
-    
-    globalModel.add(tf.layers.dense({ 
-      units: 128, 
-      activation: 'relu',
-      kernelInitializer: 'glorotNormal',
-      kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
-    }));
-    globalModel.add(tf.layers.batchNormalization());
-    
-    globalModel.add(tf.layers.dense({ 
-      units: 15, 
-      activation: 'sigmoid',
-      kernelInitializer: 'glorotNormal'
-    }));
+  try {
+    if (!globalModel) {
+      globalModel = tf.sequential();
+      
+      globalModel.add(tf.layers.dense({ 
+        units: 256, 
+        activation: 'relu', 
+        inputShape: [17],
+        kernelInitializer: 'glorotNormal',
+        kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
+      }));
+      globalModel.add(tf.layers.batchNormalization());
+      globalModel.add(tf.layers.dropout({ rate: 0.3 }));
+      
+      globalModel.add(tf.layers.dense({ 
+        units: 128, 
+        activation: 'relu',
+        kernelInitializer: 'glorotNormal',
+        kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
+      }));
+      globalModel.add(tf.layers.batchNormalization());
+      
+      globalModel.add(tf.layers.dense({ 
+        units: 15, 
+        activation: 'sigmoid',
+        kernelInitializer: 'glorotNormal'
+      }));
 
-    globalModel.compile({ 
-      optimizer: tf.train.adam(0.001),
-      loss: 'binaryCrossentropy',
-      metrics: ['accuracy']
-    });
+      globalModel.compile({ 
+        optimizer: tf.train.adam(0.001),
+        loss: 'binaryCrossentropy',
+        metrics: ['accuracy']
+      });
+    }
+    return globalModel;
+  } catch (error) {
+    console.error('Erro ao criar/obter modelo:', error);
+    return null;
   }
-  return globalModel;
 }
 
 export function analyzePatterns(data) {
   if (!data || !Array.isArray(data) || data.length === 0) {
+    console.warn('Dados inválidos para análise de padrões');
     return [];
   }
 
   const patterns = [];
   
   for (const entry of data) {
-    if (!entry || !Array.isArray(entry)) continue;
+    if (!entry || !Array.isArray(entry)) {
+      console.warn('Entrada inválida encontrada durante análise');
+      continue;
+    }
     
     const numbers = entry.slice(0, 15);
-    if (!numbers || numbers.length === 0) continue;
+    if (!numbers || numbers.length === 0) {
+      console.warn('Números inválidos encontrados durante análise');
+      continue;
+    }
     
     for (let i = 0; i < numbers.length - 1; i++) {
       if (numbers[i + 1] - numbers[i] === 1) {
@@ -80,14 +92,23 @@ export function analyzePatterns(data) {
 
 export function enrichDataWithPatterns(data, patterns) {
   if (!data || !Array.isArray(data) || data.length === 0) {
+    console.warn('Dados inválidos para enriquecimento');
     return [];
   }
 
+  if (!patterns || !Array.isArray(patterns)) {
+    console.warn('Padrões inválidos para enriquecimento');
+    return data;
+  }
+
   return data.map(entry => {
-    if (!entry || !Array.isArray(entry)) return entry;
+    if (!entry || !Array.isArray(entry)) {
+      console.warn('Entrada inválida encontrada durante enriquecimento');
+      return entry;
+    }
 
     const patternFeatures = [
-      patterns.filter(p => p.type === 'consecutive').length / patterns.length,
+      patterns.filter(p => p.type === 'consecutive').length / (patterns.length || 1),
       patterns.find(p => p.type === 'evenOdd')?.evenPercentage / 100 || 0.5,
       patterns.find(p => p.type === 'prime')?.primePercentage / 100 || 0.5
     ];
