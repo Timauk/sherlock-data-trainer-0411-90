@@ -2,21 +2,34 @@ import React from 'react'
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
+import { calculatePredictionConfidence } from '../utils/prediction/confidenceCalculator'
+import { Player } from '@/types/gameTypes'
 
 interface RealTimeFeedbackProps {
   accuracy: number;
   predictionConfidence: number;
   processingSpeed: number;
   memoryUsage: number;
+  champion?: Player | null;
+  currentPrediction?: number[];
+  historicalData?: number[][];
 }
 
 const RealTimeFeedback = ({
   accuracy,
   predictionConfidence,
   processingSpeed,
-  memoryUsage
+  memoryUsage,
+  champion,
+  currentPrediction,
+  historicalData
 }: RealTimeFeedbackProps) => {
   const { toast } = useToast()
+  
+  // Calculate real confidence if we have all required data
+  const calculatedConfidence = currentPrediction && historicalData ? 
+    calculatePredictionConfidence(currentPrediction, champion, historicalData) :
+    predictionConfidence;
 
   React.useEffect(() => {
     if (accuracy < 50) {
@@ -40,7 +53,7 @@ const RealTimeFeedback = ({
           label="Precisão do Modelo"
         />
         <Progress
-          value={predictionConfidence}
+          value={calculatedConfidence}
           showPercentage
           label="Confiança da Previsão"
         />
