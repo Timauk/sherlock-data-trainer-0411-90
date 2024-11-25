@@ -1,5 +1,4 @@
 import pino from 'pino';
-import compression from 'compression';
 import NodeCache from 'node-cache';
 
 // Verificar se estamos no ambiente Node.js
