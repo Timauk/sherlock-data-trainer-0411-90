@@ -61,7 +61,7 @@ setInterval(() => {
     console.warn('⚠️ Cache reaching capacity, cleaning old entries');
     cache.flushAll();
   }
-}, 300000);
+}, 300000); // Every 5 minutes
 
 export const cacheMiddleware = (req: any, res: any, next: any) => {
   const key = req.originalUrl;

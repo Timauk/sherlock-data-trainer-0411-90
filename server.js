@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import NodeCache from 'node-cache';
 import * as tf from '@tensorflow/tfjs-node';
 import { logger } from './src/utils/logging/logger.js';
 import { cacheMiddleware } from './src/utils/performance/serverCache.js';
