@@ -3,6 +3,10 @@ import { checkpointManager } from './utils/checkpointManager.js';
 import compression from 'compression';
 import { Worker } from 'worker_threads';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
@@ -31,7 +35,9 @@ async function clearBrowserMemory(res) {
 router.post('/', async (req, res) => {
   try {
     // Cria worker thread para processamento pesado
-    const worker = new Worker(path.join(process.cwd(), 'workers/checkpointWorker.js'));
+    const workerPath = path.join(__dirname, '..', 'workers', 'checkpointWorker.js');
+    
+    const worker = new Worker(workerPath);
     
     worker.postMessage({
       type: 'SAVE_CHECKPOINT',
