@@ -41,10 +41,17 @@ export async function getOrCreateModel() {
 }
 
 export function analyzePatterns(data) {
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return [];
+  }
+
   const patterns = [];
   
   for (const entry of data) {
+    if (!entry || !Array.isArray(entry)) continue;
+    
     const numbers = entry.slice(0, 15);
+    if (!numbers || numbers.length === 0) continue;
     
     for (let i = 0; i < numbers.length - 1; i++) {
       if (numbers[i + 1] - numbers[i] === 1) {
@@ -72,7 +79,13 @@ export function analyzePatterns(data) {
 }
 
 export function enrichDataWithPatterns(data, patterns) {
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return [];
+  }
+
   return data.map(entry => {
+    if (!entry || !Array.isArray(entry)) return entry;
+
     const patternFeatures = [
       patterns.filter(p => p.type === 'consecutive').length / patterns.length,
       patterns.find(p => p.type === 'evenOdd')?.evenPercentage / 100 || 0.5,

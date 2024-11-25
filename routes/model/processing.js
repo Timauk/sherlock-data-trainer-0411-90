@@ -15,6 +15,10 @@ router.post('/process-game', async (req, res) => {
       isManualMode 
     } = req.body;
 
+    if (!inputData) {
+      throw new Error('Input data is required');
+    }
+
     // Process game logic
     const result = await processGameLogic(
       inputData,
@@ -41,8 +45,17 @@ async function processGameLogic(
   // Game processing logic here
   const model = await getOrCreateModel();
   const patterns = analyzePatterns([inputData]);
+  
+  if (!patterns || patterns.length === 0) {
+    throw new Error('Failed to analyze patterns from input data');
+  }
+
   const enhancedInput = enrichDataWithPatterns([inputData], patterns)[0];
   
+  if (!enhancedInput) {
+    throw new Error('Failed to enhance input data with patterns');
+  }
+
   const prediction = await model.predict(tf.tensor2d([enhancedInput]));
   const result = Array.from(await prediction.data());
 
