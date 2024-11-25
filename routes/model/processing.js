@@ -1,6 +1,6 @@
 import express from 'express';
 import * as tf from '@tensorflow/tfjs';
-import { analyzePatterns, enrichDataWithPatterns } from './utils.js';
+import { analyzePatterns, enrichDataWithPatterns, getOrCreateModel } from './utils.js';
 import { logger } from '../../src/utils/logging/logger.js';
 
 const router = express.Router();
