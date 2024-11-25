@@ -3,7 +3,7 @@ class BrowserCache {
   private cache: Map<string, { value: any; expires: number }>;
   private maxKeys: number;
 
-  constructor(options: { stdTTL?: number; maxKeys?: number }) {
+  constructor(options: { maxKeys?: number } = {}) {
     this.cache = new Map();
     this.maxKeys = options.maxKeys || 1000;
   }
@@ -38,8 +38,6 @@ class BrowserCache {
 
   getStats() {
     return {
-      hits: 0,
-      misses: 0,
       keys: this.cache.size,
       ksize: this.cache.size,
       vsize: this.cache.size
@@ -47,10 +45,7 @@ class BrowserCache {
   }
 }
 
-const cache = new BrowserCache({ 
-  stdTTL: 3600,
-  maxKeys: 1000
-});
+const cache = new BrowserCache({ maxKeys: 1000 });
 
 // Monitor cache usage
 setInterval(() => {
