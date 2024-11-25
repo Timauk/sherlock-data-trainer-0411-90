@@ -1,6 +1,6 @@
 // Browser-compatible cache implementation
 class BrowserCache {
-  private cache: Map<string, { value: any; expires: number }>;
+  private cache: Map<string, { value: any; expires: number | null }>;
   private maxKeys: number;
 
   constructor(options: { maxKeys?: number } = {}) {
@@ -28,7 +28,7 @@ class BrowserCache {
 
     this.cache.set(key, {
       value,
-      expires: ttl ? Date.now() + (ttl * 1000) : 0
+      expires: ttl ? Date.now() + (ttl * 1000) : null
     });
   }
 

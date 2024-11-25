@@ -25,7 +25,7 @@ class BrowserCache {
 
     this.cache.set(key, {
       value,
-      expires: ttl ? Date.now() + (ttl * 1000) : 0
+      expires: ttl ? Date.now() + (ttl * 1000) : null
     });
   }
 
@@ -35,8 +35,6 @@ class BrowserCache {
 
   getStats() {
     return {
-      hits: 0,
-      misses: 0,
       keys: this.cache.size,
       ksize: this.cache.size,
       vsize: this.cache.size
@@ -44,10 +42,7 @@ class BrowserCache {
   }
 }
 
-const cache = new BrowserCache({ 
-  stdTTL: 3600,
-  maxKeys: 1000
-});
+const cache = new BrowserCache({ maxKeys: 1000 });
 
 // Monitor cache usage
 setInterval(() => {
@@ -58,7 +53,7 @@ setInterval(() => {
     console.warn('⚠️ Cache reaching capacity, cleaning old entries');
     cache.flushAll();
   }
-}, 300000);
+}, 300000); // Every 5 minutes
 
 export const cacheMiddleware = (req, res, next) => {
   const key = req.originalUrl;
