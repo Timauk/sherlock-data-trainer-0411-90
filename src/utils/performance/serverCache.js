@@ -1,33 +1,64 @@
-import NodeCache from 'node-cache';
-import { systemLogger } from '../logging/systemLogger.js';
+// Browser-compatible cache implementation
+class BrowserCache {
+  constructor(options = {}) {
+    this.cache = new Map();
+    this.maxKeys = options.maxKeys || 1000;
+  }
 
-const cache = new NodeCache({ 
-  stdTTL: 3600, // 1 hora
-  checkperiod: 120, // Checa a cada 2 minutos
-  maxKeys: 1000, // Limite máximo de chaves
-  useClones: false // Desativa clonagem para economizar memória
+  get(key) {
+    const item = this.cache.get(key);
+    if (!item) return null;
+    
+    if (item.expires && item.expires < Date.now()) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return item.value;
+  }
+
+  set(key, value, ttl) {
+    if (this.cache.size >= this.maxKeys) {
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
+
+    this.cache.set(key, {
+      value,
+      expires: ttl ? Date.now() + (ttl * 1000) : 0
+    });
+  }
+
+  flushAll() {
+    this.cache.clear();
+  }
+
+  getStats() {
+    return {
+      hits: 0,
+      misses: 0,
+      keys: this.cache.size,
+      ksize: this.cache.size,
+      vsize: this.cache.size
+    };
+  }
+}
+
+const cache = new BrowserCache({ 
+  stdTTL: 3600,
+  maxKeys: 1000
 });
 
-// Monitor de uso do cache
+// Monitor cache usage
 setInterval(() => {
   const stats = cache.getStats();
-  const cacheInfo = {
-    hits: stats.hits,
-    misses: stats.misses,
-    keys: stats.keys,
-    ksize: stats.ksize,
-    vsize: stats.vsize
-  };
+  console.log('📊 Cache Stats:', stats);
   
-  systemLogger.log('system', 'Cache stats', cacheInfo);
-  console.log('📊 Cache Stats:', cacheInfo);
-  
-  if (stats.keys > 800) { // 80% do limite
-    systemLogger.log('system', 'Cache reaching capacity, cleaning old entries');
-    console.warn('⚠️ Cache atingindo capacidade máxima, limpando entradas antigas');
+  if (stats.keys > 800) {
+    console.warn('⚠️ Cache reaching capacity, cleaning old entries');
     cache.flushAll();
   }
-}, 300000); // A cada 5 minutos
+}, 300000);
 
 export const cacheMiddleware = (req, res, next) => {
   const key = req.originalUrl;
@@ -41,7 +72,6 @@ export const cacheMiddleware = (req, res, next) => {
   console.log('❌ Cache Miss:', key);
   res.sendResponse = res.send;
   res.send = (body) => {
-    // Não armazena respostas muito grandes
     if (JSON.stringify(body).length < 50000) {
       cache.set(key, body);
       console.log('💾 Cache Stored:', key);
@@ -53,12 +83,7 @@ export const cacheMiddleware = (req, res, next) => {
   next();
 };
 
-// Função para limpar cache manualmente
 export const clearCache = () => {
   cache.flushAll();
   console.log('🧹 Cache limpo manualmente');
-  if (global.gc) {
-    global.gc();
-    console.log('🗑️ Garbage collection executada');
-  }
 };
