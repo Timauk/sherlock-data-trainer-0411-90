@@ -35,14 +35,14 @@ for /f "tokens=5" %%a in ('netstat -aon ^| find ":3001"') do taskkill /F /PID %%
 echo Updating dependencies...
 call npm install --force
 
-:: Create required directories
+:: Create required directories if they don't exist
 if not exist "checkpoints" mkdir checkpoints
 if not exist "logs" mkdir logs
 if not exist "saved-models" mkdir saved-models
 
-:: Start server with experimental watch mode
+:: Start server with explicit file path and no watch mode initially
 echo Starting Node.js server...
-start cmd /k "node --watch server.js"
+start cmd /k "node server.js"
 
 :: Wait for server to start
 timeout /t 5 /nobreak

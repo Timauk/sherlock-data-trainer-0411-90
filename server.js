@@ -36,12 +36,12 @@ app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
 app.use('/api/processing', processingRouter);
 
-// Create necessary directories
+// Create necessary directories with absolute paths
 const dirs = [
   path.join(__dirname, 'checkpoints'),
   path.join(__dirname, 'logs'),
   path.join(__dirname, 'saved-models')
-];
+].filter(Boolean); // Remove any null/undefined paths
 
 // Create directories if they don't exist
 await Promise.all(
