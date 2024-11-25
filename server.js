@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import compression from 'compression';
 import NodeCache from 'node-cache';
 import * as tf from '@tensorflow/tfjs-node';
 import { logger } from './src/utils/logging/logger.js';
@@ -18,7 +17,6 @@ const PORT = process.env.PORT || 3001;
 // Configurações básicas
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
-app.use(compression());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cacheMiddleware);
 
