@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -8,7 +8,7 @@ import NumberSelector from './NumberSelector';
 import PredictionsList from './PredictionsList';
 import { generatePredictions } from '../utils/prediction/predictionGenerator';
 import { systemLogger } from '../utils/logging/systemLogger';
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 
 interface ChampionPredictionsProps {
   champion: Player | undefined;
@@ -32,6 +32,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   }>>([]);
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [systemReady, setSystemReady] = useState(false);
   const { toast } = useToast();
 
   const handleNumbersSelected = (numbers: number[]) => {
@@ -44,23 +45,42 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
     }
   };
 
+  useEffect(() => {
+    const allDataLoaded = champion && trainedModel && lastConcursoNumbers;
+    setSystemReady(!!allDataLoaded);
+    
+    if (allDataLoaded) {
+      toast({
+        title: "Sistema Pronto",
+        description: "Todos os dados foram carregados com sucesso. Pronto para gerar jogos!",
+      });
+    }
+  }, [champion, trainedModel, lastConcursoNumbers, toast]);
+
   const getSystemStatus = () => {
-    if (!champion || !trainedModel || !lastConcursoNumbers) {
+    if (!systemReady) {
+      const missingItems = [];
+      if (!champion) missingItems.push('campeão');
+      if (!trainedModel) missingItems.push('modelo');
+      if (!lastConcursoNumbers) missingItems.push('números do último concurso');
+      
       return {
-        color: 'bg-yellow-600',
-        text: 'Aguardando dados...',
+        color: 'bg-yellow-500',
+        text: `Aguardando: ${missingItems.join(', ')}`,
+        icon: <AlertCircle className="h-4 w-4" />,
         ready: false
       };
     }
     return {
-      color: 'bg-green-600',
-      text: 'Pronto para gerar!',
+      color: 'bg-green-500',
+      text: 'Sistema Pronto para Gerar!',
+      icon: <CheckCircle2 className="h-4 w-4" />,
       ready: true
     };
   };
 
   const validateRequirements = () => {
-    if (!champion || !trainedModel || !lastConcursoNumbers) {
+    if (!systemReady) {
       const missingItems = [];
       if (!champion) missingItems.push('campeão');
       if (!trainedModel) missingItems.push('modelo');
@@ -128,12 +148,13 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
           <CardTitle className="flex justify-between items-center">
             <span>Previsões do Campeão {isServerProcessing ? '(Servidor)' : '(Local)'}</span>
             <div className="flex items-center gap-2">
-              <span className={`px-3 py-1 rounded-full text-white ${status.color}`}>
-                {status.text}
-              </span>
+              <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-white ${status.color}`}>
+                {status.icon}
+                <span>{status.text}</span>
+              </div>
               <Button 
                 onClick={generatePredictionsHandler} 
-                className={`${status.color} hover:opacity-90`}
+                className={`${status.color} hover:opacity-90 transition-all duration-200`}
                 disabled={isGenerating || !status.ready}
               >
                 {isGenerating ? (
@@ -158,8 +179,10 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
                   <Loader2 className="h-8 w-8 animate-spin" />
                   <p>Gerando previsões...</p>
                 </div>
-              ) : (
+              ) : systemReady ? (
                 "Clique em 'Gerar 8 Jogos' para ver as previsões"
+              ) : (
+                "Aguardando carregamento dos dados necessários..."
               )}
             </div>
           )}
