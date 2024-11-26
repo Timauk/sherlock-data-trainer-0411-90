@@ -81,8 +81,8 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
     setIsGenerating(true);
     try {
       const newPredictions = await generatePredictions(
-        champion,
-        trainedModel,
+        champion!,
+        trainedModel!,
         lastConcursoNumbers,
         selectedNumbers
       );
@@ -91,16 +91,13 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
         throw new Error("Não foi possível gerar previsões");
       }
 
-      setPredictions(newPredictions.map(pred => ({
-        ...pred,
-        matchesWithSelected: pred.numbers.filter(n => selectedNumbers.includes(n)).length
-      })));
-
-      systemLogger.log('prediction', `8 jogos gerados com sucesso pelo campeão #${champion.id}`);
+      setPredictions(newPredictions);
+      
+      systemLogger.log('prediction', `8 jogos gerados com sucesso pelo campeão #${champion!.id}`);
       
       toast({
         title: "Previsões Geradas",
-        description: `8 jogos foram gerados considerando experiência e performance do campeão! ${
+        description: `8 jogos foram gerados com sucesso! ${
           isServerProcessing ? '(Processado no servidor)' : '(Processado no navegador)'
         }`
       });
@@ -154,7 +151,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
                   <p>Gerando previsões...</p>
                 </div>
               ) : (
-                "Aguardando geração de previsões. Clique no botão 'Gerar 8 Jogos' quando o modelo estiver treinado."
+                "Clique em 'Gerar 8 Jogos' para ver as previsões"
               )}
             </div>
           )}
