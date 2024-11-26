@@ -15,9 +15,10 @@ const PORT = process.env.PORT || 3001;
 
 // Basic configurations
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://lovable.dev'],
-  methods: ['GET', 'POST'],
-  credentials: true
+  origin: ['http://localhost:3000', 'http://localhost:8080', 'https://lovable.dev'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Aumentar limite de payload para 100mb
