@@ -15,17 +15,25 @@ router.post('/process-game', async (req, res) => {
       isManualMode 
     } = req.body;
 
+    // Validação mais rigorosa dos dados
     if (!inputData || !Array.isArray(inputData)) {
-      logger.error('Dados de entrada inválidos ou ausentes');
+      logger.error('Invalid or missing input data');
       return res.status(400).json({ 
-        error: 'Dados de entrada são obrigatórios e devem ser um array' 
+        error: 'Input data is required and must be an array' 
       });
     }
 
     if (!playerWeights || !Array.isArray(playerWeights)) {
-      logger.error('Pesos do jogador inválidos ou ausentes');
+      logger.error('Invalid or missing player weights');
       return res.status(400).json({ 
-        error: 'Pesos do jogador são obrigatórios e devem ser um array' 
+        error: 'Player weights are required and must be an array' 
+      });
+    }
+
+    if (typeof generation !== 'number') {
+      logger.error('Invalid generation value');
+      return res.status(400).json({
+        error: 'Generation must be a number'
       });
     }
 
@@ -53,23 +61,22 @@ async function processGameLogic(
   isManualMode
 ) {
   try {
-    // Game processing logic here
     const model = await getOrCreateModel();
     
     if (!model) {
-      throw new Error('Modelo não pôde ser inicializado');
+      throw new Error('Model could not be initialized');
     }
 
     const patterns = analyzePatterns([inputData]);
     
     if (!patterns || patterns.length === 0) {
-      throw new Error('Falha ao analisar padrões dos dados de entrada');
+      throw new Error('Failed to analyze input data patterns');
     }
 
     const enhancedInput = enrichDataWithPatterns([inputData], patterns)[0];
     
     if (!enhancedInput) {
-      throw new Error('Falha ao enriquecer dados de entrada com padrões');
+      throw new Error('Failed to enrich input data with patterns');
     }
 
     const tensor = tf.tensor2d([enhancedInput]);
@@ -90,7 +97,7 @@ async function processGameLogic(
       }
     };
   } catch (error) {
-    logger.error('Erro no processamento do jogo:', error);
+    logger.error('Error in game processing:', error);
     throw error;
   }
 }
