@@ -44,35 +44,35 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
     }
   };
 
+  const getSystemStatus = () => {
+    if (!champion || !trainedModel || !lastConcursoNumbers) {
+      return {
+        color: 'bg-yellow-600',
+        text: 'Aguardando dados...',
+        ready: false
+      };
+    }
+    return {
+      color: 'bg-green-600',
+      text: 'Pronto para gerar!',
+      ready: true
+    };
+  };
+
   const validateRequirements = () => {
-    // Reduzimos as validações para permitir geração mais cedo
-    if (!champion) {
+    if (!champion || !trainedModel || !lastConcursoNumbers) {
+      const missingItems = [];
+      if (!champion) missingItems.push('campeão');
+      if (!trainedModel) missingItems.push('modelo');
+      if (!lastConcursoNumbers) missingItems.push('números do último concurso');
+      
       toast({
-        title: "Aviso",
-        description: "Aguardando dados do campeão...",
+        title: "Sistema em Preparação",
+        description: `Aguardando: ${missingItems.join(', ')}`,
         variant: "default"
       });
       return false;
     }
-
-    if (!trainedModel) {
-      toast({
-        title: "Aviso",
-        description: "Aguardando modelo...",
-        variant: "default"
-      });
-      return false;
-    }
-
-    if (!lastConcursoNumbers || lastConcursoNumbers.length === 0) {
-      toast({
-        title: "Aviso",
-        description: "Aguardando números do último concurso...",
-        variant: "default"
-      });
-      return false;
-    }
-
     return true;
   };
 
@@ -114,6 +114,8 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
     }
   };
 
+  const status = getSystemStatus();
+
   return (
     <div className="space-y-4">
       <NumberSelector 
@@ -125,20 +127,25 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
         <CardHeader>
           <CardTitle className="flex justify-between items-center">
             <span>Previsões do Campeão {isServerProcessing ? '(Servidor)' : '(Local)'}</span>
-            <Button 
-              onClick={generatePredictionsHandler} 
-              className="bg-green-600 hover:bg-green-700"
-              disabled={isGenerating || (!champion && !trainedModel)}
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Gerando...
-                </>
-              ) : (
-                'Gerar 8 Jogos'
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-white ${status.color}`}>
+                {status.text}
+              </span>
+              <Button 
+                onClick={generatePredictionsHandler} 
+                className={`${status.color} hover:opacity-90`}
+                disabled={isGenerating || !status.ready}
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Gerando...
+                  </>
+                ) : (
+                  'Gerar 8 Jogos'
+                )}
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
