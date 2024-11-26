@@ -44,33 +44,39 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
     }
   };
 
-  const generatePredictionsHandler = async () => {
+  const validateRequirements = () => {
     if (!champion) {
       toast({
         title: "Erro",
-        description: "Não há campeão disponível para gerar previsões.",
+        description: "Não há campeão disponível para gerar previsões. Aguarde o treinamento completar.",
         variant: "destructive"
       });
-      return;
+      return false;
     }
 
     if (!trainedModel) {
       toast({
         title: "Erro",
-        description: "O modelo não está treinado ou disponível.",
+        description: "O modelo não está treinado ou disponível. Aguarde o treinamento completar.",
         variant: "destructive"
       });
-      return;
+      return false;
     }
 
     if (!lastConcursoNumbers || lastConcursoNumbers.length === 0) {
       toast({
         title: "Erro",
-        description: "Não há números do último concurso disponíveis.",
+        description: "Não há números do último concurso disponíveis. Carregue os dados primeiro.",
         variant: "destructive"
       });
-      return;
+      return false;
     }
+
+    return true;
+  };
+
+  const generatePredictionsHandler = async () => {
+    if (!validateRequirements()) return;
 
     setIsGenerating(true);
     try {
@@ -148,7 +154,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
                   <p>Gerando previsões...</p>
                 </div>
               ) : (
-                "Clique no botão para gerar 8 previsões para o próximo concurso"
+                "Aguardando geração de previsões. Clique no botão 'Gerar 8 Jogos' quando o modelo estiver treinado."
               )}
             </div>
           )}
