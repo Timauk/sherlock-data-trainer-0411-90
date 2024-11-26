@@ -47,6 +47,13 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
 
   useEffect(() => {
     const allDataLoaded = champion && trainedModel && lastConcursoNumbers;
+    console.log('Estado dos dados:', {
+      hasChampion: !!champion,
+      hasModel: !!trainedModel,
+      hasNumbers: !!lastConcursoNumbers,
+      allDataLoaded
+    });
+    
     setSystemReady(!!allDataLoaded);
     
     if (allDataLoaded) {
@@ -54,6 +61,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
         title: "Sistema Pronto",
         description: "Todos os dados foram carregados com sucesso. Pronto para gerar jogos!",
       });
+      systemLogger.log('system', 'Sistema pronto para gerar previsões');
     }
   }, [champion, trainedModel, lastConcursoNumbers, toast]);
 
@@ -63,6 +71,11 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       if (!champion) missingItems.push('campeão');
       if (!trainedModel) missingItems.push('modelo');
       if (!lastConcursoNumbers) missingItems.push('números do último concurso');
+      
+      console.log('Status do sistema:', {
+        systemReady,
+        missingItems
+      });
       
       return {
         color: 'bg-yellow-500',
@@ -86,6 +99,14 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       if (!trainedModel) missingItems.push('modelo');
       if (!lastConcursoNumbers) missingItems.push('números do último concurso');
       
+      console.log('Validação de requisitos:', {
+        systemReady,
+        missingItems,
+        champion: !!champion,
+        trainedModel: !!trainedModel,
+        lastConcursoNumbers: !!lastConcursoNumbers
+      });
+      
       toast({
         title: "Sistema em Preparação",
         description: `Aguardando: ${missingItems.join(', ')}`,
@@ -101,6 +122,12 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
 
     setIsGenerating(true);
     try {
+      console.log('Iniciando geração de previsões:', {
+        championId: champion?.id,
+        hasModel: !!trainedModel,
+        numbersLength: lastConcursoNumbers?.length
+      });
+
       const newPredictions = await generatePredictions(
         champion!,
         trainedModel!,
@@ -121,6 +148,11 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
         description: `8 jogos foram gerados com sucesso! ${
           isServerProcessing ? '(Processado no servidor)' : '(Processado no navegador)'
         }`
+      });
+
+      console.log('Previsões geradas com sucesso:', {
+        count: newPredictions.length,
+        firstPrediction: newPredictions[0]
       });
     } catch (error) {
       console.error("Erro ao gerar previsões:", error);
