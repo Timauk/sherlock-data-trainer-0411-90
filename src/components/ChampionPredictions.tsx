@@ -8,6 +8,7 @@ import NumberSelector from './NumberSelector';
 import PredictionsList from './PredictionsList';
 import { generatePredictions } from '../utils/prediction/predictionGenerator';
 import { systemLogger } from '../utils/logging/systemLogger';
+import { Loader2 } from "lucide-react";
 
 interface ChampionPredictionsProps {
   champion: Player | undefined;
@@ -44,10 +45,28 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   };
 
   const generatePredictionsHandler = async () => {
-    if (!champion || !trainedModel || !lastConcursoNumbers.length) {
+    if (!champion) {
       toast({
         title: "Erro",
-        description: "Não há campeão ou modelo treinado disponível.",
+        description: "Não há campeão disponível para gerar previsões.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!trainedModel) {
+      toast({
+        title: "Erro",
+        description: "O modelo não está treinado ou disponível.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!lastConcursoNumbers || lastConcursoNumbers.length === 0) {
+      toast({
+        title: "Erro",
+        description: "Não há números do último concurso disponíveis.",
         variant: "destructive"
       });
       return;
@@ -61,6 +80,10 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
         lastConcursoNumbers,
         selectedNumbers
       );
+
+      if (!newPredictions || newPredictions.length === 0) {
+        throw new Error("Não foi possível gerar previsões");
+      }
 
       setPredictions(newPredictions.map(pred => ({
         ...pred,
@@ -103,7 +126,14 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
               className="bg-green-600 hover:bg-green-700"
               disabled={isGenerating}
             >
-              {isGenerating ? 'Gerando...' : 'Gerar 8 Jogos'}
+              {isGenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Gerando...
+                </>
+              ) : (
+                'Gerar 8 Jogos'
+              )}
             </Button>
           </CardTitle>
         </CardHeader>
@@ -111,8 +141,15 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
           {predictions.length > 0 ? (
             <PredictionsList predictions={predictions} selectedNumbers={selectedNumbers} />
           ) : (
-            <div className="text-center text-gray-500 dark:text-gray-400">
-              Clique no botão para gerar 8 previsões para o próximo concurso
+            <div className="text-center text-gray-500 dark:text-gray-400 p-4">
+              {isGenerating ? (
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                  <p>Gerando previsões...</p>
+                </div>
+              ) : (
+                "Clique no botão para gerar 8 previsões para o próximo concurso"
+              )}
             </div>
           )}
         </CardContent>
