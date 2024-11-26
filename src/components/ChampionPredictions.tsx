@@ -45,29 +45,30 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   };
 
   const validateRequirements = () => {
+    // Reduzimos as validações para permitir geração mais cedo
     if (!champion) {
       toast({
-        title: "Erro",
-        description: "Não há campeão disponível para gerar previsões. Aguarde o treinamento completar.",
-        variant: "destructive"
+        title: "Aviso",
+        description: "Aguardando dados do campeão...",
+        variant: "default"
       });
       return false;
     }
 
     if (!trainedModel) {
       toast({
-        title: "Erro",
-        description: "O modelo não está treinado ou disponível. Aguarde o treinamento completar.",
-        variant: "destructive"
+        title: "Aviso",
+        description: "Aguardando modelo...",
+        variant: "default"
       });
       return false;
     }
 
     if (!lastConcursoNumbers || lastConcursoNumbers.length === 0) {
       toast({
-        title: "Erro",
-        description: "Não há números do último concurso disponíveis. Carregue os dados primeiro.",
-        variant: "destructive"
+        title: "Aviso",
+        description: "Aguardando números do último concurso...",
+        variant: "default"
       });
       return false;
     }
@@ -127,7 +128,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
             <Button 
               onClick={generatePredictionsHandler} 
               className="bg-green-600 hover:bg-green-700"
-              disabled={isGenerating}
+              disabled={isGenerating || (!champion && !trainedModel)}
             >
               {isGenerating ? (
                 <>
