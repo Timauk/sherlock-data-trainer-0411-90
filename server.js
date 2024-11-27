@@ -3,6 +3,7 @@ import cors from 'cors';
 import * as tf from '@tensorflow/tfjs';
 import { logger } from './src/utils/logging/logger.js';
 import { cacheMiddleware } from './src/utils/performance/serverCache.js';
+import compression from 'compression';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -13,7 +14,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Basic configurations
+// Configurações básicas
 app.use(cors({
   origin: ['http://localhost:3000', 'http://localhost:8080', 'https://lovable.dev'],
   methods: ['GET', 'POST', 'OPTIONS'],
@@ -21,13 +22,15 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// Compressão gzip para todas as respostas
+app.use(compression());
+
 // Aumentar limite de payload para 100mb
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 app.use(express.static('public'));
 app.use(cacheMiddleware);
 
-// Routes
 import { modelRouter } from './routes/model.js';
 import { checkpointRouter } from './routes/checkpoint.js';
 import { statusRouter } from './routes/status.js';
@@ -69,6 +72,16 @@ await tf.ready().then(() => {
 }).catch(error => {
   logger.error('Error initializing TensorFlow.js:', error);
 });
+
+// Monitoramento de memória
+setInterval(() => {
+  const usage = process.memoryUsage();
+  logger.info('Server Memory Usage:', {
+    heapUsed: `${Math.round(usage.heapUsed / 1024 / 1024)}MB`,
+    heapTotal: `${Math.round(usage.heapTotal / 1024 / 1024)}MB`,
+    rss: `${Math.round(usage.rss / 1024 / 1024)}MB`
+  });
+}, 300000); // A cada 5 minutos
 
 // Global error handler
 app.use((err, req, res, next) => {
