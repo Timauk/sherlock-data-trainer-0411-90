@@ -14,18 +14,16 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Log de inicialização com cor verde
-logger.info('\x1b[32m%s\x1b[0m', 'Iniciando servidor...', {
+// Log initialization
+logger.info('\x1b[32m%s\x1b[0m', 'Starting server...', {
   nodeVersion: process.version,
   platform: process.platform,
   arch: process.arch
 });
 
-// Updated CORS configuration to accept all origins in development
+// CORS configuration
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://lovable.dev']
-    : '*',
+  origin: '*', // Allow all origins temporarily for development
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization']

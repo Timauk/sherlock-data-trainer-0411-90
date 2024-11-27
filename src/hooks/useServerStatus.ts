@@ -7,12 +7,12 @@ export const useServerStatus = () => {
 
   const checkServerStatus = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/test`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/test`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        mode: 'cors'
       });
 
       if (response.ok) {
@@ -26,8 +26,8 @@ export const useServerStatus = () => {
       if (status !== 'offline') {
         setStatus('offline');
         toast({
-          title: "Servidor Offline",
-          description: "Não foi possível conectar ao servidor",
+          title: "Server Offline",
+          description: "Could not connect to server",
           variant: "destructive"
         });
       }

@@ -11,11 +11,7 @@ class SystemLogger {
   private maxLogs = 1000;
 
   private constructor() {
-    // Bind methods to instance
-    this.log = this.log.bind(this);
-    this.getLogs = this.getLogs.bind(this);
-    this.getLogsByType = this.getLogsByType.bind(this);
-    this.clearLogs = this.clearLogs.bind(this);
+    // No need to bind methods when using arrow functions
   }
 
   public static getInstance(): SystemLogger {
@@ -25,7 +21,7 @@ class SystemLogger {
     return SystemLogger.instance;
   }
 
-  public log(type: LogEntry['type'], message: string, details?: any): void {
+  public log = (type: LogEntry['type'], message: string, details?: any): void => {
     const entry: LogEntry = {
       timestamp: new Date(),
       type,
@@ -47,19 +43,19 @@ class SystemLogger {
 
     // Also log to console for debugging
     console.log(`[${type.toUpperCase()}] ${message}`, details || '');
-  }
+  };
 
-  public getLogs(): LogEntry[] {
+  public getLogs = (): LogEntry[] => {
     return [...this.logs];
-  }
+  };
 
-  public getLogsByType(type: LogEntry['type']): LogEntry[] {
+  public getLogsByType = (type: LogEntry['type']): LogEntry[] => {
     return this.logs.filter(log => log.type === type);
-  }
+  };
 
-  public clearLogs(): void {
+  public clearLogs = (): void => {
     this.logs = [];
-  }
+  };
 }
 
 // Create and export the singleton instance
