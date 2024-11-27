@@ -1,8 +1,10 @@
 import * as tf from '@tensorflow/tfjs';
 import { Player } from '@/types/gameTypes';
-import { decisionTreeSystem } from '../../utils/learning/decisionTree.js';
-import { tfDecisionTree } from '../learning/tfDecisionTree';
+import { decisionTreeSystem } from '../learning/decisionTree.js';
+import { TFDecisionTree } from '../learning/tfDecisionTree';
 import { systemLogger } from '../logging/systemLogger';
+
+const tfDecisionTreeInstance = new TFDecisionTree();
 
 interface PredictionResult {
   numbers: number[];
@@ -76,7 +78,7 @@ export const generatePredictions = async (
                                 (1 + championFactors.performance * 0.1);
 
         const classicDecision = decisionTreeSystem.predict(selectedNumbers, 'Crescente');
-        const tfDecision = await tfDecisionTree.predict(selectedNumbers, 'Crescente');
+        const tfDecision = await tfDecisionTreeInstance.predict(selectedNumbers);
         const isGoodDecision = classicDecision && tfDecision;
 
         predictions.push({
@@ -87,7 +89,7 @@ export const generatePredictions = async (
           isGoodDecision
         });
 
-        tfDecisionTree.addDecision(selectedNumbers, 'Crescente', isGoodDecision);
+        tfDecisionTreeInstance.addDecision(selectedNumbers, isGoodDecision);
       }
     }
 
