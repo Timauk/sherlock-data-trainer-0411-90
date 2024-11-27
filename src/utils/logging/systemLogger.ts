@@ -10,7 +10,13 @@ class SystemLogger {
   private logs: LogEntry[] = [];
   private maxLogs = 1000;
 
-  private constructor() {}
+  private constructor() {
+    // Bind methods to instance
+    this.log = this.log.bind(this);
+    this.getLogs = this.getLogs.bind(this);
+    this.getLogsByType = this.getLogsByType.bind(this);
+    this.clearLogs = this.clearLogs.bind(this);
+  }
 
   public static getInstance(): SystemLogger {
     if (!SystemLogger.instance) {
@@ -28,6 +34,8 @@ class SystemLogger {
     };
 
     this.logs.push(entry);
+    
+    // Maintain max logs limit
     if (this.logs.length > this.maxLogs) {
       this.logs = this.logs.slice(-this.maxLogs);
     }
@@ -56,5 +64,4 @@ class SystemLogger {
 }
 
 // Create and export the singleton instance
-const systemLogger = SystemLogger.getInstance();
-export { systemLogger };
+export const systemLogger = SystemLogger.getInstance();
