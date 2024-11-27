@@ -16,8 +16,6 @@ export class TFDecisionTree {
   private async initializeModel() {
     this.model = tf.sequential();
     
-    // Camada de entrada com 5 features:
-    // [evenCount, sum, sequentialCount, lunarPhaseEncoded, primeCount]
     this.model.add(tf.layers.dense({
       units: 16,
       activation: 'relu',
@@ -29,7 +27,6 @@ export class TFDecisionTree {
       activation: 'relu'
     }));
     
-    // Saída binária: boa decisão (1) ou má decisão (0)
     this.model.add(tf.layers.dense({
       units: 1,
       activation: 'sigmoid'
@@ -117,7 +114,7 @@ export class TFDecisionTree {
 
   async predict(numbers: number[], lunarPhase: string): Promise<boolean> {
     if (!this.model || this.decisions.length < 10) {
-      return true; // Retorna true se não houver dados suficientes
+      return true;
     }
 
     const features = tf.tensor2d([this.extractFeatures(numbers, lunarPhase)]);
