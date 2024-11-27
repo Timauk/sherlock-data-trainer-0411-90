@@ -10,9 +10,7 @@ class SystemLogger {
   private logs: LogEntry[] = [];
   private maxLogs = 1000;
 
-  private constructor() {
-    // Private constructor to enforce singleton pattern
-  }
+  private constructor() {}
 
   public static getInstance(): SystemLogger {
     if (!SystemLogger.instance) {

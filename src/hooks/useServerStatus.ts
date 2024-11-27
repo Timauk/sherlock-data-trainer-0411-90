@@ -7,7 +7,7 @@ export const useServerStatus = () => {
 
   const checkServerStatus = async () => {
     try {
-      const response = await fetch('http://localhost:3001/test', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/test`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -24,6 +24,11 @@ export const useServerStatus = () => {
     } catch (error) {
       if (status !== 'offline') {
         setStatus('offline');
+        toast({
+          title: "Servidor Offline",
+          description: "Não foi possível conectar ao servidor",
+          variant: "destructive"
+        });
       }
     }
   };
@@ -32,7 +37,7 @@ export const useServerStatus = () => {
     checkServerStatus();
     const interval = setInterval(checkServerStatus, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [status]);
 
   return { status };
 };

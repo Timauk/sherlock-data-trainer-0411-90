@@ -37,7 +37,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
   
   const processGame = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/processing/process-game', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/processing/process-game`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -56,7 +56,6 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
       }
 
       const result = await response.json();
-      // Update game state with server response
       gameLogic.updateGameState(result);
     } catch (error) {
       toast({
@@ -78,7 +77,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
       const playersData = JSON.parse(localStorage.getItem('playersData') || '[]');
       const evolutionHistory = JSON.parse(localStorage.getItem('evolutionHistory') || '[]');
       
-      const response = await fetch('http://localhost:3001/api/model/save-full-model', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/model/save-full-model`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
