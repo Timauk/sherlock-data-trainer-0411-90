@@ -1,42 +1,38 @@
+import { logger } from './logger.js';
+
 class SystemLogger {
-  static instance;
-  logs = [];
-  maxLogs = 1000;
-
-  static getInstance() {
-    if (!SystemLogger.instance) {
-      SystemLogger.instance = new SystemLogger();
-    }
-    return SystemLogger.instance;
+  static logError(error, context = {}) {
+    logger.error('\x1b[31m%s\x1b[0m', 'ERRO DO SISTEMA:', {
+      message: error.message,
+      stack: error.stack,
+      ...context,
+      timestamp: new Date().toISOString()
+    });
   }
 
-  log(type, message, details) {
-    const entry = {
-      timestamp: new Date(),
-      type,
+  static logWarning(message, context = {}) {
+    logger.warn('\x1b[33m%s\x1b[0m', 'AVISO DO SISTEMA:', {
       message,
-      details
-    };
-
-    this.logs.push(entry);
-    if (this.logs.length > this.maxLogs) {
-      this.logs = this.logs.slice(-this.maxLogs);
-    }
-
-    console.log(`[${type.toUpperCase()}] ${message}`, details || '');
+      ...context,
+      timestamp: new Date().toISOString()
+    });
   }
 
-  getLogs() {
-    return this.logs;
+  static logInfo(message, context = {}) {
+    logger.info('\x1b[32m%s\x1b[0m', 'INFO DO SISTEMA:', {
+      message,
+      ...context,
+      timestamp: new Date().toISOString()
+    });
   }
 
-  clearLogs() {
-    this.logs = [];
-  }
-
-  getLogsByType(type) {
-    return this.logs.filter(log => log.type === type);
+  static logDebug(message, context = {}) {
+    logger.debug('\x1b[36m%s\x1b[0m', 'DEBUG DO SISTEMA:', {
+      message,
+      ...context,
+      timestamp: new Date().toISOString()
+    });
   }
 }
 
-export const systemLogger = SystemLogger.getInstance();
+export { SystemLogger };

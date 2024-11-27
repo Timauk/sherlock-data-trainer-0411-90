@@ -19,30 +19,27 @@ export class TensorFlowSetup {
     if (this.isInitialized) return;
 
     try {
-      // Tenta inicializar com GPU primeiro
       await tf.setBackend('tensorflow');
       await tfjsNode.ready();
       
-      // Verifica se GPU está disponível
-      const gpuAvailable = await tf.test_util.isWebGLAvailable();
+      // Verifica se GPU está disponível usando tf.env()
+      const gpuAvailable = tf.env().get('HAS_WEBGL');
       
       if (gpuAvailable) {
-        logger.info('TensorFlow.js initialized with GPU support');
-        logger.info(`GPU Device: ${await tf.backend().getGPUDevice()}`);
+        logger.info('\x1b[32m%s\x1b[0m', 'TensorFlow.js initialized with GPU support');
+        logger.info('\x1b[32m%s\x1b[0m', `GPU Memory: ${tf.memory().numBytes} bytes used`);
       } else {
-        // Fallback para CPU se GPU não estiver disponível
         await tf.setBackend('cpu');
-        logger.info('TensorFlow.js initialized with CPU backend (GPU not available)');
+        logger.info('\x1b[32m%s\x1b[0m', 'TensorFlow.js initialized with CPU backend (GPU not available)');
       }
     } catch (error) {
-      logger.error('Failed to initialize TensorFlow.js with GPU:', error);
+      logger.error('\x1b[31m%s\x1b[0m', 'Failed to initialize TensorFlow.js with GPU:', error);
       
       try {
-        // Fallback para CPU
         await tf.setBackend('cpu');
-        logger.info('TensorFlow.js initialized with CPU backend (fallback)');
+        logger.info('\x1b[32m%s\x1b[0m', 'TensorFlow.js initialized with CPU backend (fallback)');
       } catch (cpuError) {
-        logger.error('Failed to initialize TensorFlow.js:', cpuError);
+        logger.error('\x1b[31m%s\x1b[0m', 'Failed to initialize TensorFlow.js:', cpuError);
         throw new Error('TensorFlow initialization failed');
       }
     }
@@ -50,9 +47,8 @@ export class TensorFlowSetup {
     await tf.ready();
     this.isInitialized = true;
     
-    // Log memory info
-    const memoryInfo = await tf.memory();
-    logger.info('TensorFlow.js Memory Info:', {
+    const memoryInfo = tf.memory();
+    logger.info('\x1b[32m%s\x1b[0m', 'TensorFlow.js Memory Info:', {
       numTensors: memoryInfo.numTensors,
       numDataBuffers: memoryInfo.numDataBuffers,
       numBytes: memoryInfo.numBytes,
@@ -88,7 +84,7 @@ export class TensorFlowSetup {
 
       return model;
     } catch (error) {
-      logger.error('Error creating TensorFlow model:', error);
+      logger.error('\x1b[31m%s\x1b[0m', 'Error creating TensorFlow model:', error);
       return null;
     }
   }
@@ -98,7 +94,7 @@ export class TensorFlowSetup {
       try {
         model.dispose();
       } catch (error) {
-        logger.error('Error disposing model:', error);
+        logger.error('\x1b[31m%s\x1b[0m', 'Error disposing model:', error);
       }
     }
   }
