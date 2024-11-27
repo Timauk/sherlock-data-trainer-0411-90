@@ -21,9 +21,11 @@ logger.info('\x1b[32m%s\x1b[0m', 'Iniciando servidor...', {
   arch: process.arch
 });
 
-// Configurações básicas
+// Updated CORS configuration to accept all origins in development
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:8080', 'https://lovable.dev'],
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://lovable.dev']
+    : '*',
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization']

@@ -7,11 +7,16 @@ export const useServerStatus = () => {
 
   const checkServerStatus = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/test`, {
+      const apiUrl = process.env.NODE_ENV === 'production'
+        ? 'https://api.lovable.dev'
+        : 'http://localhost:3001';
+
+      const response = await fetch(`${apiUrl}/test`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        credentials: 'include'
       });
 
       if (response.ok) {
