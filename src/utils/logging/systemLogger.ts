@@ -93,4 +93,4 @@ class SystemLogger {
 
 const systemLogger = SystemLogger.getInstance();
 export { systemLogger };
-export type { LogEntry, SystemLogger };
+export type { LogEntry };
