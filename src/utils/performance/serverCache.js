@@ -1,4 +1,4 @@
-import { cacheManager } from './cacheManager';
+import { cacheManager } from './cacheManager.js';
 import { logger } from '../logging/logger.js';
 
 export const cacheMiddleware = (req, res, next) => {
