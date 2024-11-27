@@ -1,8 +1,8 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import Overview from '@/components/manual/Overview';
+import CodeViewer from '@/components/manual/CodeViewer';
 
 const ManualPage = () => {
   return (
@@ -10,48 +10,19 @@ const ManualPage = () => {
       <h1 className="text-3xl font-bold mb-6">Manual do Sistema</h1>
       
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 md:grid-cols-6">
+        <TabsList className="grid w-full grid-cols-1 md:grid-cols-7">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="players">Jogadores & IA</TabsTrigger>
           <TabsTrigger value="controls">Controles</TabsTrigger>
           <TabsTrigger value="analysis">Análises</TabsTrigger>
           <TabsTrigger value="techniques">Técnicas</TabsTrigger>
           <TabsTrigger value="updates">Atualizações</TabsTrigger>
+          <TabsTrigger value="code">Código</TabsTrigger>
         </TabsList>
 
         <ScrollArea className="h-[600px] w-full rounded-md border p-4">
           <TabsContent value="overview">
-            <Card>
-              <CardHeader>
-                <CardTitle>Visão Geral do Sistema</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <section>
-                  <h3 className="text-lg font-semibold">O que é o Sistema?</h3>
-                  <p>O Aprendiz é um sistema avançado de treinamento que combina múltiplas técnicas de IA:</p>
-                  <ul className="list-disc pl-6 mt-2 space-y-2">
-                    <li>Redes Neurais Profundas (Deep Learning)</li>
-                    <li>Algoritmos Genéticos para Evolução</li>
-                    <li>Análise de Séries Temporais</li>
-                    <li>Sistemas de Ensemble Learning</li>
-                    <li>Processamento Paralelo</li>
-                  </ul>
-                </section>
-
-                <Separator className="my-4" />
-
-                <section>
-                  <h3 className="text-lg font-semibold">Arquitetura do Sistema</h3>
-                  <ul className="list-disc pl-6 mt-2 space-y-2">
-                    <li>Frontend React com TypeScript</li>
-                    <li>Backend Node.js com Express</li>
-                    <li>TensorFlow.js para Deep Learning</li>
-                    <li>Sistema de Checkpoints para Backup</li>
-                    <li>Análise em Tempo Real</li>
-                  </ul>
-                </section>
-              </CardContent>
-            </Card>
+            <Overview />
           </TabsContent>
 
           <TabsContent value="players">
@@ -248,6 +219,10 @@ const ManualPage = () => {
                 </section>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="code">
+            <CodeViewer />
           </TabsContent>
         </ScrollArea>
       </Tabs>
