@@ -6,12 +6,12 @@ export interface LogEntry {
 }
 
 class SystemLogger {
-  private static instance: SystemLogger;
+  private static instance: SystemLogger | null = null;
   private logs: LogEntry[] = [];
   private maxLogs = 1000;
 
   private constructor() {
-    // Initialize the singleton
+    // Private constructor to enforce singleton pattern
   }
 
   public static getInstance(): SystemLogger {
@@ -58,4 +58,5 @@ class SystemLogger {
 }
 
 // Create and export the singleton instance
-export const systemLogger = SystemLogger.getInstance();
+const systemLogger = SystemLogger.getInstance();
+export { systemLogger };
