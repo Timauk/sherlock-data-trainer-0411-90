@@ -14,6 +14,13 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Log de inicialização
+logger.info('Iniciando servidor...', {
+  nodeVersion: process.version,
+  platform: process.platform,
+  arch: process.arch
+});
+
 // Configurações básicas
 app.use(cors({
   origin: ['http://localhost:3000', 'http://localhost:8080', 'https://lovable.dev'],
@@ -22,10 +29,18 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Compressão gzip para todas as respostas
-app.use(compression());
+// Log de requisições
+app.use((req, res, next) => {
+  logger.info('Nova requisição:', {
+    method: req.method,
+    path: req.path,
+    ip: req.ip,
+    timestamp: new Date().toISOString()
+  });
+  next();
+});
 
-// Aumentar limite de payload para 100mb
+app.use(compression());
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 app.use(express.static('public'));
@@ -52,9 +67,10 @@ await Promise.all(
   dirs.map(async (dir) => {
     try {
       await fs.access(dir);
+      logger.info(`Diretório existente: ${dir}`);
     } catch {
       await fs.mkdir(dir, { recursive: true });
-      logger.info(`Directory created: ${dir}`);
+      logger.info(`Diretório criado: ${dir}`);
     }
   })
 );
@@ -65,39 +81,71 @@ app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
 app.use('/api/processing', processingRouter);
 
-// Test route
+// Test route with error logging
 app.get('/test', (req, res) => {
+  logger.info('Teste de rota acessado');
   res.json({ message: 'Server is running' });
 });
 
-// Initialize TensorFlow.js
-await tf.ready().then(() => {
-  logger.info('TensorFlow.js initialized successfully');
-}).catch(error => {
-  logger.error('Error initializing TensorFlow.js:', error);
-});
+// Initialize TensorFlow.js with error handling
+try {
+  await tf.ready();
+  logger.info('TensorFlow.js inicializado com sucesso', {
+    backend: tf.getBackend(),
+    memory: tf.memory()
+  });
+} catch (error) {
+  logger.error('Erro ao inicializar TensorFlow.js:', {
+    error: error.message,
+    stack: error.stack
+  });
+}
 
-// Monitoramento de memória
+// Monitoramento de memória com logs detalhados
 setInterval(() => {
   const usage = process.memoryUsage();
-  logger.info('Server Memory Usage:', {
+  logger.info('Uso de Memória do Servidor:', {
     heapUsed: `${Math.round(usage.heapUsed / 1024 / 1024)}MB`,
     heapTotal: `${Math.round(usage.heapTotal / 1024 / 1024)}MB`,
-    rss: `${Math.round(usage.rss / 1024 / 1024)}MB`
+    rss: `${Math.round(usage.rss / 1024 / 1024)}MB`,
+    external: `${Math.round(usage.external / 1024 / 1024)}MB`,
+    arrayBuffers: `${Math.round(usage.arrayBuffers / 1024 / 1024)}MB`
   });
 }, 300000);
 
-// Global error handler
+// Global error handler com logs detalhados
 app.use((err, req, res, next) => {
-  logger.error('Server error:', err);
+  logger.error('Erro no servidor:', {
+    error: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method,
+    timestamp: new Date().toISOString(),
+    requestBody: req.body,
+    requestQuery: req.query
+  });
+
   res.status(500).json({
     error: 'Internal server error',
     message: err.message
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  logger.info(`Server running at http://localhost:${PORT}`);
-  logger.info(`Cache directory: ${path.join(__dirname, 'cache')}`);
-});
+// Start server with error handling
+try {
+  app.listen(PORT, () => {
+    logger.info(`Servidor iniciado com sucesso`, {
+      port: PORT,
+      environment: process.env.NODE_ENV,
+      cacheDir: path.join(__dirname, 'cache'),
+      timestamp: new Date().toISOString()
+    });
+  });
+} catch (error) {
+  logger.error('Erro fatal ao iniciar servidor:', {
+    error: error.message,
+    stack: error.stack,
+    timestamp: new Date().toISOString()
+  });
+  process.exit(1);
+}
