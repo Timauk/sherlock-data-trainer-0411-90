@@ -2,135 +2,119 @@ import * as tf from '@tensorflow/tfjs';
 import { systemLogger } from '../logging/systemLogger';
 
 export class TFDecisionTree {
-  private model: tf.Sequential | null = null;
-  private decisions: Array<{
-    numbers: number[];
-    features: number[];
-    success: boolean;
-  }> = [];
+  private model: tf.LayersModel | null = null;
+  private trained: boolean = false;
 
   constructor() {
     this.initializeModel();
   }
 
   private async initializeModel() {
-    this.model = tf.sequential();
-    
-    this.model.add(tf.layers.dense({
-      units: 16,
-      activation: 'relu',
-      inputShape: [5]
-    }));
-    
-    this.model.add(tf.layers.dense({
-      units: 8,
-      activation: 'relu'
-    }));
-    
-    this.model.add(tf.layers.dense({
-      units: 1,
-      activation: 'sigmoid'
-    }));
-
-    this.model.compile({
-      optimizer: tf.train.adam(0.001),
-      loss: 'binaryCrossentropy',
-      metrics: ['accuracy']
-    });
-
-    systemLogger.log('system', 'TensorFlow Decision Tree Model initialized');
-  }
-
-  private extractFeatures(numbers: number[], lunarPhase: string): number[] {
-    const evenCount = numbers.filter(n => n % 2 === 0).length / numbers.length;
-    const sum = numbers.reduce((a, b) => a + b, 0) / (25 * numbers.length);
-    const sequentialCount = this.countSequential(numbers) / numbers.length;
-    const lunarPhaseEncoded = this.encodeLunarPhase(lunarPhase);
-    const primeCount = numbers.filter(n => this.isPrime(n)).length / numbers.length;
-
-    return [evenCount, sum, sequentialCount, lunarPhaseEncoded, primeCount];
-  }
-
-  private countSequential(numbers: number[]): number {
-    const sorted = [...numbers].sort((a, b) => a - b);
-    let count = 0;
-    for (let i = 1; i < sorted.length; i++) {
-      if (sorted[i] === sorted[i-1] + 1) count++;
-    }
-    return count;
-  }
-
-  private isPrime(num: number): boolean {
-    if (num <= 1) return false;
-    for (let i = 2; i <= Math.sqrt(num); i++) {
-      if (num % i === 0) return false;
-    }
-    return true;
-  }
-
-  private encodeLunarPhase(phase: string): number {
-    const phases = {
-      'Nova': 0,
-      'Crescente': 0.33,
-      'Cheia': 0.66,
-      'Minguante': 1
-    };
-    return phases[phase as keyof typeof phases] || 0.5;
-  }
-
-  async addDecision(numbers: number[], lunarPhase: string, success: boolean) {
-    const features = this.extractFeatures(numbers, lunarPhase);
-    this.decisions.push({ numbers, features, success });
-
-    if (this.decisions.length >= 10) {
-      await this.train();
-    }
-  }
-
-  private async train() {
-    if (!this.model || this.decisions.length < 10) return;
-
-    const features = tf.tensor2d(this.decisions.map(d => d.features));
-    const labels = tf.tensor2d(this.decisions.map(d => [d.success ? 1 : 0]));
-
     try {
-      await this.model.fit(features, labels, {
-        epochs: 10,
-        batchSize: 4,
-        shuffle: true,
-        verbose: 0
+      systemLogger.log('model', 'Inicializando modelo de árvore de decisão', {
+        backend: tf.getBackend(),
+        memory: tf.memory()
       });
 
-      systemLogger.log('system', 'TensorFlow Decision Tree Model retrained', {
-        decisionsCount: this.decisions.length
+      this.model = tf.sequential({
+        layers: [
+          tf.layers.dense({ units: 64, activation: 'relu', inputShape: [10] }),
+          tf.layers.dropout({ rate: 0.2 }),
+          tf.layers.dense({ units: 32, activation: 'relu' }),
+          tf.layers.dense({ units: 1, activation: 'sigmoid' })
+        ]
       });
+
+      this.model.compile({
+        optimizer: tf.train.adam(0.001),
+        loss: 'binaryCrossentropy',
+        metrics: ['accuracy']
+      });
+
+      systemLogger.log('model', 'Modelo inicializado com sucesso');
     } catch (error) {
-      systemLogger.log('system', 'Error training TF Decision Tree', { error });
-    } finally {
-      features.dispose();
-      labels.dispose();
+      systemLogger.log('model', 'Erro ao inicializar modelo', { error });
+      throw error;
     }
   }
 
-  async predict(numbers: number[], lunarPhase: string): Promise<boolean> {
-    if (!this.model || this.decisions.length < 10) {
-      return true;
+  async train(data: number[][], labels: number[], epochs: number = 50) {
+    if (!this.model) {
+      throw new Error('Modelo não inicializado');
     }
 
-    const features = tf.tensor2d([this.extractFeatures(numbers, lunarPhase)]);
-    
     try {
-      const prediction = await this.model.predict(features) as tf.Tensor;
-      const value = (await prediction.data())[0];
+      systemLogger.log('model', 'Iniciando treinamento', {
+        dataSize: data.length,
+        epochs
+      });
+
+      const xs = tf.tensor2d(data);
+      const ys = tf.tensor2d(labels, [labels.length, 1]);
+
+      await this.model.fit(xs, ys, {
+        epochs,
+        validationSplit: 0.2,
+        callbacks: {
+          onEpochEnd: (epoch, logs) => {
+            systemLogger.log('model', `Época ${epoch + 1}/${epochs}`, logs);
+          }
+        }
+      });
+
+      this.trained = true;
+      systemLogger.log('model', 'Treinamento concluído com sucesso');
+
+      xs.dispose();
+      ys.dispose();
+    } catch (error) {
+      systemLogger.log('model', 'Erro durante treinamento', { error });
+      throw error;
+    }
+  }
+
+  predict(input: number[]): number {
+    if (!this.model || !this.trained) {
+      throw new Error('Modelo não treinado');
+    }
+
+    try {
+      const inputTensor = tf.tensor2d([input]);
+      const prediction = this.model.predict(inputTensor) as tf.Tensor;
+      const result = prediction.dataSync()[0];
+
+      inputTensor.dispose();
       prediction.dispose();
-      features.dispose();
-      
-      return value > 0.5;
+
+      return result;
     } catch (error) {
-      systemLogger.log('system', 'Error predicting with TF Decision Tree', { error });
-      return true;
+      systemLogger.log('model', 'Erro durante predição', { error });
+      throw error;
+    }
+  }
+
+  async save(path: string): Promise<void> {
+    if (!this.model) {
+      throw new Error('Modelo não inicializado');
+    }
+
+    try {
+      await this.model.save(`file://${path}`);
+      systemLogger.log('model', 'Modelo salvo com sucesso', { path });
+    } catch (error) {
+      systemLogger.log('model', 'Erro ao salvar modelo', { error });
+      throw error;
+    }
+  }
+
+  async load(path: string): Promise<void> {
+    try {
+      this.model = await tf.loadLayersModel(`file://${path}`);
+      this.trained = true;
+      systemLogger.log('model', 'Modelo carregado com sucesso', { path });
+    } catch (error) {
+      systemLogger.log('model', 'Erro ao carregar modelo', { error });
+      throw error;
     }
   }
 }
-
-export const tfDecisionTree = new TFDecisionTree();
