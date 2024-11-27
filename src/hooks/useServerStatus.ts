@@ -7,12 +7,13 @@ export const useServerStatus = () => {
 
   const checkServerStatus = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/test`, {
+      const apiUrl = import.meta.env.VITE_API_URL || window.location.origin.replace(':5173', ':3001');
+      const response = await fetch(`${apiUrl}/test`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        mode: 'cors'
+        credentials: 'include'
       });
 
       if (response.ok) {

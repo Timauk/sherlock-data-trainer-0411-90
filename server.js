@@ -21,9 +21,24 @@ logger.info('\x1b[32m%s\x1b[0m', 'Starting server...', {
   arch: process.arch
 });
 
-// CORS configuration
+// CORS configuration with specific origin handling
 app.use(cors({
-  origin: '*', // Allow all origins temporarily for development
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'https://dcc838c0-148c-47bb-abaf-cbdd03ce84f5.lovableproject.com'
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization']
