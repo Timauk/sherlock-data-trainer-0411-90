@@ -1,5 +1,5 @@
 import * as tf from '@tensorflow/tfjs';
-import { systemLogger } from '../logging/systemLogger';
+import { logger } from '../logging/logger';
 
 export class TFDecisionTree {
   private model: tf.LayersModel | null = null;
@@ -11,7 +11,7 @@ export class TFDecisionTree {
 
   private async initializeModel() {
     try {
-      systemLogger.log('model', 'Inicializando modelo de árvore de decisão', {
+      logger.info('Inicializando modelo de árvore de decisão', {
         backend: tf.getBackend(),
         memory: tf.memory()
       });
@@ -31,9 +31,9 @@ export class TFDecisionTree {
         metrics: ['accuracy']
       });
 
-      systemLogger.log('model', 'Modelo inicializado com sucesso');
+      logger.info('Modelo inicializado com sucesso');
     } catch (error) {
-      systemLogger.log('model', 'Erro ao inicializar modelo', { error });
+      logger.error('Erro ao inicializar modelo', error);
       throw error;
     }
   }
@@ -44,7 +44,7 @@ export class TFDecisionTree {
     }
 
     try {
-      systemLogger.log('model', 'Iniciando treinamento', {
+      logger.info('Iniciando treinamento', {
         dataSize: data.length,
         epochs
       });
@@ -57,18 +57,18 @@ export class TFDecisionTree {
         validationSplit: 0.2,
         callbacks: {
           onEpochEnd: (epoch, logs) => {
-            systemLogger.log('model', `Época ${epoch + 1}/${epochs}`, logs);
+            logger.info(`Época ${epoch + 1}/${epochs}`, logs);
           }
         }
       });
 
       this.trained = true;
-      systemLogger.log('model', 'Treinamento concluído com sucesso');
+      logger.info('Treinamento concluído com sucesso');
 
       xs.dispose();
       ys.dispose();
     } catch (error) {
-      systemLogger.log('model', 'Erro durante treinamento', { error });
+      logger.error('Erro durante treinamento', error);
       throw error;
     }
   }
@@ -88,7 +88,7 @@ export class TFDecisionTree {
 
       return result > 0.5;
     } catch (error) {
-      systemLogger.log('model', 'Erro durante predição', { error });
+      logger.error('Erro durante predição', error);
       throw error;
     }
   }
@@ -100,9 +100,9 @@ export class TFDecisionTree {
 
     try {
       await this.model.save(`file://${path}`);
-      systemLogger.log('model', 'Modelo salvo com sucesso', { path });
+      logger.info('Modelo salvo com sucesso', { path });
     } catch (error) {
-      systemLogger.log('model', 'Erro ao salvar modelo', { error });
+      logger.error('Erro ao salvar modelo', error);
       throw error;
     }
   }
@@ -111,9 +111,9 @@ export class TFDecisionTree {
     try {
       this.model = await tf.loadLayersModel(`file://${path}`);
       this.trained = true;
-      systemLogger.log('model', 'Modelo carregado com sucesso', { path });
+      logger.info('Modelo carregado com sucesso', { path });
     } catch (error) {
-      systemLogger.log('model', 'Erro ao carregar modelo', { error });
+      logger.error('Erro ao carregar modelo', error);
       throw error;
     }
   }
