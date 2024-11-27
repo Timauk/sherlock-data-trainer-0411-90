@@ -11,7 +11,6 @@ class SystemLogger {
   private maxLogs = 1000;
 
   private constructor() {
-    // Initialize empty logs array
     this.logs = [];
   }
 
