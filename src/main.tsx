@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-import { initTensorFlow } from './utils/tensorflow/init';
+import * as tf from '@tensorflow/tfjs';
 
 const root = document.getElementById('root');
 
@@ -11,10 +11,7 @@ if (!root) {
 }
 
 // Initialize TensorFlow before rendering
-initTensorFlow().then((success) => {
-  if (!success) {
-    console.error('Failed to initialize TensorFlow.js');
-  }
+tf.ready().then(() => {
   ReactDOM.createRoot(root).render(
     <React.StrictMode>
       <App />

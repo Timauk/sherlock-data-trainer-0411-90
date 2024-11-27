@@ -1,13 +1,12 @@
-import { tfSetup } from './tfSetup';
-import { logger } from '../logging/logger';
+import * as tf from '@tensorflow/tfjs';
 
-export const initTensorFlow = async () => {
+export const initTensorFlow = async (): Promise<boolean> => {
   try {
-    await tfSetup.initialize();
-    logger.info('TensorFlow.js initialized successfully');
+    await tf.ready();
+    console.log('TensorFlow.js initialized successfully');
     return true;
   } catch (error) {
-    logger.error('Failed to initialize TensorFlow.js:', error);
+    console.error('Failed to initialize TensorFlow.js:', error);
     return false;
   }
 };

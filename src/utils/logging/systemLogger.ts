@@ -34,24 +34,24 @@ class SystemLogger {
       this.logs = this.logs.slice(-this.maxLogs);
     }
 
-    // Dispara evento para atualização da UI
+    // Dispatch event for UI updates
     const event = new CustomEvent('systemLog', { detail: entry });
     window.dispatchEvent(event);
 
-    // Also log to console with colors
+    // Console logging with colors
     const colorMap = {
-      action: '\x1b[34m', // blue
-      prediction: '\x1b[32m', // green
-      performance: '\x1b[33m', // yellow
-      system: '\x1b[35m', // magenta
-      lunar: '\x1b[36m', // cyan
-      player: '\x1b[33m', // yellow
-      checkpoint: '\x1b[31m', // red
-      learning: '\x1b[32m', // green
-      model: '\x1b[36m' // cyan
+      action: '\x1b[34m',
+      prediction: '\x1b[32m',
+      performance: '\x1b[33m',
+      system: '\x1b[35m',
+      lunar: '\x1b[36m',
+      player: '\x1b[33m',
+      checkpoint: '\x1b[31m',
+      learning: '\x1b[32m',
+      model: '\x1b[36m'
     };
 
-    const color = colorMap[type] || '\x1b[37m'; // default to white
+    const color = colorMap[type] || '\x1b[37m';
     logger.info(`${color}[${type.toUpperCase()}]\x1b[0m ${message}`, details);
   }
 
@@ -59,12 +59,12 @@ class SystemLogger {
     return this.logs;
   }
 
-  clearLogs() {
-    this.logs = [];
-  }
-
   getLogsByType(type: LogEntry['type']): LogEntry[] {
     return this.logs.filter(log => log.type === type);
+  }
+
+  clearLogs() {
+    this.logs = [];
   }
 
   exportLogs(): string {
