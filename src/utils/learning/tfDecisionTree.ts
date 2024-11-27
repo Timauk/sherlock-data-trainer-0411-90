@@ -73,7 +73,7 @@ export class TFDecisionTree {
     }
   }
 
-  predict(input: number[]): number {
+  predict(input: number[]): boolean {
     if (!this.model || !this.trained) {
       throw new Error('Modelo não treinado');
     }
@@ -86,7 +86,7 @@ export class TFDecisionTree {
       inputTensor.dispose();
       prediction.dispose();
 
-      return result;
+      return result > 0.5;
     } catch (error) {
       systemLogger.log('model', 'Erro durante predição', { error });
       throw error;

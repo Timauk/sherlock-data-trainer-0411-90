@@ -78,18 +78,16 @@ export const generatePredictions = async (
                                 (1 + championFactors.performance * 0.1);
 
         const classicDecision = decisionTreeSystem.predict(selectedNumbers, 'Crescente');
-        const tfDecision = await tfDecisionTreeInstance.predict(selectedNumbers);
+        const tfDecision = tfDecisionTreeInstance.predict(selectedNumbers);
         const isGoodDecision = classicDecision && tfDecision;
 
         predictions.push({
           numbers: selectedNumbers,
-          estimatedAccuracy: estimatedAccuracy * (isGoodDecision ? 1.2 : 0.8),
+          estimatedAccuracy,
           targetMatches: target.matches,
           matchesWithSelected: selectedNumbers.filter(n => selectedNumbers.includes(n)).length,
           isGoodDecision
         });
-
-        tfDecisionTreeInstance.addDecision(selectedNumbers, isGoodDecision);
       }
     }
 

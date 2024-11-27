@@ -38,21 +38,7 @@ class SystemLogger {
       window.dispatchEvent(event);
     }
 
-    // Console logging with colors
-    const colorMap = {
-      action: '\x1b[34m',
-      prediction: '\x1b[32m',
-      performance: '\x1b[33m',
-      system: '\x1b[35m',
-      lunar: '\x1b[36m',
-      player: '\x1b[33m',
-      checkpoint: '\x1b[31m',
-      learning: '\x1b[32m',
-      model: '\x1b[36m'
-    };
-
-    const color = colorMap[type] || '\x1b[37m';
-    console.log(`${color}[${type.toUpperCase()}]\x1b[0m ${message}`, details);
+    console.log(`[${type.toUpperCase()}] ${message}`, details || '');
   }
 
   public getLogs(): LogEntry[] {
