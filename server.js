@@ -14,8 +14,8 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Log de inicialização
-logger.info('Iniciando servidor...', {
+// Log de inicialização com cor verde
+logger.info('\x1b[32m%s\x1b[0m', 'Iniciando servidor...', {
   nodeVersion: process.version,
   platform: process.platform,
   arch: process.arch
@@ -29,9 +29,9 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Log de requisições
+// Log de requisições em verde
 app.use((req, res, next) => {
-  logger.info('Nova requisição:', {
+  logger.info('\x1b[32m%s\x1b[0m', 'Nova requisição:', {
     method: req.method,
     path: req.path,
     ip: req.ip,
@@ -67,10 +67,10 @@ await Promise.all(
   dirs.map(async (dir) => {
     try {
       await fs.access(dir);
-      logger.info(`Diretório existente: ${dir}`);
+      logger.info('\x1b[32m%s\x1b[0m', `Diretório existente: ${dir}`);
     } catch {
       await fs.mkdir(dir, { recursive: true });
-      logger.info(`Diretório criado: ${dir}`);
+      logger.info('\x1b[32m%s\x1b[0m', `Diretório criado: ${dir}`);
     }
   })
 );
@@ -83,28 +83,28 @@ app.use('/api/processing', processingRouter);
 
 // Test route with error logging
 app.get('/test', (req, res) => {
-  logger.info('Teste de rota acessado');
+  logger.info('\x1b[32m%s\x1b[0m', 'Teste de rota acessado');
   res.json({ message: 'Server is running' });
 });
 
 // Initialize TensorFlow.js with error handling
 try {
   await tf.ready();
-  logger.info('TensorFlow.js inicializado com sucesso', {
+  logger.info('\x1b[32m%s\x1b[0m', 'TensorFlow.js inicializado com sucesso', {
     backend: tf.getBackend(),
     memory: tf.memory()
   });
 } catch (error) {
-  logger.error('Erro ao inicializar TensorFlow.js:', {
+  logger.error('\x1b[31m%s\x1b[0m', 'Erro ao inicializar TensorFlow.js:', {
     error: error.message,
     stack: error.stack
   });
 }
 
-// Monitoramento de memória com logs detalhados
+// Monitoramento de memória com logs em amarelo (warning)
 setInterval(() => {
   const usage = process.memoryUsage();
-  logger.info('Uso de Memória do Servidor:', {
+  logger.warn('\x1b[33m%s\x1b[0m', 'Uso de Memória do Servidor:', {
     heapUsed: `${Math.round(usage.heapUsed / 1024 / 1024)}MB`,
     heapTotal: `${Math.round(usage.heapTotal / 1024 / 1024)}MB`,
     rss: `${Math.round(usage.rss / 1024 / 1024)}MB`,
@@ -113,9 +113,9 @@ setInterval(() => {
   });
 }, 300000);
 
-// Global error handler com logs detalhados
+// Global error handler com logs em vermelho
 app.use((err, req, res, next) => {
-  logger.error('Erro no servidor:', {
+  logger.error('\x1b[31m%s\x1b[0m', 'Erro no servidor:', {
     error: err.message,
     stack: err.stack,
     path: req.path,
@@ -134,7 +134,7 @@ app.use((err, req, res, next) => {
 // Start server with error handling
 try {
   app.listen(PORT, () => {
-    logger.info(`Servidor iniciado com sucesso`, {
+    logger.info('\x1b[32m%s\x1b[0m', `Servidor iniciado com sucesso`, {
       port: PORT,
       environment: process.env.NODE_ENV,
       cacheDir: path.join(__dirname, 'cache'),
@@ -142,7 +142,7 @@ try {
     });
   });
 } catch (error) {
-  logger.error('Erro fatal ao iniciar servidor:', {
+  logger.error('\x1b[31m%s\x1b[0m', 'Erro fatal ao iniciar servidor:', {
     error: error.message,
     stack: error.stack,
     timestamp: new Date().toISOString()
