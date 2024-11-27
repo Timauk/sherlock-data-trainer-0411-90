@@ -1,34 +1,20 @@
+interface Logger {
+  debug: (message: any, ...args: any[]) => void;
+  info: (message: any, ...args: any[]) => void;
+  warn: (message: any, ...args: any[]) => void;
+  error: (message: any, ...args: any[]) => void;
+}
+
 // Verificar se estamos no ambiente Node.js
 const isNode = typeof process !== 'undefined' && 
                process.versions != null && 
                process.versions.node != null;
 
-let logger;
-
-if (isNode) {
-  // Configuração para Node.js
-  const transport = {
-    target: 'pino-pretty',
-    options: {
-      colorize: true,
-      translateTime: 'SYS:standard',
-    }
-  };
-
-  logger = {
-    debug: console.debug,
-    info: console.info,
-    warn: console.warn,
-    error: console.error
-  };
-} else {
-  // Configuração para navegador
-  logger = {
-    debug: console.debug,
-    info: console.info,
-    warn: console.warn,
-    error: console.error
-  };
-}
+const logger: Logger = {
+  debug: console.debug,
+  info: console.info,
+  warn: console.warn,
+  error: console.error
+};
 
 export { logger };
