@@ -36,23 +36,16 @@ import { checkpointRouter } from './routes/checkpoint.js';
 import { statusRouter } from './routes/status.js';
 import { processingRouter } from './routes/model/processing.js';
 
-// Test route
-app.get('/test', (req, res) => {
-  res.json({ message: 'Server is running' });
-});
-
-// Apply routes
-app.use('/api/model', modelRouter);
-app.use('/api/checkpoint', checkpointRouter);
-app.use('/api/status', statusRouter);
-app.use('/api/processing', processingRouter);
-
 // Create necessary directories with absolute paths
 const dirs = [
   path.join(__dirname, 'checkpoints'),
   path.join(__dirname, 'logs'),
-  path.join(__dirname, 'saved-models')
-].filter(Boolean); // Remove any null/undefined paths
+  path.join(__dirname, 'saved-models'),
+  path.join(__dirname, 'cache'),
+  path.join(__dirname, 'cache/predictions'),
+  path.join(__dirname, 'cache/models'),
+  path.join(__dirname, 'cache/static')
+].filter(Boolean);
 
 // Create directories if they don't exist
 await Promise.all(
@@ -65,6 +58,17 @@ await Promise.all(
     }
   })
 );
+
+// Apply routes
+app.use('/api/model', modelRouter);
+app.use('/api/checkpoint', checkpointRouter);
+app.use('/api/status', statusRouter);
+app.use('/api/processing', processingRouter);
+
+// Test route
+app.get('/test', (req, res) => {
+  res.json({ message: 'Server is running' });
+});
 
 // Initialize TensorFlow.js
 await tf.ready().then(() => {
@@ -81,21 +85,11 @@ setInterval(() => {
     heapTotal: `${Math.round(usage.heapTotal / 1024 / 1024)}MB`,
     rss: `${Math.round(usage.rss / 1024 / 1024)}MB`
   });
-}, 300000); // A cada 5 minutos
+}, 300000);
 
 // Global error handler
 app.use((err, req, res, next) => {
   logger.error('Server error:', err);
-  
-  // Handle payload too large error
-  if (err.type === 'entity.too.large') {
-    return res.status(413).json({
-      error: 'Payload too large',
-      message: 'The data sent exceeds the size limit'
-    });
-  }
-  
-  // Handle other errors
   res.status(500).json({
     error: 'Internal server error',
     message: err.message
@@ -105,7 +99,5 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(PORT, () => {
   logger.info(`Server running at http://localhost:${PORT}`);
-  logger.info(`Checkpoints directory: ${path.join(__dirname, 'checkpoints')}`);
-  logger.info(`Logs directory: ${path.join(__dirname, 'logs')}`);
-  logger.info(`Saved models directory: ${path.join(__dirname, 'saved-models')}`);
+  logger.info(`Cache directory: ${path.join(__dirname, 'cache')}`);
 });

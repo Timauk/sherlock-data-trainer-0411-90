@@ -3,8 +3,9 @@ import { logger } from '../logging/logger';
 
 // Configuração dos caches com diferentes TTLs
 const predictionCache = new NodeCache({ stdTTL: 300 }); // 5 minutos
-const modelCache = new NodeCache({ stdTTL: 86400 }); // 24 horas
+const modelCache = new NodeCache({ stdTTL: 3600 }); // 1 hora
 const staticDataCache = new NodeCache({ stdTTL: 604800 }); // 1 semana
+const playerPredictionsCache = new NodeCache({ stdTTL: 1800 }); // 30 minutos
 
 // Monitor de uso de memória
 const monitorCacheUsage = () => {
@@ -62,11 +63,28 @@ export const cacheManager = {
     return staticDataCache.get(key);
   },
 
+  // Novo: Cache para previsões dos jogadores
+  setPlayerPrediction: (playerId: string, prediction: any) => {
+    try {
+      const key = `player_prediction_${playerId}`;
+      playerPredictionsCache.set(key, prediction);
+      logger.debug(`Player prediction cached: ${key}`);
+    } catch (error) {
+      logger.error('Error caching player prediction:', error);
+    }
+  },
+
+  getPlayerPrediction: (playerId: string) => {
+    const key = `player_prediction_${playerId}`;
+    return playerPredictionsCache.get(key);
+  },
+
   // Limpar caches
   clearAll: () => {
     predictionCache.flushAll();
     modelCache.flushAll();
     staticDataCache.flushAll();
+    playerPredictionsCache.flushAll();
     logger.info('All caches cleared');
   }
 };
