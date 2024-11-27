@@ -10,7 +10,9 @@ class SystemLogger {
   private logs: LogEntry[] = [];
   private maxLogs = 1000;
 
-  private constructor() {}
+  private constructor() {
+    // Initialize the singleton
+  }
 
   public static getInstance(): SystemLogger {
     if (!SystemLogger.instance) {
@@ -33,16 +35,17 @@ class SystemLogger {
     }
 
     // Dispatch event for UI updates
-    const event = new CustomEvent('systemLog', { detail: entry });
     if (typeof window !== 'undefined') {
+      const event = new CustomEvent('systemLog', { detail: entry });
       window.dispatchEvent(event);
     }
 
+    // Also log to console for debugging
     console.log(`[${type.toUpperCase()}] ${message}`, details || '');
   }
 
   public getLogs(): LogEntry[] {
-    return this.logs;
+    return [...this.logs];
   }
 
   public getLogsByType(type: LogEntry['type']): LogEntry[] {
@@ -54,4 +57,5 @@ class SystemLogger {
   }
 }
 
+// Create and export the singleton instance
 export const systemLogger = SystemLogger.getInstance();
