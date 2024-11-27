@@ -1,7 +1,25 @@
 import { logger } from './logger.js';
 
 class SystemLogger {
-  static logError(error, context = {}) {
+  static #instance;
+  #logs = [];
+  #maxLogs = 1000;
+
+  constructor() {
+    if (SystemLogger.#instance) {
+      return SystemLogger.#instance;
+    }
+    SystemLogger.#instance = this;
+  }
+
+  static getInstance() {
+    if (!SystemLogger.#instance) {
+      SystemLogger.#instance = new SystemLogger();
+    }
+    return SystemLogger.#instance;
+  }
+
+  logError(error, context = {}) {
     logger.error('\x1b[31m%s\x1b[0m', 'ERRO DO SISTEMA:', {
       message: error.message,
       stack: error.stack,
@@ -10,7 +28,7 @@ class SystemLogger {
     });
   }
 
-  static logWarning(message, context = {}) {
+  logWarning(message, context = {}) {
     logger.warn('\x1b[33m%s\x1b[0m', 'AVISO DO SISTEMA:', {
       message,
       ...context,
@@ -18,7 +36,7 @@ class SystemLogger {
     });
   }
 
-  static logInfo(message, context = {}) {
+  logInfo(message, context = {}) {
     logger.info('\x1b[32m%s\x1b[0m', 'INFO DO SISTEMA:', {
       message,
       ...context,
@@ -26,7 +44,7 @@ class SystemLogger {
     });
   }
 
-  static logDebug(message, context = {}) {
+  logDebug(message, context = {}) {
     logger.debug('\x1b[36m%s\x1b[0m', 'DEBUG DO SISTEMA:', {
       message,
       ...context,
@@ -35,4 +53,5 @@ class SystemLogger {
   }
 }
 
-export { SystemLogger };
+const systemLogger = SystemLogger.getInstance();
+export { systemLogger };
