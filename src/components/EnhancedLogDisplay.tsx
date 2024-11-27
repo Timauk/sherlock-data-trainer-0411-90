@@ -2,13 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { systemLogger } from '@/utils/logging/systemLogger';
 import { Badge } from "@/components/ui/badge";
-
-interface LogEntry {
-  timestamp: Date;
-  type: string;
-  message: string;
-  details?: any;
-}
+import type { LogEntry } from '@/utils/logging/systemLogger';
 
 const EnhancedLogDisplay: React.FC = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -20,6 +14,7 @@ const EnhancedLogDisplay: React.FC = () => {
     };
 
     window.addEventListener('systemLog', updateLogs as EventListener);
+    // Get initial logs from the singleton instance
     setLogs(systemLogger.getLogs());
 
     return () => {

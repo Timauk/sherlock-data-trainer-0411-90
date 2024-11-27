@@ -7,20 +7,14 @@ export const useServerStatus = () => {
 
   const checkServerStatus = async () => {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000); // Reduced timeout to 2 seconds
-
       const response = await fetch('http://localhost:3001/test', {
         method: 'GET',
-        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
         },
-        cache: 'no-store' // Prevent caching
+        cache: 'no-store'
       });
 
-      clearTimeout(timeoutId);
-      
       if (response.ok) {
         if (status !== 'online') {
           setStatus('online');
@@ -41,10 +35,10 @@ export const useServerStatus = () => {
     };
 
     checkAndNotify();
-    const interval = setInterval(checkAndNotify, 3000); // Check every 3 seconds
+    const interval = setInterval(checkAndNotify, 5000);
     
     return () => clearInterval(interval);
-  }, []); // Remove status dependency to prevent loops
+  }, []);
 
   return { status };
 };
