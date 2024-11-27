@@ -92,5 +92,6 @@ class SystemLogger {
 }
 
 // Create and export the singleton instance
-export const systemLogger = SystemLogger.getInstance();
+const systemLoggerInstance = SystemLogger.getInstance();
+export { systemLoggerInstance as systemLogger };
 export type { LogEntry, SystemLogger };
