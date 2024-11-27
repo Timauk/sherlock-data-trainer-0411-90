@@ -11,11 +11,8 @@ class SystemLogger {
   private maxLogs = 1000;
 
   private constructor() {
-    // Bind methods to instance
-    this.log = this.log.bind(this);
-    this.getLogs = this.getLogs.bind(this);
-    this.getLogsByType = this.getLogsByType.bind(this);
-    this.clearLogs = this.clearLogs.bind(this);
+    // Initialize empty logs array
+    this.logs = [];
   }
 
   public static getInstance(): SystemLogger {
