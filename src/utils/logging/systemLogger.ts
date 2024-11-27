@@ -29,6 +29,7 @@ class SystemLogger {
 
     this.logs.push(entry);
     
+    // Maintain max logs limit
     if (this.logs.length > this.maxLogs) {
       this.logs = this.logs.slice(-this.maxLogs);
     }
@@ -53,8 +54,10 @@ class SystemLogger {
 
   public clearLogs(): void {
     this.logs = [];
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('systemLogsClear'));
+    }
   }
 }
 
-// Create and export the singleton instance
 export const systemLogger = SystemLogger.getInstance();
