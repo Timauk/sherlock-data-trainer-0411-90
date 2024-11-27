@@ -6,13 +6,11 @@ export interface LogEntry {
 }
 
 class SystemLogger {
-  private static instance: SystemLogger | null = null;
+  private static instance: SystemLogger;
   private logs: LogEntry[] = [];
   private maxLogs = 1000;
 
-  private constructor() {
-    this.logs = [];
-  }
+  private constructor() {}
 
   public static getInstance(): SystemLogger {
     if (!SystemLogger.instance) {
