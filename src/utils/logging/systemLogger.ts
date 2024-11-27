@@ -14,14 +14,14 @@ class SystemLogger {
 
   private constructor() {}
 
-  static getInstance(): SystemLogger {
+  public static getInstance(): SystemLogger {
     if (!SystemLogger.instance) {
       SystemLogger.instance = new SystemLogger();
     }
     return SystemLogger.instance;
   }
 
-  log(type: LogEntry['type'], message: string, details?: any) {
+  public log(type: LogEntry['type'], message: string, details?: any): void {
     const entry: LogEntry = {
       timestamp: new Date(),
       type,
@@ -55,41 +55,42 @@ class SystemLogger {
     logger.info(`${color}[${type.toUpperCase()}]\x1b[0m ${message}`, details);
   }
 
-  getLogs(): LogEntry[] {
+  public getLogs(): LogEntry[] {
     return this.logs;
   }
 
-  getLogsByType(type: LogEntry['type']): LogEntry[] {
+  public getLogsByType(type: LogEntry['type']): LogEntry[] {
     return this.logs.filter(log => log.type === type);
   }
 
-  clearLogs() {
+  public clearLogs(): void {
     this.logs = [];
   }
 
-  exportLogs(): string {
+  public exportLogs(): string {
     return JSON.stringify(this.logs, null, 2);
   }
 
-  logError(error: Error, context: Record<string, any> = {}) {
+  public logError(error: Error, context: Record<string, any> = {}): void {
     this.log('system', `Error: ${error.message}`, {
       stack: error.stack,
       ...context
     });
   }
 
-  logWarning(message: string, context: Record<string, any> = {}) {
+  public logWarning(message: string, context: Record<string, any> = {}): void {
     this.log('system', `Warning: ${message}`, context);
   }
 
-  logInfo(message: string, context: Record<string, any> = {}) {
+  public logInfo(message: string, context: Record<string, any> = {}): void {
     this.log('system', message, context);
   }
 
-  logDebug(message: string, context: Record<string, any> = {}) {
+  public logDebug(message: string, context: Record<string, any> = {}): void {
     this.log('system', `Debug: ${message}`, context);
   }
 }
 
 // Create and export the singleton instance
-export const systemLogger = SystemLogger.getInstance();
+const systemLogger = SystemLogger.getInstance();
+export { systemLogger, SystemLogger, type LogEntry };
