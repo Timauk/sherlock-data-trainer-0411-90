@@ -11,8 +11,7 @@ export const useServerStatus = () => {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        },
-        cache: 'no-store'
+        }
       });
 
       if (response.ok) {
@@ -30,13 +29,8 @@ export const useServerStatus = () => {
   };
 
   useEffect(() => {
-    const checkAndNotify = async () => {
-      await checkServerStatus();
-    };
-
-    checkAndNotify();
-    const interval = setInterval(checkAndNotify, 5000);
-    
+    checkServerStatus();
+    const interval = setInterval(checkServerStatus, 5000);
     return () => clearInterval(interval);
   }, []);
 

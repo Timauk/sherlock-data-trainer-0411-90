@@ -14,7 +14,6 @@ const EnhancedLogDisplay: React.FC = () => {
     };
 
     window.addEventListener('systemLog', updateLogs as EventListener);
-    // Get initial logs from the singleton instance
     setLogs(systemLogger.getLogs());
 
     return () => {

@@ -1,6 +1,4 @@
-import { logger } from './logger';
-
-interface LogEntry {
+export interface LogEntry {
   timestamp: Date;
   type: 'action' | 'prediction' | 'performance' | 'system' | 'lunar' | 'player' | 'checkpoint' | 'learning' | 'model';
   message: string;
@@ -36,7 +34,9 @@ class SystemLogger {
 
     // Dispatch event for UI updates
     const event = new CustomEvent('systemLog', { detail: entry });
-    window.dispatchEvent(event);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(event);
+    }
 
     // Console logging with colors
     const colorMap = {
@@ -52,7 +52,7 @@ class SystemLogger {
     };
 
     const color = colorMap[type] || '\x1b[37m';
-    logger.info(`${color}[${type.toUpperCase()}]\x1b[0m ${message}`, details);
+    console.log(`${color}[${type.toUpperCase()}]\x1b[0m ${message}`, details);
   }
 
   public getLogs(): LogEntry[] {
@@ -66,30 +66,6 @@ class SystemLogger {
   public clearLogs(): void {
     this.logs = [];
   }
-
-  public exportLogs(): string {
-    return JSON.stringify(this.logs, null, 2);
-  }
-
-  public logError(error: Error, context: Record<string, any> = {}): void {
-    this.log('system', `Error: ${error.message}`, {
-      stack: error.stack,
-      ...context
-    });
-  }
-
-  public logWarning(message: string, context: Record<string, any> = {}): void {
-    this.log('system', `Warning: ${message}`, context);
-  }
-
-  public logInfo(message: string, context: Record<string, any> = {}): void {
-    this.log('system', message, context);
-  }
-
-  public logDebug(message: string, context: Record<string, any> = {}): void {
-    this.log('system', `Debug: ${message}`, context);
-  }
 }
 
 export const systemLogger = SystemLogger.getInstance();
-export type { LogEntry };
