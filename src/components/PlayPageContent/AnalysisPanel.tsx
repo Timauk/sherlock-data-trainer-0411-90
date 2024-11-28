@@ -16,6 +16,7 @@ interface AnalysisPanelProps {
   modelMetrics: any;
   neuralNetworkVisualization: any;
   concursoNumber: number;
+  csvProgress?: number;
 }
 
 const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
@@ -30,7 +31,8 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   numbers,
   modelMetrics,
   neuralNetworkVisualization,
-  concursoNumber
+  concursoNumber,
+  csvProgress
 }) => {
   return (
     <div className="space-y-4">
@@ -45,6 +47,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
           trainedModel={trainedModel}
           lastConcursoNumbers={boardNumbers}
           isServerProcessing={isServerProcessing}
+          csvProgress={csvProgress}
         />
       </div>
 

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Player } from '@/types/gameTypes';
 import * as tf from '@tensorflow/tfjs';
@@ -8,28 +7,26 @@ import NumberSelector from './NumberSelector';
 import PredictionsList from './PredictionsList';
 import { generatePredictions } from '../utils/prediction/predictionGenerator';
 import { systemLogger } from '../utils/logging/systemLogger';
-import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { PredictionsHeader } from './predictions/PredictionsHeader';
+import { PredictionResult } from './predictions/types';
 
 interface ChampionPredictionsProps {
   champion: Player | undefined;
   trainedModel: tf.LayersModel | null;
   lastConcursoNumbers: number[];
   isServerProcessing?: boolean;
+  csvProgress?: number;
 }
 
 const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   champion,
   trainedModel,
   lastConcursoNumbers,
-  isServerProcessing = false
+  isServerProcessing = false,
+  csvProgress = 0
 }) => {
-  const [predictions, setPredictions] = useState<Array<{
-    numbers: number[];
-    estimatedAccuracy: number;
-    targetMatches: number;
-    matchesWithSelected: number;
-    isGoodDecision: boolean;
-  }>>([]);
+  const [predictions, setPredictions] = useState<PredictionResult[]>([]);
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [systemReady, setSystemReady] = useState(false);
@@ -65,6 +62,13 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
     }
   }, [champion, trainedModel, lastConcursoNumbers, toast]);
 
+  // Nova lógica para auto-gerar quando o CSV terminar
+  useEffect(() => {
+    if (csvProgress >= 100 && systemReady && !isGenerating && predictions.length === 0) {
+      generatePredictionsHandler();
+    }
+  }, [csvProgress, systemReady, isGenerating, predictions.length]);
+
   const getSystemStatus = () => {
     if (!systemReady) {
       const missingItems = [];
@@ -92,42 +96,23 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
     };
   };
 
-  const validateRequirements = () => {
+  const generatePredictionsHandler = async () => {
     if (!systemReady) {
       const missingItems = [];
       if (!champion) missingItems.push('campeão');
       if (!trainedModel) missingItems.push('modelo');
       if (!lastConcursoNumbers) missingItems.push('números do último concurso');
       
-      console.log('Validação de requisitos:', {
-        systemReady,
-        missingItems,
-        champion: !!champion,
-        trainedModel: !!trainedModel,
-        lastConcursoNumbers: !!lastConcursoNumbers
-      });
-      
       toast({
         title: "Sistema em Preparação",
         description: `Aguardando: ${missingItems.join(', ')}`,
         variant: "default"
       });
-      return false;
+      return;
     }
-    return true;
-  };
-
-  const generatePredictionsHandler = async () => {
-    if (!validateRequirements()) return;
 
     setIsGenerating(true);
     try {
-      console.log('Iniciando geração de previsões:', {
-        championId: champion?.id,
-        hasModel: !!trainedModel,
-        numbersLength: lastConcursoNumbers?.length
-      });
-
       const newPredictions = await generatePredictions(
         champion!,
         trainedModel!,
@@ -150,10 +135,6 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
         }`
       });
 
-      console.log('Previsões geradas com sucesso:', {
-        count: newPredictions.length,
-        firstPrediction: newPredictions[0]
-      });
     } catch (error) {
       console.error("Erro ao gerar previsões:", error);
       toast({
@@ -177,29 +158,12 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       
       <Card className="mt-4">
         <CardHeader>
-          <CardTitle className="flex justify-between items-center">
-            <span>Previsões do Campeão {isServerProcessing ? '(Servidor)' : '(Local)'}</span>
-            <div className="flex items-center gap-2">
-              <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-white ${status.color}`}>
-                {status.icon}
-                <span>{status.text}</span>
-              </div>
-              <Button 
-                onClick={generatePredictionsHandler} 
-                className={`${status.color} hover:opacity-90 transition-all duration-200`}
-                disabled={isGenerating || !status.ready}
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Gerando...
-                  </>
-                ) : (
-                  'Gerar 8 Jogos'
-                )}
-              </Button>
-            </div>
-          </CardTitle>
+          <PredictionsHeader 
+            status={status}
+            isGenerating={isGenerating}
+            onGenerate={generatePredictionsHandler}
+            isServerProcessing={isServerProcessing}
+          />
         </CardHeader>
         <CardContent>
           {predictions.length > 0 ? (
