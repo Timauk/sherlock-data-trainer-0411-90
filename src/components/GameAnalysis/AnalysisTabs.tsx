@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Player } from '@/types/gameTypes';
 import GameBoard from '../GameBoard';
 import SystemDiagnostics from '../SystemDiagnostics';
+import ErrorBoundary from '../ErrorBoundary';
 
 const EnhancedLogDisplay = React.lazy(() => import('../EnhancedLogDisplay'));
 const NeuralNetworkVisualization = React.lazy(() => import('../NeuralNetworkVisualization'));
@@ -70,7 +71,9 @@ const AnalysisTabs: React.FC<AnalysisTabsProps> = ({
               players={players}
               evolutionData={evolutionData}
             />
-            <EnhancedLogDisplay />
+            <ErrorBoundary>
+              <EnhancedLogDisplay />
+            </ErrorBoundary>
           </div>
         </Suspense>
       </TabsContent>
