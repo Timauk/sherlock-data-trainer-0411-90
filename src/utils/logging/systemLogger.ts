@@ -28,7 +28,7 @@ class SystemLogger {
   }
 
   public error(type: LogEntry['type'], message: string, details?: any): void {
-    this.addLog(type, message, details);
+    this.addLog(type, `ERROR: ${message}`, details);
     console.error(`[${type.toUpperCase()}] ${message}`, details || '');
   }
 
