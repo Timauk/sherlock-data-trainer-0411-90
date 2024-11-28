@@ -29,7 +29,6 @@ class SystemLogger {
 
     this.logs.push(entry);
     
-    // Maintain max logs limit
     if (this.logs.length > this.maxLogs) {
       this.logs = this.logs.slice(-this.maxLogs);
     }
@@ -40,7 +39,7 @@ class SystemLogger {
       window.dispatchEvent(event);
     }
 
-    // Also log to console for debugging
+    // Console log for debugging
     console.log(`[${type.toUpperCase()}] ${message}`, details || '');
   }
 
