@@ -19,7 +19,20 @@ class SystemLogger {
     return SystemLogger.instance;
   }
 
+  public info(type: LogEntry['type'], message: string, details?: any): void {
+    this.addLog(type, message, details);
+  }
+
   public log(type: LogEntry['type'], message: string, details?: any): void {
+    this.addLog(type, message, details);
+  }
+
+  public error(type: LogEntry['type'], message: string, details?: any): void {
+    this.addLog(type, message, details);
+    console.error(`[${type.toUpperCase()}] ${message}`, details || '');
+  }
+
+  private addLog(type: LogEntry['type'], message: string, details?: any): void {
     const entry: LogEntry = {
       timestamp: new Date(),
       type,
