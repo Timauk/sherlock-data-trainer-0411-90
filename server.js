@@ -21,26 +21,24 @@ logger.info('\x1b[32m%s\x1b[0m', 'Starting server...', {
   arch: process.arch
 });
 
-// CORS configuration with specific origin handling
+// Updated CORS configuration
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:5173',
+      'http://localhost:8080',
       'https://dcc838c0-148c-47bb-abaf-cbdd03ce84f5.lovableproject.com'
     ];
     
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -61,11 +59,6 @@ app.use(express.urlencoded({ limit: '100mb', extended: true }));
 app.use(express.static('public'));
 app.use(cacheMiddleware);
 
-import { modelRouter } from './routes/model.js';
-import { checkpointRouter } from './routes/checkpoint.js';
-import { statusRouter } from './routes/status.js';
-import { processingRouter } from './routes/model/processing.js';
-
 // Create necessary directories with absolute paths
 const dirs = [
   path.join(__dirname, 'checkpoints'),
@@ -82,15 +75,20 @@ await Promise.all(
   dirs.map(async (dir) => {
     try {
       await fs.access(dir);
-      logger.info('\x1b[32m%s\x1b[0m', `Diretório existente: ${dir}`);
+      logger.info('\x1b[32m%s\x1b[0m', `Directory exists: ${dir}`);
     } catch {
       await fs.mkdir(dir, { recursive: true });
-      logger.info('\x1b[32m%s\x1b[0m', `Diretório criado: ${dir}`);
+      logger.info('\x1b[32m%s\x1b[0m', `Directory created: ${dir}`);
     }
   })
 );
 
 // Apply routes
+import { modelRouter } from './routes/model.js';
+import { checkpointRouter } from './routes/checkpoint.js';
+import { statusRouter } from './routes/status.js';
+import { processingRouter } from './routes/model/processing.js';
+
 app.use('/api/model', modelRouter);
 app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);

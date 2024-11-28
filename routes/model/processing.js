@@ -15,23 +15,30 @@ router.post('/process-game', async (req, res) => {
       isManualMode 
     } = req.body;
 
-    // Validação mais rigorosa dos dados
-    if (!inputData || !Array.isArray(inputData)) {
-      logger.error('Invalid or missing input data');
+    // Enhanced input validation
+    if (!inputData) {
+      logger.error('Missing input data');
       return res.status(400).json({ 
-        error: 'Input data is required and must be an array' 
+        error: 'Input data is required' 
       });
     }
 
-    if (!playerWeights || !Array.isArray(playerWeights)) {
-      logger.error('Invalid or missing player weights');
+    if (!Array.isArray(inputData)) {
+      logger.error('Input data must be an array');
       return res.status(400).json({ 
-        error: 'Player weights are required and must be an array' 
+        error: 'Input data must be an array' 
+      });
+    }
+
+    if (!Array.isArray(playerWeights)) {
+      logger.error('Player weights must be an array');
+      return res.status(400).json({ 
+        error: 'Player weights must be an array' 
       });
     }
 
     if (typeof generation !== 'number') {
-      logger.error('Invalid generation value');
+      logger.error('Generation must be a number');
       return res.status(400).json({
         error: 'Generation must be a number'
       });
@@ -49,7 +56,9 @@ router.post('/process-game', async (req, res) => {
     res.json(result);
   } catch (error) {
     logger.error('Error processing game:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      error: error.message || 'Internal server error'
+    });
   }
 });
 
