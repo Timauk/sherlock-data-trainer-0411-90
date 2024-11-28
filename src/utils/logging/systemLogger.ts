@@ -9,8 +9,23 @@ class SystemLogger {
   private static instance: SystemLogger;
   private logs: LogEntry[] = [];
   private maxLogs = 1000;
+  private cache: { [key: string]: LogEntry[] } = {};
 
-  private constructor() {}
+  private constructor() {
+    // Initialize cache
+    this.cache = {
+      latest: [],
+      action: [],
+      prediction: [],
+      performance: [],
+      system: [],
+      lunar: [],
+      player: [],
+      checkpoint: [],
+      learning: [],
+      model: []
+    };
+  }
 
   public static getInstance(): SystemLogger {
     if (!SystemLogger.instance) {
@@ -19,20 +34,48 @@ class SystemLogger {
     return SystemLogger.instance;
   }
 
-  public info(type: LogEntry['type'], message: string, details?: any): void {
-    this.addLog(type, message, details);
+  private updateCache(entry: LogEntry): void {
+    // Update type-specific cache
+    if (!this.cache[entry.type]) {
+      this.cache[entry.type] = [];
+    }
+    this.cache[entry.type].push(entry);
+
+    // Update latest logs cache
+    this.cache.latest.push(entry);
+
+    // Trim caches if they exceed maxLogs
+    if (this.cache[entry.type].length > this.maxLogs) {
+      this.cache[entry.type] = this.cache[entry.type].slice(-this.maxLogs);
+    }
+    if (this.cache.latest.length > this.maxLogs) {
+      this.cache.latest = this.cache.latest.slice(-this.maxLogs);
+    }
   }
 
-  public log(type: LogEntry['type'], message: string, details?: any): void {
-    this.addLog(type, message, details);
+  public info(type: LogEntry['type'], message: string, details?: any): void {
+    this.log(type, message, details);
   }
 
   public error(type: LogEntry['type'], message: string, details?: any): void {
-    this.addLog(type, `ERROR: ${message}`, details);
+    const entry: LogEntry = {
+      timestamp: new Date(),
+      type,
+      message: `ERROR: ${message}`,
+      details
+    };
+    
+    this.logs.push(entry);
+    this.updateCache(entry);
+    
     console.error(`[${type.toUpperCase()}] ${message}`, details || '');
+    
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('systemLog', { detail: entry }));
+    }
   }
 
-  private addLog(type: LogEntry['type'], message: string, details?: any): void {
+  public log(type: LogEntry['type'], message: string, details?: any): void {
     const entry: LogEntry = {
       timestamp: new Date(),
       type,
@@ -41,31 +84,33 @@ class SystemLogger {
     };
 
     this.logs.push(entry);
-    
+    this.updateCache(entry);
+
     if (this.logs.length > this.maxLogs) {
       this.logs = this.logs.slice(-this.maxLogs);
     }
 
-    // Dispatch event for UI updates
     if (typeof window !== 'undefined') {
-      const event = new CustomEvent('systemLog', { detail: entry });
-      window.dispatchEvent(event);
+      window.dispatchEvent(new CustomEvent('systemLog', { detail: entry }));
     }
 
-    // Console log for debugging
     console.log(`[${type.toUpperCase()}] ${message}`, details || '');
   }
 
   public getLogs(): LogEntry[] {
-    return [...this.logs];
+    return this.cache.latest || [];
   }
 
   public getLogsByType(type: LogEntry['type']): LogEntry[] {
-    return this.logs.filter(log => log.type === type);
+    return this.cache[type] || [];
   }
 
   public clearLogs(): void {
     this.logs = [];
+    Object.keys(this.cache).forEach(key => {
+      this.cache[key] = [];
+    });
+    
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('systemLogsClear'));
     }

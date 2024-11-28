@@ -19,6 +19,7 @@ const EnhancedLogDisplay: React.FC = () => {
     const initialLogs = systemLogger.getLogs();
     setLogs(initialLogs);
 
+    // Clear logs when component unmounts
     return () => {
       window.removeEventListener('systemLog', updateLogs as EventListener);
     };
@@ -40,6 +41,10 @@ const EnhancedLogDisplay: React.FC = () => {
         return 'bg-orange-500';
       case 'checkpoint':
         return 'bg-red-500';
+      case 'learning':
+        return 'bg-cyan-500';
+      case 'model':
+        return 'bg-pink-500';
       default:
         return 'bg-gray-500';
     }
@@ -65,6 +70,8 @@ const EnhancedLogDisplay: React.FC = () => {
           <option value="lunar">Lunar</option>
           <option value="player">Jogadores</option>
           <option value="checkpoint">Checkpoints</option>
+          <option value="learning">Aprendizado</option>
+          <option value="model">Modelo</option>
         </select>
       </div>
 

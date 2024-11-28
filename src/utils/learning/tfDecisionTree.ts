@@ -11,7 +11,7 @@ export class TFDecisionTree {
 
   private async initializeModel() {
     try {
-      systemLogger.info('learning', 'Inicializando modelo de árvore de decisão', {
+      systemLogger.log('learning', 'Inicializando modelo de árvore de decisão', {
         backend: tf.getBackend(),
         memory: tf.memory()
       });
@@ -31,9 +31,9 @@ export class TFDecisionTree {
         metrics: ['accuracy']
       });
 
-      systemLogger.info('learning', 'Modelo inicializado com sucesso');
+      systemLogger.log('learning', 'Modelo inicializado com sucesso');
     } catch (error) {
-      systemLogger.error('learning', 'Erro ao inicializar modelo', { error });
+      systemLogger.log('learning', 'Erro ao inicializar modelo', { error });
       throw error;
     }
   }
