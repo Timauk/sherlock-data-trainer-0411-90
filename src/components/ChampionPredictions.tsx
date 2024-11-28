@@ -7,7 +7,7 @@ import NumberSelector from './NumberSelector';
 import PredictionsList from './PredictionsList';
 import { generatePredictions } from '../utils/prediction/predictionGenerator';
 import { systemLogger } from '../utils/logging/systemLogger';
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { PredictionsHeader } from './predictions/PredictionsHeader';
 import { PredictionResult } from './predictions/types';
 
