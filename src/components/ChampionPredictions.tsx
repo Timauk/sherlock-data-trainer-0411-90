@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Player } from '@/types/gameTypes';
@@ -32,81 +32,45 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   const [systemReady, setSystemReady] = useState(false);
   const { toast } = useToast();
 
-  const handleNumbersSelected = (numbers: number[]) => {
-    setSelectedNumbers(numbers);
-    if (predictions.length > 0) {
-      setPredictions(predictions.map(pred => ({
-        ...pred,
-        matchesWithSelected: pred.numbers.filter(n => numbers.includes(n)).length
-      })));
-    }
-  };
+  const getMissingItems = useCallback(() => {
+    const items = [];
+    if (!champion) items.push('campeão');
+    if (!trainedModel) items.push('modelo');
+    if (!lastConcursoNumbers) items.push('números do último concurso');
+    return items;
+  }, [champion, trainedModel, lastConcursoNumbers]);
 
-  useEffect(() => {
-    const allDataLoaded = champion && trainedModel && lastConcursoNumbers;
-    console.log('Estado dos dados:', {
-      hasChampion: !!champion,
-      hasModel: !!trainedModel,
-      hasNumbers: !!lastConcursoNumbers,
-      allDataLoaded
-    });
-    
-    setSystemReady(!!allDataLoaded);
-    
-    if (allDataLoaded) {
-      toast({
-        title: "Sistema Pronto",
-        description: "Todos os dados foram carregados com sucesso. Pronto para gerar jogos!",
-      });
-      systemLogger.log('system', 'Sistema pronto para gerar previsões');
-    }
-  }, [champion, trainedModel, lastConcursoNumbers, toast]);
-
-  // Nova lógica para auto-gerar quando o CSV terminar
-  useEffect(() => {
-    if (csvProgress >= 100 && systemReady && !isGenerating && predictions.length === 0) {
-      generatePredictionsHandler();
-    }
-  }, [csvProgress, systemReady, isGenerating, predictions.length]);
-
-  const getSystemStatus = () => {
+  const getSystemStatus = useCallback(() => {
     if (!systemReady) {
-      const missingItems = [];
-      if (!champion) missingItems.push('campeão');
-      if (!trainedModel) missingItems.push('modelo');
-      if (!lastConcursoNumbers) missingItems.push('números do último concurso');
-      
-      console.log('Status do sistema:', {
-        systemReady,
-        missingItems
-      });
-      
       return {
         color: 'bg-yellow-500',
-        text: `Aguardando: ${missingItems.join(', ')}`,
+        text: `Aguardando: ${getMissingItems().join(', ')}`,
         icon: <AlertCircle className="h-4 w-4" />,
-        ready: false
+        ready: false,
       };
     }
     return {
       color: 'bg-green-500',
       text: 'Sistema Pronto para Gerar!',
       icon: <CheckCircle2 className="h-4 w-4" />,
-      ready: true
+      ready: true,
     };
-  };
+  }, [systemReady, getMissingItems]);
 
-  const generatePredictionsHandler = async () => {
+  const handleNumbersSelected = useCallback((numbers: number[]) => {
+    setSelectedNumbers(numbers);
+    setPredictions(prev => prev.map(pred => ({
+      ...pred,
+      matchesWithSelected: pred.numbers.filter(n => numbers.includes(n)).length,
+    })));
+  }, []);
+
+  const generatePredictionsHandler = useCallback(async () => {
     if (!systemReady) {
-      const missingItems = [];
-      if (!champion) missingItems.push('campeão');
-      if (!trainedModel) missingItems.push('modelo');
-      if (!lastConcursoNumbers) missingItems.push('números do último concurso');
-      
       toast({
         title: "Sistema em Preparação",
-        description: `Aguardando: ${missingItems.join(', ')}`,
-        variant: "default"
+        description: `Aguardando: ${getMissingItems().join(', ')}`,
+        variant: "default",
       });
       return;
     }
@@ -120,34 +84,49 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
         selectedNumbers
       );
 
-      if (!newPredictions || newPredictions.length === 0) {
+      if (!newPredictions?.length) {
         throw new Error("Não foi possível gerar previsões");
       }
 
       setPredictions(newPredictions);
-      
       systemLogger.log('prediction', `8 jogos gerados com sucesso pelo campeão #${champion!.id}`);
       
       toast({
         title: "Previsões Geradas",
         description: `8 jogos foram gerados com sucesso! ${
           isServerProcessing ? '(Processado no servidor)' : '(Processado no navegador)'
-        }`
+        }`,
       });
-
     } catch (error) {
       console.error("Erro ao gerar previsões:", error);
       toast({
         title: "Erro",
-        description: "Erro ao gerar previsões: " + (error instanceof Error ? error.message : "Erro desconhecido"),
-        variant: "destructive"
+        description: `Erro ao gerar previsões: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
+        variant: "destructive",
       });
     } finally {
       setIsGenerating(false);
     }
-  };
+  }, [systemReady, champion, trainedModel, lastConcursoNumbers, selectedNumbers, toast, isServerProcessing]);
 
-  const status = getSystemStatus();
+  useEffect(() => {
+    const allDataLoaded = Boolean(champion && trainedModel && lastConcursoNumbers);
+    setSystemReady(allDataLoaded);
+
+    if (allDataLoaded) {
+      toast({
+        title: "Sistema Pronto",
+        description: "Todos os dados foram carregados com sucesso. Pronto para gerar jogos!",
+      });
+      systemLogger.log('system', 'Sistema pronto para gerar previsões');
+    }
+  }, [champion, trainedModel, lastConcursoNumbers, toast]);
+
+  useEffect(() => {
+    if (csvProgress >= 100 && systemReady && !isGenerating && !predictions.length) {
+      generatePredictionsHandler();
+    }
+  }, [csvProgress, systemReady, isGenerating, predictions.length, generatePredictionsHandler]);
 
   return (
     <div className="space-y-4">
@@ -159,7 +138,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       <Card className="mt-4">
         <CardHeader>
           <PredictionsHeader 
-            status={status}
+            status={getSystemStatus()}
             isGenerating={isGenerating}
             onGenerate={generatePredictionsHandler}
             isServerProcessing={isServerProcessing}
@@ -167,7 +146,10 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
         </CardHeader>
         <CardContent>
           {predictions.length > 0 ? (
-            <PredictionsList predictions={predictions} selectedNumbers={selectedNumbers} />
+            <PredictionsList 
+              predictions={predictions} 
+              selectedNumbers={selectedNumbers} 
+            />
           ) : (
             <div className="text-center text-gray-500 dark:text-gray-400 p-4">
               {isGenerating ? (
