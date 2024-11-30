@@ -2,27 +2,13 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-import * as tf from '@tensorflow/tfjs';
+import { initLogger } from './utils/logging/initLogger';
 
-const root = document.getElementById('root');
+// Inicializa o logger antes de renderizar a aplicação
+initLogger();
 
-if (!root) {
-  throw new Error('Root element not found');
-}
-
-// Initialize TensorFlow before rendering
-tf.ready().then(() => {
-  ReactDOM.createRoot(root).render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
-}).catch(error => {
-  console.error('Critical error initializing TensorFlow.js:', error);
-  // Still render the app, as some features might work without TensorFlow
-  ReactDOM.createRoot(root).render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
-});
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
