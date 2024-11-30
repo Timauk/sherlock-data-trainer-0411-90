@@ -68,7 +68,7 @@ export const handleOfflineError = (error: any) => {
     toast({
       title: "Modo Offline",
       description: "Você está offline. Algumas funcionalidades podem estar indisponíveis.",
-      variant: "warning"
+      variant: "default"
     });
     return true;
   }

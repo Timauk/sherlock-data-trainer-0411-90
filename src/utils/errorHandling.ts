@@ -5,7 +5,7 @@ export const handleApiError = (error: any) => {
     toast({
       title: "Muitas Requisições",
       description: "Por favor, aguarde um momento antes de tentar novamente.",
-      variant: "warning"
+      variant: "default"
     });
     return;
   }
