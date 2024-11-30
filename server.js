@@ -21,13 +21,14 @@ logger.info('\x1b[32m%s\x1b[0m', 'Starting server...', {
   arch: process.arch
 });
 
-// Updated CORS configuration
+// Updated CORS configuration with WebSocket support
 app.use(cors({
-  origin: (origin, callback) => {
+  origin: function(origin, callback) {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:5173',
       'http://localhost:8080',
+      'https://lovable.dev',
       'https://dcc838c0-148c-47bb-abaf-cbdd03ce84f5.lovableproject.com'
     ];
     
@@ -38,11 +39,12 @@ app.use(cors({
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 600
 }));
 
-// Log de requisições em verde
 app.use((req, res, next) => {
   logger.info('\x1b[32m%s\x1b[0m', 'Nova requisição:', {
     method: req.method,
@@ -126,16 +128,19 @@ setInterval(() => {
   });
 }, 300000);
 
-// Global error handler com logs em vermelho
+// WebSocket error handling
 app.use((err, req, res, next) => {
-  logger.error('\x1b[31m%s\x1b[0m', 'Erro no servidor:', {
+  if (err.name === 'UnauthorizedError') {
+    res.status(401).json({ error: 'Invalid token' });
+    return;
+  }
+  
+  logger.error('\x1b[31m%s\x1b[0m', 'Server error:', {
     error: err.message,
     stack: err.stack,
     path: req.path,
     method: req.method,
-    timestamp: new Date().toISOString(),
-    requestBody: req.body,
-    requestQuery: req.query
+    timestamp: new Date().toISOString()
   });
 
   res.status(500).json({
@@ -146,16 +151,28 @@ app.use((err, req, res, next) => {
 
 // Start server with error handling
 try {
-  app.listen(PORT, () => {
-    logger.info('\x1b[32m%s\x1b[0m', `Servidor iniciado com sucesso`, {
+  const server = app.listen(PORT, () => {
+    logger.info('\x1b[32m%s\x1b[0m', `Server started successfully`, {
       port: PORT,
       environment: process.env.NODE_ENV,
       cacheDir: path.join(__dirname, 'cache'),
       timestamp: new Date().toISOString()
     });
   });
+
+  // WebSocket error handling
+  server.on('upgrade', (request, socket, head) => {
+    socket.on('error', (err) => {
+      logger.error('\x1b[31m%s\x1b[0m', 'WebSocket error:', {
+        error: err.message,
+        stack: err.stack,
+        timestamp: new Date().toISOString()
+      });
+    });
+  });
+
 } catch (error) {
-  logger.error('\x1b[31m%s\x1b[0m', 'Erro fatal ao iniciar servidor:', {
+  logger.error('\x1b[31m%s\x1b[0m', 'Fatal error starting server:', {
     error: error.message,
     stack: error.stack,
     timestamp: new Date().toISOString()
