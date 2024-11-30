@@ -29,17 +29,14 @@ class SystemLogger {
 
     this.logs.push(entry);
 
-    // Limita o número de logs armazenados
     if (this.logs.length > this.maxLogs) {
       this.logs = this.logs.slice(-this.maxLogs);
     }
 
-    // Emite evento para atualizar a interface
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('systemLog', { detail: entry }));
     }
 
-    // Log no console para debug
     console.log(`[${type.toUpperCase()}] ${message}`, details || '');
   }
 
@@ -62,6 +59,10 @@ class SystemLogger {
 
   public getLogs(): LogEntry[] {
     return [...this.logs];
+  }
+
+  public getLogsByType(type: LogEntry['type']): LogEntry[] {
+    return this.logs.filter(log => log.type === type);
   }
 
   public clearLogs(): void {
