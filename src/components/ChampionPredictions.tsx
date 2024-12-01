@@ -181,7 +181,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       trainedModel: {
         exists: !!trainedModel,
         type: typeof trainedModel,
-        isCompiled: trainedModel?.compiled
+        isCompiled: trainedModel?.compile !== undefined
       },
       lastConcursoNumbers: {
         exists: !!lastConcursoNumbers,
