@@ -39,9 +39,18 @@ rmdir /s /q node_modules 2>nul
 del package-lock.json 2>nul
 npm cache clean --force
 
-:: Força atualização das dependências
+:: Força atualização das dependências e aguarda conclusão
 echo Instalando dependencias...
 call npm install --force
+echo Aguardando instalacao das dependencias...
+timeout /t 10 /nobreak
+echo Verificando instalacao...
+if not exist "node_modules" (
+    echo Erro: Falha na instalacao das dependencias!
+    echo Tentando novamente...
+    call npm install --force
+    timeout /t 10 /nobreak
+)
 
 :: Cria diretórios necessários se não existirem
 if not exist "checkpoints" mkdir checkpoints
@@ -57,6 +66,13 @@ echo Limpando arquivos de cache...
 del /q "cache\predictions\*.*" 2>nul
 del /q "cache\models\*.*" 2>nul
 del /q "cache\static\*.*" 2>nul
+
+:: Verifica se node_modules existe antes de iniciar
+if not exist "node_modules" (
+    echo ERRO: node_modules nao encontrado! A instalacao falhou.
+    pause
+    exit
+)
 
 :: Inicia o servidor com caminho explícito e sem modo watch inicialmente
 echo Iniciando servidor Node.js...
