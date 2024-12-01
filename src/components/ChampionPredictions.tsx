@@ -34,17 +34,37 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
 
   const getMissingItems = useCallback(() => {
     const items = [];
-    if (!champion) items.push('campeão');
-    if (!trainedModel) items.push('modelo');
-    if (!lastConcursoNumbers) items.push('números do último concurso');
+    if (!champion) {
+      items.push('campeão');
+      console.log('Champion status:', { champion, players: champion?.id });
+    }
+    if (!trainedModel) {
+      items.push('modelo');
+      console.log('Model status:', { modelLoaded: !!trainedModel });
+    }
+    if (!lastConcursoNumbers?.length) {
+      items.push('números do último concurso');
+      console.log('Last numbers status:', { numbers: lastConcursoNumbers });
+    }
     return items;
   }, [champion, trainedModel, lastConcursoNumbers]);
 
   const getSystemStatus = useCallback(() => {
-    if (!systemReady) {
+    const missingItems = getMissingItems();
+    console.log('System status check:', {
+      systemReady,
+      missingItems,
+      championDetails: champion ? {
+        id: champion.id,
+        score: champion.score,
+        fitness: champion.fitness
+      } : null
+    });
+
+    if (!systemReady || missingItems.length > 0) {
       return {
         color: 'bg-yellow-500',
-        text: `Aguardando: ${getMissingItems().join(', ')}`,
+        text: `Aguardando: ${missingItems.join(', ')}`,
         icon: <AlertCircle className="h-4 w-4" />,
         ready: false,
       };
@@ -55,7 +75,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       icon: <CheckCircle2 className="h-4 w-4" />,
       ready: true,
     };
-  }, [systemReady, getMissingItems]);
+  }, [systemReady, getMissingItems, champion]);
 
   const handleNumbersSelected = useCallback((numbers: number[]) => {
     setSelectedNumbers(numbers);
@@ -67,9 +87,17 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
 
   const generatePredictionsHandler = useCallback(async () => {
     if (!systemReady) {
+      const missingItems = getMissingItems();
+      console.log('Cannot generate - system not ready:', {
+        missingItems,
+        champion: !!champion,
+        trainedModel: !!trainedModel,
+        lastConcursoNumbers: !!lastConcursoNumbers
+      });
+
       toast({
         title: "Sistema em Preparação",
-        description: `Aguardando: ${getMissingItems().join(', ')}`,
+        description: `Aguardando: ${missingItems.join(', ')}`,
         variant: "default",
       });
       return;
@@ -77,6 +105,12 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
 
     setIsGenerating(true);
     try {
+      console.log('Starting prediction generation with:', {
+        championId: champion?.id,
+        modelLoaded: !!trainedModel,
+        lastNumbers: lastConcursoNumbers
+      });
+
       const newPredictions = await generatePredictions(
         champion!,
         trainedModel!,
@@ -107,10 +141,19 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
     } finally {
       setIsGenerating(false);
     }
-  }, [systemReady, champion, trainedModel, lastConcursoNumbers, selectedNumbers, toast, isServerProcessing]);
+  }, [systemReady, champion, trainedModel, lastConcursoNumbers, selectedNumbers, toast, isServerProcessing, getMissingItems]);
 
   useEffect(() => {
-    const allDataLoaded = Boolean(champion && trainedModel && lastConcursoNumbers);
+    const allDataLoaded = Boolean(champion && trainedModel && lastConcursoNumbers?.length > 0);
+    console.log('Checking system readiness:', {
+      champion: !!champion,
+      championId: champion?.id,
+      trainedModel: !!trainedModel,
+      lastConcursoNumbers: !!lastConcursoNumbers,
+      numbersLength: lastConcursoNumbers?.length,
+      allDataLoaded
+    });
+
     setSystemReady(allDataLoaded);
 
     if (allDataLoaded) {
@@ -124,6 +167,12 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
 
   useEffect(() => {
     if (csvProgress >= 100 && systemReady && !isGenerating && !predictions.length) {
+      console.log('Auto-generating predictions:', {
+        csvProgress,
+        systemReady,
+        isGenerating,
+        predictionsLength: predictions.length
+      });
       generatePredictionsHandler();
     }
   }, [csvProgress, systemReady, isGenerating, predictions.length, generatePredictionsHandler]);
