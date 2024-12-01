@@ -6,27 +6,88 @@ export interface LogEntry {
 }
 
 class SystemLogger {
-  private static instance: SystemLogger;
-  private logs: LogEntry[] = [];
-  private maxLogs = 1000;
+  static instance;
+  logs = [];
+  maxLogs = 1000;
 
-  private constructor() {}
+  constructor() {
+    if (SystemLogger.instance) {
+      return SystemLogger.instance;
+    }
+    SystemLogger.instance = this;
+  }
 
-  public static getInstance(): SystemLogger {
+  static getInstance() {
     if (!SystemLogger.instance) {
       SystemLogger.instance = new SystemLogger();
     }
     return SystemLogger.instance;
   }
 
-  public log(type: LogEntry['type'], message: string, details?: any): void {
-    const entry: LogEntry = {
+  log(type: LogEntry['type'], message: string, details?: any) {
+    const entry = {
       timestamp: new Date(),
       type,
       message,
-      details
+      details,
     };
 
+    this.addLog(entry);
+    this.printLog(entry, 'info');
+  }
+
+  error(type: LogEntry['type'], message: string, details?: any) {
+    const entry = {
+      timestamp: new Date(),
+      type,
+      message: `ERROR: ${message}`,
+      details,
+    };
+
+    this.addLog(entry);
+    this.printLog(entry, 'error');
+  }
+
+  warn(type: LogEntry['type'], message: string, details?: any) {
+    const entry = {
+      timestamp: new Date(),
+      type,
+      message: `WARNING: ${message}`,
+      details,
+    };
+
+    this.addLog(entry);
+    this.printLog(entry, 'warn');
+  }
+
+  debug(type: LogEntry['type'], message: string, details?: any) {
+    const entry = {
+      timestamp: new Date(),
+      type,
+      message: `DEBUG: ${message}`,
+      details,
+    };
+
+    this.addLog(entry);
+    this.printLog(entry, 'debug');
+  }
+
+  getLogs() {
+    return [...this.logs];
+  }
+
+  getLogsByType(type: LogEntry['type']) {
+    return this.logs.filter((log) => log.type === type);
+  }
+
+  clearLogs() {
+    this.logs = [];
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('systemLogsClear'));
+    }
+  }
+
+  private addLog(entry: LogEntry) {
     this.logs.push(entry);
 
     if (this.logs.length > this.maxLogs) {
@@ -36,40 +97,18 @@ class SystemLogger {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('systemLog', { detail: entry }));
     }
-
-    console.log(`[${type.toUpperCase()}] ${message}`, details || '');
   }
 
-  public error(type: LogEntry['type'], message: string, details?: any): void {
-    const entry: LogEntry = {
-      timestamp: new Date(),
-      type,
-      message: `ERROR: ${message}`,
-      details
+  private printLog(entry: LogEntry, level: 'info' | 'warn' | 'error' | 'debug') {
+    const colorMap = {
+      info: '\x1b[32m',
+      warn: '\x1b[33m',
+      error: '\x1b[31m',
+      debug: '\x1b[36m',
     };
-    
-    this.logs.push(entry);
-    
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('systemLog', { detail: entry }));
-    }
-    
-    console.error(`[${type.toUpperCase()}] ${message}`, details || '');
-  }
 
-  public getLogs(): LogEntry[] {
-    return [...this.logs];
-  }
-
-  public getLogsByType(type: LogEntry['type']): LogEntry[] {
-    return this.logs.filter(log => log.type === type);
-  }
-
-  public clearLogs(): void {
-    this.logs = [];
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('systemLogsClear'));
-    }
+    const color = colorMap[level] || '\x1b[0m';
+    console[level](`${color}[${entry.type.toUpperCase()}] ${entry.message}\x1b[0m`, entry.details || '');
   }
 }
 

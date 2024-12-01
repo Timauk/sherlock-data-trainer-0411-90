@@ -35,18 +35,9 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   const getMissingItems = useCallback(() => {
     const items = [];
     
-    console.log('Verificando champion:', {
-      champion,
-      championId: champion?.id,
-      championScore: champion?.score,
-      championFitness: champion?.fitness,
-      isUndefined: champion === undefined,
-      isNull: champion === null
-    });
-
     if (!champion) {
       items.push('campeão');
-      console.log('Champion não detectado:', { 
+      systemLogger.debug('system', 'Champion não detectado', { 
         champion, 
         type: typeof champion,
         hasId: champion?.id !== undefined
@@ -55,7 +46,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
 
     if (!trainedModel) {
       items.push('modelo');
-      console.log('Model status:', { 
+      systemLogger.debug('system', 'Model status', { 
         modelLoaded: !!trainedModel,
         modelType: typeof trainedModel 
       });
@@ -63,7 +54,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
 
     if (!lastConcursoNumbers?.length) {
       items.push('números do último concurso');
-      console.log('Last numbers status:', { 
+      systemLogger.debug('system', 'Last numbers status', { 
         numbers: lastConcursoNumbers,
         length: lastConcursoNumbers?.length,
         type: typeof lastConcursoNumbers
