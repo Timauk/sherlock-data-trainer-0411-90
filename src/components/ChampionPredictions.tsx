@@ -34,18 +34,42 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
 
   const getMissingItems = useCallback(() => {
     const items = [];
+    
+    console.log('Verificando champion:', {
+      champion,
+      championId: champion?.id,
+      championScore: champion?.score,
+      championFitness: champion?.fitness,
+      isUndefined: champion === undefined,
+      isNull: champion === null
+    });
+
     if (!champion) {
       items.push('campeão');
-      console.log('Champion status:', { champion, players: champion?.id });
+      console.log('Champion não detectado:', { 
+        champion, 
+        type: typeof champion,
+        hasId: champion?.id !== undefined
+      });
     }
+
     if (!trainedModel) {
       items.push('modelo');
-      console.log('Model status:', { modelLoaded: !!trainedModel });
+      console.log('Model status:', { 
+        modelLoaded: !!trainedModel,
+        modelType: typeof trainedModel 
+      });
     }
+
     if (!lastConcursoNumbers?.length) {
       items.push('números do último concurso');
-      console.log('Last numbers status:', { numbers: lastConcursoNumbers });
+      console.log('Last numbers status:', { 
+        numbers: lastConcursoNumbers,
+        length: lastConcursoNumbers?.length,
+        type: typeof lastConcursoNumbers
+      });
     }
+
     return items;
   }, [champion, trainedModel, lastConcursoNumbers]);
 
@@ -145,13 +169,28 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
 
   useEffect(() => {
     const allDataLoaded = Boolean(champion && trainedModel && lastConcursoNumbers?.length > 0);
-    console.log('Checking system readiness:', {
-      champion: !!champion,
-      championId: champion?.id,
-      trainedModel: !!trainedModel,
-      lastConcursoNumbers: !!lastConcursoNumbers,
-      numbersLength: lastConcursoNumbers?.length,
-      allDataLoaded
+    
+    console.log('Verificação detalhada do sistema:', {
+      champion: {
+        exists: !!champion,
+        id: champion?.id,
+        score: champion?.score,
+        fitness: champion?.fitness,
+        type: typeof champion
+      },
+      trainedModel: {
+        exists: !!trainedModel,
+        type: typeof trainedModel,
+        isCompiled: trainedModel?.compiled
+      },
+      lastConcursoNumbers: {
+        exists: !!lastConcursoNumbers,
+        length: lastConcursoNumbers?.length,
+        values: lastConcursoNumbers,
+        type: typeof lastConcursoNumbers
+      },
+      allDataLoaded,
+      systemReady
     });
 
     setSystemReady(allDataLoaded);
