@@ -98,23 +98,33 @@ const PlayPage: React.FC = () => {
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
-    if (isPlaying) {
+    if (isPlaying && csvData.length > 0) { // Added check for csvData
       intervalId = setInterval(() => {
-        gameLogic.gameLoop();
-        setProgress((prevProgress) => {
-          const newProgress = prevProgress + (100 / csvData.length);
-          if (newProgress >= 100) {
-            if (!gameLogic.isManualMode) {
-              gameLogic.evolveGeneration();
+        if (gameLogic.currentInput && gameLogic.currentInput.length > 0) { // Ensure we have input data
+          gameLogic.gameLoop();
+          setProgress((prevProgress) => {
+            const newProgress = prevProgress + (100 / csvData.length);
+            if (newProgress >= 100) {
+              if (!gameLogic.isManualMode) {
+                gameLogic.evolveGeneration();
+              }
+              return gameLogic.isInfiniteMode ? 0 : 100;
             }
-            return gameLogic.isInfiniteMode ? 0 : 100;
-          }
-          return newProgress;
-        });
+            return newProgress;
+          });
+        } else {
+          console.warn('No input data available for game loop');
+          pauseGame();
+          toast({
+            title: "Erro no Processamento",
+            description: "Dados de entrada não disponíveis. Carregue um arquivo CSV primeiro.",
+            variant: "destructive"
+          });
+        }
       }, gameSpeed);
     }
     return () => clearInterval(intervalId);
-  }, [isPlaying, csvData, gameLogic, gameSpeed]);
+  }, [isPlaying, csvData, gameLogic, gameSpeed, pauseGame, toast]);
 
   return (
     <div className="p-6">
