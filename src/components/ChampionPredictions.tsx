@@ -35,34 +35,34 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   const getMissingItems = useCallback(() => {
     const items = [];
     
-    if (!champion) {
-      items.push('campeão');
-      systemLogger.debug('system', 'Champion não detectado', { 
-        champion, 
-        type: typeof champion,
-        hasId: champion?.id !== undefined
-      });
-    }
-
-    if (!trainedModel) {
-      items.push('modelo');
-      systemLogger.debug('system', 'Model status', { 
-        modelLoaded: !!trainedModel,
-        modelType: typeof trainedModel 
-      });
-    }
-
-    if (!lastConcursoNumbers?.length) {
-      items.push('números do último concurso');
-      systemLogger.debug('system', 'Last numbers status', { 
-        numbers: lastConcursoNumbers,
-        length: lastConcursoNumbers?.length,
-        type: typeof lastConcursoNumbers
-      });
-    }
+    if (!champion) items.push('campeão');
+    if (!trainedModel) items.push('modelo');
+    if (!lastConcursoNumbers?.length) items.push('números do último concurso');
 
     return items;
   }, [champion, trainedModel, lastConcursoNumbers]);
+
+  // Movido para useEffect para evitar setState durante renderização
+  useEffect(() => {
+    const items = getMissingItems();
+    if (items.length > 0) {
+      systemLogger.debug('system', 'Status dos componentes', { 
+        champion: { 
+          exists: !!champion, 
+          type: typeof champion,
+          hasId: champion?.id !== undefined
+        },
+        model: {
+          loaded: !!trainedModel,
+          type: typeof trainedModel
+        },
+        lastNumbers: {
+          exists: !!lastConcursoNumbers,
+          length: lastConcursoNumbers?.length
+        }
+      });
+    }
+  }, [champion, trainedModel, lastConcursoNumbers, getMissingItems]);
 
   const getSystemStatus = useCallback(() => {
     const missingItems = getMissingItems();
@@ -160,30 +160,6 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
 
   useEffect(() => {
     const allDataLoaded = Boolean(champion && trainedModel && lastConcursoNumbers?.length > 0);
-    
-    console.log('Verificação detalhada do sistema:', {
-      champion: {
-        exists: !!champion,
-        id: champion?.id,
-        score: champion?.score,
-        fitness: champion?.fitness,
-        type: typeof champion
-      },
-      trainedModel: {
-        exists: !!trainedModel,
-        type: typeof trainedModel,
-        isCompiled: trainedModel?.compile !== undefined
-      },
-      lastConcursoNumbers: {
-        exists: !!lastConcursoNumbers,
-        length: lastConcursoNumbers?.length,
-        values: lastConcursoNumbers,
-        type: typeof lastConcursoNumbers
-      },
-      allDataLoaded,
-      systemReady
-    });
-
     setSystemReady(allDataLoaded);
 
     if (allDataLoaded) {
