@@ -41,6 +41,10 @@ const PlayPage: React.FC = () => {
     }
   };
 
+  const handleSpeedChange = (value: number[]) => {
+    setGameSpeed(2000 - value[0]);
+  };
+
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
     if (isPlaying && csvData.length > 0) {
@@ -74,7 +78,7 @@ const PlayPage: React.FC = () => {
   return (
     <div className="p-6">
       <PlayPageHeader />
-      <SpeedControl gameSpeed={gameSpeed} onSpeedChange={setGameSpeed} />
+      <SpeedControl gameSpeed={gameSpeed} onSpeedChange={handleSpeedChange} />
       <PlayPageContent
         isPlaying={isPlaying}
         onPlay={playGame}
