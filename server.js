@@ -29,10 +29,11 @@ app.use(cors({
       'http://localhost:5173',
       'http://localhost:8080',
       'https://lovable.dev',
-      'https://dcc838c0-148c-47bb-abaf-cbdd03ce84f5.lovableproject.com'
+      'https://dcc838c0-148c-47bb-abaf-cbdd03ce84f5.lovableproject.com',
+      'https://id-preview--dcc838c0-148c-47bb-abaf-cbdd03ce84f5.lovable.app'
     ];
     
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
