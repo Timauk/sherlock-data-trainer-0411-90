@@ -21,8 +21,8 @@ logger.info('\x1b[32m%s\x1b[0m', 'Starting server...', {
   arch: process.arch
 });
 
-// Updated CORS configuration with WebSocket support
-app.use(cors({
+// CORS configuration with improved error handling
+const corsOptions = {
   origin: function(origin, callback) {
     const allowedOrigins = [
       'http://localhost:3000',
@@ -33,18 +33,37 @@ app.use(cors({
       'https://id-preview--dcc838c0-148c-47bb-abaf-cbdd03ce84f5.lovable.app'
     ];
     
-    if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    // Debug logging
+    logger.info('\x1b[33m%s\x1b[0m', 'CORS Request from origin:', { origin });
+    
+    if (!origin) {
+      logger.info('\x1b[33m%s\x1b[0m', 'Allowing request with no origin');
+      return callback(null, true);
     }
+    
+    const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed));
+    
+    if (isAllowed) {
+      logger.info('\x1b[32m%s\x1b[0m', 'Origin allowed:', { origin });
+      return callback(null, true);
+    }
+    
+    logger.warn('\x1b[31m%s\x1b[0m', 'Origin rejected:', { origin });
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 600
-}));
+  maxAge: 600,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+
+// Pre-flight requests
+app.options('*', cors(corsOptions));
 
 app.use((req, res, next) => {
   logger.info('\x1b[32m%s\x1b[0m', 'Nova requisição:', {
