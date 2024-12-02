@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import * as tf from '@tensorflow/tfjs';
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +20,7 @@ const PlayPage: React.FC = () => {
 
   const gameLogic = useGameLogic(csvData, trainedModel);
 
-  const loadCSV = useCallback(async (file: File) => {
+  const loadCSV = async (file: File) => {
     try {
       const text = await file.text();
       const lines = text.trim().split('\n').slice(1);
@@ -39,68 +39,13 @@ const PlayPage: React.FC = () => {
     } catch (error) {
       gameLogic.addLog(`Erro ao carregar CSV: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     }
-  }, [gameLogic]);
-
-  const loadModel = useCallback(async (jsonFile: File, weightsFile: File) => {
-    try {
-      const model = await tf.loadLayersModel(
-        tf.io.browserFiles([jsonFile, weightsFile])
-      );
-      setTrainedModel(model);
-      gameLogic.addLog("Modelo carregado com sucesso!");
-      toast({
-        title: "Modelo Carregado",
-        description: "O modelo foi carregado com sucesso.",
-      });
-    } catch (error) {
-      gameLogic.addLog(`Erro ao carregar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-      console.error("Detalhes do erro:", error);
-      toast({
-        title: "Erro ao Carregar Modelo",
-        description: "Certifique-se de selecionar tanto o arquivo .json quanto o arquivo .weights.bin",
-        variant: "destructive",
-      });
-    }
-  }, [gameLogic, toast]);
-
-  const saveModel = useCallback(async () => {
-    if (trainedModel) {
-      try {
-        await trainedModel.save('downloads://modelo-atual');
-        gameLogic.addLog("Modelo salvo com sucesso!");
-        toast({
-          title: "Modelo Salvo",
-          description: "O modelo atual foi salvo com sucesso.",
-        });
-      } catch (error) {
-        gameLogic.addLog(`Erro ao salvar o modelo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-        console.error("Detalhes do erro:", error);
-        toast({
-          title: "Erro ao Salvar Modelo",
-          description: "Ocorreu um erro ao salvar o modelo. Verifique o console para mais detalhes.",
-          variant: "destructive",
-        });
-      }
-    } else {
-      gameLogic.addLog("Nenhum modelo para salvar.");
-      toast({
-        title: "Nenhum Modelo",
-        description: "Não há nenhum modelo carregado para salvar.",
-        variant: "destructive",
-      });
-    }
-  }, [trainedModel, gameLogic, toast]);
-
-  const handleSpeedChange = (value: number[]) => {
-    const newSpeed = 2000 - value[0];
-    setGameSpeed(newSpeed);
   };
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
-    if (isPlaying && csvData.length > 0) { // Added check for csvData
+    if (isPlaying && csvData.length > 0) {
       intervalId = setInterval(() => {
-        if (gameLogic.currentInput && gameLogic.currentInput.length > 0) { // Ensure we have input data
+        if (csvData.length > 0 && gameLogic.numbers.length > 0) {
           gameLogic.gameLoop();
           setProgress((prevProgress) => {
             const newProgress = prevProgress + (100 / csvData.length);
@@ -129,7 +74,7 @@ const PlayPage: React.FC = () => {
   return (
     <div className="p-6">
       <PlayPageHeader />
-      <SpeedControl gameSpeed={gameSpeed} onSpeedChange={handleSpeedChange} />
+      <SpeedControl gameSpeed={gameSpeed} onSpeedChange={setGameSpeed} />
       <PlayPageContent
         isPlaying={isPlaying}
         onPlay={playGame}
@@ -137,8 +82,23 @@ const PlayPage: React.FC = () => {
         onReset={resetGame}
         onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         onCsvUpload={loadCSV}
-        onModelUpload={loadModel}
-        onSaveModel={saveModel}
+        onModelUpload={(jsonFile, weightsFile) => {
+          tf.loadLayersModel(tf.io.browserFiles([jsonFile, weightsFile]))
+            .then(setTrainedModel)
+            .catch(error => {
+              console.error('Error loading model:', error);
+              toast({
+                title: "Erro ao Carregar Modelo",
+                description: "Ocorreu um erro ao carregar o modelo.",
+                variant: "destructive"
+              });
+            });
+        }}
+        onSaveModel={() => {
+          if (trainedModel) {
+            trainedModel.save('downloads://modelo-atual');
+          }
+        }}
         progress={progress}
         generation={gameLogic.generation}
         gameLogic={gameLogic}
