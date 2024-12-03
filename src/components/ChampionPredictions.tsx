@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Player } from '@/types/gameTypes';
 import * as tf from '@tensorflow/tfjs';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 import NumberSelector from './NumberSelector';
 import PredictionsList from './PredictionsList';
 import { systemLogger } from '../utils/logging/systemLogger';
