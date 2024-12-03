@@ -78,20 +78,6 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
     }
   }, [champion, trainedModel, lastConcursoNumbers, toast]);
 
-  const predictionGenerator = champion && trainedModel ? 
-    <PredictionGenerator
-      champion={champion}
-      trainedModel={trainedModel}
-      lastConcursoNumbers={lastConcursoNumbers}
-      selectedNumbers={selectedNumbers}
-      onPredictionsGenerated={handlePredictionsGenerated}
-    /> : null;
-
-  const systemStatus = <SystemStatus 
-    missingItems={getMissingItems()} 
-    systemReady={systemReady} 
-  />;
-
   return (
     <div className="space-y-4">
       <NumberSelector 
@@ -102,9 +88,31 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       <Card className="mt-4">
         <CardHeader>
           <PredictionsHeader 
-            status={systemStatus}
+            status={{
+              color: systemReady ? 'bg-green-500' : 'bg-yellow-500',
+              text: systemReady ? 'Sistema Pronto para Gerar!' : `Aguardando: ${getMissingItems().join(', ')}`,
+              icon: systemReady ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />,
+              ready: systemReady
+            }}
             isGenerating={isGenerating}
-            onGenerate={predictionGenerator?.generatePredictionsHandler}
+            onGenerate={() => {
+              if (champion && trainedModel) {
+                setIsGenerating(true);
+                const generator = (
+                  <PredictionGenerator
+                    champion={champion}
+                    trainedModel={trainedModel}
+                    lastConcursoNumbers={lastConcursoNumbers}
+                    selectedNumbers={selectedNumbers}
+                    onPredictionsGenerated={(newPreds) => {
+                      handlePredictionsGenerated(newPreds);
+                      setIsGenerating(false);
+                    }}
+                  />
+                );
+                return generator;
+              }
+            }}
             isServerProcessing={isServerProcessing}
           />
         </CardHeader>

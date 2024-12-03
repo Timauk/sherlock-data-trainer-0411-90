@@ -52,5 +52,9 @@ export const PredictionGenerator: React.FC<PredictionGeneratorProps> = ({
     }
   };
 
-  return { generatePredictionsHandler };
+  return (
+    <button onClick={generatePredictionsHandler}>
+      Gerar Previsões
+    </button>
+  );
 };
