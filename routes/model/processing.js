@@ -23,7 +23,10 @@ router.post('/process-game', async (req, res) => {
 
     // Enhanced input validation with detailed logging
     if (!inputData) {
-      logger.error('Dados de entrada ausentes', { body: req.body });
+      logger.error('Dados de entrada ausentes', { 
+        body: req.body,
+        timestamp: new Date().toISOString()
+      });
       return res.status(400).json({ 
         error: 'Input data is required',
         details: 'O campo inputData é obrigatório'
@@ -33,7 +36,8 @@ router.post('/process-game', async (req, res) => {
     if (!Array.isArray(inputData)) {
       logger.error('Dados de entrada inválidos', { 
         inputData,
-        type: typeof inputData 
+        type: typeof inputData,
+        timestamp: new Date().toISOString()
       });
       return res.status(400).json({ 
         error: 'Input data must be an array',
@@ -44,7 +48,8 @@ router.post('/process-game', async (req, res) => {
     if (!Array.isArray(playerWeights)) {
       logger.error('Pesos do jogador inválidos', { 
         playerWeights,
-        type: typeof playerWeights 
+        type: typeof playerWeights,
+        timestamp: new Date().toISOString()
       });
       return res.status(400).json({ 
         error: 'Player weights must be an array',
@@ -55,7 +60,8 @@ router.post('/process-game', async (req, res) => {
     if (typeof generation !== 'number') {
       logger.error('Geração inválida', { 
         generation,
-        type: typeof generation 
+        type: typeof generation,
+        timestamp: new Date().toISOString()
       });
       return res.status(400).json({
         error: 'Generation must be a number',
@@ -68,7 +74,8 @@ router.post('/process-game', async (req, res) => {
       playerWeightsLength: playerWeights.length,
       generation,
       isInfiniteMode,
-      isManualMode
+      isManualMode,
+      timestamp: new Date().toISOString()
     });
 
     // Process game logic with enhanced logging
@@ -83,7 +90,8 @@ router.post('/process-game', async (req, res) => {
     logger.info('Processamento concluído com sucesso', { 
       resultSize: result.prediction.length,
       patternsFound: result.patterns.length,
-      newGeneration: result.generation
+      newGeneration: result.generation,
+      timestamp: new Date().toISOString()
     });
 
     res.json(result);
@@ -111,43 +119,53 @@ async function processGameLogic(
   logger.info('Iniciando processamento da lógica do jogo', {
     dataLength: inputData.length,
     generation,
-    mode: { infinite: isInfiniteMode, manual: isManualMode }
+    mode: { infinite: isInfiniteMode, manual: isManualMode },
+    timestamp: new Date().toISOString()
   });
 
   try {
     const model = await getOrCreateModel();
     
     if (!model) {
-      logger.error('Falha ao inicializar modelo');
+      logger.error('Falha ao inicializar modelo', {
+        timestamp: new Date().toISOString()
+      });
       throw new Error('Model could not be initialized');
     }
 
     logger.info('Modelo carregado com sucesso', {
       layers: model.layers.length,
-      compiled: model.compiled
+      compiled: model.compiled,
+      timestamp: new Date().toISOString()
     });
 
     const patterns = analyzePatterns([inputData]);
     
     if (!patterns || patterns.length === 0) {
-      logger.warn('Nenhum padrão encontrado nos dados');
+      logger.warn('Nenhum padrão encontrado nos dados', {
+        timestamp: new Date().toISOString()
+      });
       throw new Error('Failed to analyze input data patterns');
     }
 
     logger.info('Padrões analisados', {
       patternsFound: patterns.length,
-      patternTypes: patterns.map(p => p.type)
+      patternTypes: patterns.map(p => p.type),
+      timestamp: new Date().toISOString()
     });
 
     const enhancedInput = enrichDataWithPatterns([inputData], patterns)[0];
     
     if (!enhancedInput) {
-      logger.error('Falha ao enriquecer dados');
+      logger.error('Falha ao enriquecer dados', {
+        timestamp: new Date().toISOString()
+      });
       throw new Error('Failed to enrich input data with patterns');
     }
 
     logger.info('Dados enriquecidos com sucesso', {
-      inputLength: enhancedInput.length
+      inputLength: enhancedInput.length,
+      timestamp: new Date().toISOString()
     });
 
     const tensor = tf.tensor2d([enhancedInput]);
@@ -159,7 +177,8 @@ async function processGameLogic(
       predictionRange: {
         min: Math.min(...result),
         max: Math.max(...result)
-      }
+      },
+      timestamp: new Date().toISOString()
     });
 
     // Cleanup
@@ -178,7 +197,8 @@ async function processGameLogic(
   } catch (error) {
     logger.error('Erro na lógica do jogo', {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      timestamp: new Date().toISOString()
     });
     throw error;
   }
