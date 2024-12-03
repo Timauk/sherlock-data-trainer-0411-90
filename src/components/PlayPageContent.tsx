@@ -37,6 +37,24 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
   
   const processGame = async () => {
     try {
+      // Validate input data before sending
+      if (!gameLogic?.currentInput || !Array.isArray(gameLogic.currentInput)) {
+        toast({
+          title: "Erro de Validação",
+          description: "Dados de entrada inválidos. Certifique-se de que há dados carregados.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('Sending request with data:', {
+        inputData: gameLogic.currentInput,
+        generation,
+        playerWeights: gameLogic.playerWeights,
+        isInfiniteMode: gameLogic.isInfiniteMode,
+        isManualMode: gameLogic.isManualMode
+      });
+
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/processing/process-game`, {
         method: 'POST',
         headers: {
@@ -52,12 +70,14 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
       });
 
       if (!response.ok) {
-        throw new Error('Erro no processamento do servidor');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro no processamento do servidor');
       }
 
       const result = await response.json();
       gameLogic.updateGameState(result);
     } catch (error) {
+      console.error('Process game error:', error);
       toast({
         title: "Erro no Processamento",
         description: error instanceof Error ? error.message : "Erro desconhecido",
