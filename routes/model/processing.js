@@ -23,6 +23,17 @@ router.post('/process-game', async (req, res) => {
       isManualMode 
     } = req.body;
 
+    // Log received data
+    logger.info('Dados recebidos:', {
+      hasInputData: !!inputData,
+      inputDataLength: inputData?.length,
+      generation,
+      hasPlayerWeights: !!playerWeights,
+      playerWeightsLength: playerWeights?.length,
+      isInfiniteMode,
+      isManualMode
+    });
+
     // Enhanced input validation
     const validationError = validateInputData(inputData) || validatePlayerWeights(playerWeights);
     if (validationError) {
