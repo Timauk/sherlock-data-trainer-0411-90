@@ -36,8 +36,18 @@ const PlayPage: React.FC = () => {
       setCsvDates(data.map(d => d.data));
       gameLogic.addLog("CSV carregado e processado com sucesso!");
       gameLogic.addLog(`Número de registros carregados: ${data.length}`);
+      
+      toast({
+        title: "Dados Carregados",
+        description: `${data.length} registros foram carregados com sucesso.`,
+      });
     } catch (error) {
       gameLogic.addLog(`Erro ao carregar CSV: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      toast({
+        title: "Erro ao Carregar Dados",
+        description: "Verifique se o arquivo CSV está no formato correto.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -45,9 +55,35 @@ const PlayPage: React.FC = () => {
     setGameSpeed(2000 - value[0]);
   };
 
+  const validateGameStart = () => {
+    if (!csvData.length) {
+      toast({
+        title: "Dados Necessários",
+        description: "Por favor, carregue um arquivo CSV antes de iniciar.",
+        variant: "destructive"
+      });
+      return false;
+    }
+    if (!trainedModel) {
+      toast({
+        title: "Modelo Necessário",
+        description: "Por favor, carregue um modelo treinado antes de iniciar.",
+        variant: "destructive"
+      });
+      return false;
+    }
+    return true;
+  };
+
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
-    if (isPlaying && csvData.length > 0) {
+    
+    if (isPlaying) {
+      if (!validateGameStart()) {
+        pauseGame();
+        return;
+      }
+
       intervalId = setInterval(() => {
         if (csvData.length > 0 && gameLogic.numbers.length > 0) {
           gameLogic.gameLoop();
@@ -64,14 +100,10 @@ const PlayPage: React.FC = () => {
         } else {
           console.warn('No input data available for game loop');
           pauseGame();
-          toast({
-            title: "Erro no Processamento",
-            description: "Dados de entrada não disponíveis. Carregue um arquivo CSV primeiro.",
-            variant: "destructive"
-          });
         }
       }, gameSpeed);
     }
+    
     return () => clearInterval(intervalId);
   }, [isPlaying, csvData, gameLogic, gameSpeed, pauseGame, toast]);
 
@@ -81,14 +113,24 @@ const PlayPage: React.FC = () => {
       <SpeedControl gameSpeed={gameSpeed} onSpeedChange={handleSpeedChange} />
       <PlayPageContent
         isPlaying={isPlaying}
-        onPlay={playGame}
+        onPlay={() => {
+          if (validateGameStart()) {
+            playGame();
+          }
+        }}
         onPause={pauseGame}
         onReset={resetGame}
         onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         onCsvUpload={loadCSV}
         onModelUpload={(jsonFile, weightsFile) => {
           tf.loadLayersModel(tf.io.browserFiles([jsonFile, weightsFile]))
-            .then(setTrainedModel)
+            .then(model => {
+              setTrainedModel(model);
+              toast({
+                title: "Modelo Carregado",
+                description: "O modelo foi carregado com sucesso.",
+              });
+            })
             .catch(error => {
               console.error('Error loading model:', error);
               toast({
