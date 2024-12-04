@@ -49,15 +49,16 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       // Inicializa os jogadores se ainda não existirem
       if (!players || players.length === 0) {
         const initialPlayers = initializePlayers();
-        setPlayers(initialPlayers);
+        setPlayers(() => initialPlayers); // Fixed: Using callback form
         
         // Define o campeão inicial
         const initialChampion = {
           player: initialPlayers[0],
           generation: 1,
-          score: 0
+          score: 0,
+          trainingData: [] // Fixed: Added required trainingData property
         };
-        setChampion(initialChampion);
+        setChampion(() => initialChampion); // Fixed: Using callback form
         
         systemLogger.log('game', 'Dados do jogo inicializados', {
           numbersLength: csvData.length,
@@ -187,6 +188,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     toggleManualMode: gameActions.toggleManualMode,
     clonePlayer: gameActions.clonePlayer,
     champion,
-    initializeGameData // Exporta a função de inicialização
+    initializeGameData
   };
 };
