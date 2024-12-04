@@ -10,12 +10,12 @@ export interface ValidationMetrics {
 export const performCrossValidation = (
   predictions: number[][],
   actualResults: number[][],
-  folds: number = 5
+  minSamples: number = 10
 ): ValidationMetrics[] => {
-  const foldSize = Math.floor(predictions.length / folds);
+  const foldSize = Math.floor(predictions.length / minSamples);
   const metrics: ValidationMetrics[] = [];
 
-  for (let i = 0; i < folds; i++) {
+  for (let i = 0; i < minSamples; i++) {
     const testStart = i * foldSize;
     const testEnd = testStart + foldSize;
     
