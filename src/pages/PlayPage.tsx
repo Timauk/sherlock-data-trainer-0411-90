@@ -17,6 +17,7 @@ const PlayPage: React.FC = () => {
   const [csvData, setCsvData] = useState<number[][]>([]);
   const [csvDates, setCsvDates] = useState<Date[]>([]);
   const [trainedModel, setTrainedModel] = useState<tf.LayersModel | null>(null);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const { isPlaying, playGame, pauseGame, resetGame } = useGameControls();
@@ -26,9 +27,53 @@ const PlayPage: React.FC = () => {
   // Inicializa os dados do jogo quando o CSV é carregado
   useEffect(() => {
     if (csvData.length > 0 && trainedModel) {
-      gameLogic.initializeGameData();
+      initializeNeuralNetwork();
     }
-  }, [csvData, trainedModel, gameLogic]);
+  }, [csvData, trainedModel]);
+
+  const initializeNeuralNetwork = async () => {
+    try {
+      // Configura o backend do TensorFlow.js
+      await tf.setBackend('cpu');
+      await tf.ready();
+      
+      // Prepara os dados para treinamento
+      const xs = tf.tensor2d(csvData.map(row => row.slice(0, 15)));
+      const ys = tf.tensor2d(csvData.map(row => row.slice(-15)));
+      
+      // Treina o modelo com os dados carregados
+      await trainedModel.fit(xs, ys, {
+        epochs: 10,
+        batchSize: 32,
+        shuffle: true,
+        callbacks: {
+          onEpochEnd: (epoch, logs) => {
+            systemLogger.log('training', `Época ${epoch + 1}`, { loss: logs?.loss });
+          }
+        }
+      });
+
+      setIsDataLoaded(true);
+      gameLogic.initializeGameData();
+      
+      toast({
+        title: "Dados Carregados com Sucesso",
+        description: "O modelo neural foi treinado e está pronto para iniciar o jogo.",
+      });
+
+      // Cleanup
+      xs.dispose();
+      ys.dispose();
+      
+    } catch (error) {
+      systemLogger.error('training', 'Erro ao inicializar rede neural', { error });
+      toast({
+        title: "Erro ao Carregar Dados",
+        description: "Ocorreu um erro ao treinar o modelo neural.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const loadCSV = async (file: File) => {
     try {
@@ -68,10 +113,10 @@ const PlayPage: React.FC = () => {
 
       toast({
         title: "Dados Carregados",
-        description: `${data.length} registros foram carregados com sucesso.`,
+        description: `${data.length} registros foram carregados. Iniciando treinamento...`,
       });
     } catch (error) {
-      systemLogger.log('error', 'Erro ao carregar CSV', { error });
+      systemLogger.error('csv', 'Erro ao carregar CSV', { error });
       toast({
         title: "Erro ao Carregar Dados",
         description: error instanceof Error ? error.message : "Erro desconhecido",
@@ -85,6 +130,15 @@ const PlayPage: React.FC = () => {
   };
 
   const validateAndStartGame = () => {
+    if (!isDataLoaded) {
+      toast({
+        title: "Aguarde",
+        description: "O modelo neural ainda está sendo treinado...",
+        variant: "destructive"
+      });
+      return false;
+    }
+
     const validation = validateSystemState(
       csvData,
       gameLogic.champion,
@@ -167,11 +221,11 @@ const PlayPage: React.FC = () => {
               systemLogger.log('model', 'Modelo carregado com sucesso');
               toast({
                 title: "Modelo Carregado",
-                description: "O modelo foi carregado com sucesso.",
+                description: "O modelo foi carregado com sucesso. Aguarde o treinamento...",
               });
             })
             .catch(error => {
-              systemLogger.log('error', 'Erro ao carregar modelo', { error });
+              systemLogger.error('model', 'Erro ao carregar modelo', { error });
               toast({
                 title: "Erro ao Carregar Modelo",
                 description: "Ocorreu um erro ao carregar o modelo.",
@@ -187,6 +241,7 @@ const PlayPage: React.FC = () => {
         progress={progress}
         generation={gameLogic.generation}
         gameLogic={gameLogic}
+        isDataLoaded={isDataLoaded}
       />
     </div>
   );
