@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import { useToast } from "@/hooks/use-toast";
 import { useGameState } from './useGameState';
@@ -46,8 +46,8 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       setBoardNumbers(csvData[0]);
       
       if (!players || players.length === 0) {
-        const initialPlayers = initializePlayers();
-        setPlayers(prevPlayers => {
+        const initialPlayers: Player[] = initializePlayers();
+        setPlayers((prevPlayers: Player[]) => {
           const currentPlayers = Array.isArray(prevPlayers) ? prevPlayers : [];
           return [...currentPlayers, ...initialPlayers];
         });
@@ -58,7 +58,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
           score: 0,
           trainingData: [] as number[][]
         };
-        setChampion(prevChampion => ({ ...initialChampion }));
+        setChampion(initialChampion);
         
         systemLogger.log('game', 'Dados do jogo inicializados', {
           numbersLength: csvData.length,
