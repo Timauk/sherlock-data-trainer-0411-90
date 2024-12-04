@@ -7,6 +7,8 @@ import { useGameControls } from '@/hooks/useGameControls';
 import { PlayPageHeader } from '@/components/PlayPageHeader';
 import PlayPageContent from '@/components/PlayPageContent';
 import SpeedControl from '@/components/SpeedControl';
+import { validateGameState, validateCsvStructure } from '@/utils/validation/gameValidation';
+import { systemLogger } from '@/utils/logging/systemLogger';
 
 const PlayPage: React.FC = () => {
   const [progress, setProgress] = useState(0);
@@ -23,6 +25,12 @@ const PlayPage: React.FC = () => {
   const loadCSV = async (file: File) => {
     try {
       const text = await file.text();
+      
+      // Valida estrutura do CSV antes de processar
+      if (!validateCsvStructure(text)) {
+        throw new Error('Formato do CSV inválido');
+      }
+
       const lines = text.trim().split('\n').slice(1);
       const data = lines.map(line => {
         const values = line.split(',');
@@ -32,20 +40,35 @@ const PlayPage: React.FC = () => {
           bolas: values.slice(2).map(Number)
         };
       });
+
+      // Valida os números extraídos
+      const isValidNumbers = data.every(d => 
+        d.bolas.length === 15 && 
+        d.bolas.every(n => n >= 1 && n <= 25)
+      );
+
+      if (!isValidNumbers) {
+        throw new Error('Números inválidos encontrados no CSV');
+      }
+
       setCsvData(data.map(d => d.bolas));
       setCsvDates(data.map(d => d.data));
-      gameLogic.addLog("CSV carregado e processado com sucesso!");
-      gameLogic.addLog(`Número de registros carregados: ${data.length}`);
       
+      systemLogger.log('csv', 'CSV processado com sucesso', {
+        totalRegistros: data.length,
+        primeiraLinha: data[0],
+        ultimaLinha: data[data.length - 1]
+      });
+
       toast({
         title: "Dados Carregados",
         description: `${data.length} registros foram carregados com sucesso.`,
       });
     } catch (error) {
-      gameLogic.addLog(`Erro ao carregar CSV: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      systemLogger.log('error', 'Erro ao carregar CSV', { error });
       toast({
         title: "Erro ao Carregar Dados",
-        description: "Verifique se o arquivo CSV está no formato correto.",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
         variant: "destructive"
       });
     }
@@ -55,23 +78,29 @@ const PlayPage: React.FC = () => {
     setGameSpeed(2000 - value[0]);
   };
 
-  const validateGameStart = () => {
-    if (!csvData.length) {
+  const validateAndStartGame = () => {
+    const validation = validateGameState(
+      csvData,
+      gameLogic.champion,
+      trainedModel,
+      gameLogic.numbers
+    );
+
+    if (!validation.isValid) {
       toast({
-        title: "Dados Necessários",
-        description: "Por favor, carregue um arquivo CSV antes de iniciar.",
+        title: "Não é possível iniciar o jogo",
+        description: validation.errors.join('. '),
         variant: "destructive"
       });
       return false;
     }
-    if (!trainedModel) {
-      toast({
-        title: "Modelo Necessário",
-        description: "Por favor, carregue um modelo treinado antes de iniciar.",
-        variant: "destructive"
-      });
-      return false;
-    }
+
+    systemLogger.log('game', 'Jogo iniciado com sucesso', {
+      csvRegistros: csvData.length,
+      modeloCarregado: !!trainedModel,
+      campeaoId: gameLogic.champion?.id
+    });
+
     return true;
   };
 
@@ -79,7 +108,7 @@ const PlayPage: React.FC = () => {
     let intervalId: NodeJS.Timeout;
     
     if (isPlaying) {
-      if (!validateGameStart()) {
+      if (!validateAndStartGame()) {
         pauseGame();
         return;
       }
@@ -98,14 +127,17 @@ const PlayPage: React.FC = () => {
             return newProgress;
           });
         } else {
-          console.warn('No input data available for game loop');
+          systemLogger.log('warning', 'Loop do jogo interrompido', {
+            csvLength: csvData.length,
+            numbersLength: gameLogic.numbers.length
+          });
           pauseGame();
         }
       }, gameSpeed);
     }
     
     return () => clearInterval(intervalId);
-  }, [isPlaying, csvData, gameLogic, gameSpeed, pauseGame, toast]);
+  }, [isPlaying, csvData, gameLogic, gameSpeed, pauseGame]);
 
   return (
     <div className="p-6">
@@ -114,7 +146,7 @@ const PlayPage: React.FC = () => {
       <PlayPageContent
         isPlaying={isPlaying}
         onPlay={() => {
-          if (validateGameStart()) {
+          if (validateAndStartGame()) {
             playGame();
           }
         }}
@@ -126,13 +158,14 @@ const PlayPage: React.FC = () => {
           tf.loadLayersModel(tf.io.browserFiles([jsonFile, weightsFile]))
             .then(model => {
               setTrainedModel(model);
+              systemLogger.log('model', 'Modelo carregado com sucesso');
               toast({
                 title: "Modelo Carregado",
                 description: "O modelo foi carregado com sucesso.",
               });
             })
             .catch(error => {
-              console.error('Error loading model:', error);
+              systemLogger.log('error', 'Erro ao carregar modelo', { error });
               toast({
                 title: "Erro ao Carregar Modelo",
                 description: "Ocorreu um erro ao carregar o modelo.",
