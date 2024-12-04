@@ -12,3 +12,8 @@ export interface ModelVisualization {
   output: number[];
   weights: number[][];
 }
+
+export interface Champion {
+  player: Player;
+  trainingData: number[][];
+}

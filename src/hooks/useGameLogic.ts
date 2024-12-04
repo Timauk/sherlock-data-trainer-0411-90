@@ -6,7 +6,7 @@ import { useGameLoop } from './useGameLoop';
 import { updateModelWithNewData } from '@/utils/modelUtils';
 import { cloneChampion, updateModelWithChampionKnowledge } from '@/utils/playerEvolution';
 import { selectBestPlayers } from '@/utils/evolutionSystem';
-import { ModelVisualization, Player } from '@/types/gameTypes';
+import { ModelVisualization, Player, Champion } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
 
 export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel | null) => {
@@ -14,10 +14,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const { players, setPlayers, initializePlayers } = useGameInitialization();
   const [generation, setGeneration] = useState(1);
   const [gameCount, setGameCount] = useState(0);
-  const [championData, setChampionData] = useState<{
-    player: Player;
-    trainingData: number[][];
-  }>();
+  const [champion, setChampion] = useState<Champion | null>(null);
   const [evolutionData, setEvolutionData] = useState<Array<{
     generation: number;
     playerId: number;
@@ -71,31 +68,25 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     const bestPlayers = selectBestPlayers(players);
     setGameCount(prev => prev + 1);
 
-    // Modificado para clonar apenas a cada 500 jogos
     if (gameCount % 500 === 0 && bestPlayers.length > 0) {
-      const champion = bestPlayers[0];
-      const clones = cloneChampion(champion, players.length);
+      const newChampion = bestPlayers[0];
+      const clones = cloneChampion(newChampion, players.length);
       setPlayers(clones);
       
-      toast({
-        title: "Nova Geração Criada",
-        description: `Clonagem realizada após ${gameCount} jogos. Campeão: Jogador #${champion.id}`,
-      });
-      
-      if (trainedModel && championData) {
+      if (trainedModel) {
         try {
           const updatedModel = await updateModelWithChampionKnowledge(
             trainedModel,
-            champion,
-            championData.trainingData
+            newChampion,
+            trainingData
           );
           
-          systemLogger.log('player', `Conhecimento do Campeão (Score: ${champion.score}) incorporado ao modelo`);
-          
-          setChampionData({
-            player: champion,
+          setChampion({
+            player: newChampion,
             trainingData: trainingData
           });
+          
+          systemLogger.log('player', `Conhecimento do Campeão (Score: ${newChampion.score}) incorporado ao modelo`);
         } catch (error) {
           systemLogger.log('system', `Erro ao atualizar modelo com conhecimento do campeão: ${error}`);
         }
@@ -124,7 +115,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     if (bestPlayers.length > 0) {
       systemLogger.log('player', `Melhor jogador da geração ${generation}: Score ${bestPlayers[0].score}`);
     }
-  }, [players, generation, trainedModel, gameCount, championData, trainingData, toast]);
+  }, [players, generation, trainedModel, gameCount, trainingData, toast]);
 
   const updateFrequencyData = useCallback((newFrequencyData: { [key: string]: number[] }) => {
     setFrequencyData(newFrequencyData);
@@ -190,5 +181,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     isManualMode,
     toggleManualMode,
     clonePlayer,
+    champion
   };
 };
