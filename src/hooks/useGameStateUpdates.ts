@@ -27,7 +27,8 @@ export const updatePlayerStates = (
     randomMatches += randomMatch;
     currentGameRandomMatches += randomMatch;
 
-    temporalAccuracyTracker.recordAccuracy(matches);
+    // Pass both required arguments: matches and total possible matches (15)
+    temporalAccuracyTracker.recordAccuracy(matches, 15);
 
     const reward = calculateReward(matches);
     
