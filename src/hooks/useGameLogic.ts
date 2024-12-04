@@ -146,11 +146,12 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
         setTrainingData([]);
       }
 
-      const modelCompileStatus = trainedModel.compiled;
+      // Changed from model.compiled to checking if model has been compiled
+      const isModelCompiled = trainedModel.optimizer !== undefined;
       systemLogger.log('game', 'Game loop completed', {
         nextConcurso,
         playersUpdated: updatedPlayers.length,
-        modelStatus: modelCompileStatus ? 'compiled' : 'not compiled'
+        modelStatus: isModelCompiled ? 'compiled' : 'not compiled'
       });
 
     } catch (error) {
