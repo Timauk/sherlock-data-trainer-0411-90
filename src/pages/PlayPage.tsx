@@ -26,7 +26,6 @@ const PlayPage: React.FC = () => {
     try {
       const text = await file.text();
       
-      // Valida estrutura do CSV antes de processar
       if (!validateCsvStructure(text)) {
         throw new Error('Formato do CSV inválido');
       }
@@ -41,7 +40,6 @@ const PlayPage: React.FC = () => {
         };
       });
 
-      // Valida os números extraídos
       const isValidNumbers = data.every(d => 
         d.bolas.length === 15 && 
         d.bolas.every(n => n >= 1 && n <= 25)
@@ -81,7 +79,7 @@ const PlayPage: React.FC = () => {
   const validateAndStartGame = () => {
     const validation = validateGameState(
       csvData,
-      gameLogic.champion,
+      gameLogic.champion?.player || null,
       trainedModel,
       gameLogic.numbers
     );
@@ -98,7 +96,7 @@ const PlayPage: React.FC = () => {
     systemLogger.log('game', 'Jogo iniciado com sucesso', {
       csvRegistros: csvData.length,
       modeloCarregado: !!trainedModel,
-      campeaoId: gameLogic.champion?.id
+      campeaoId: gameLogic.champion?.player?.id
     });
 
     return true;
