@@ -6,6 +6,10 @@ import { useGameActions } from './useGameActions';
 import { useGameInitialization } from './useGameInitialization';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
+import { validateGameState } from '@/utils/game/validation';
+import { getLunarPhase, analyzeLunarPatterns } from '@/utils/game/lunarAnalysis';
+import { handlePlayerPredictions } from '@/utils/game/playerPredictions';
+import { updateModel } from '@/utils/game/modelUpdate';
 
 export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel | null) => {
   const { toast } = useToast();
@@ -83,10 +87,9 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
 
   const gameLoop = useCallback(async () => {
     if (!csvData.length || !trainedModel) {
-      systemLogger.log('error', 'Dados ou modelo ausentes para o loop do jogo', {
+      systemLogger.log('error', 'Missing required data for game loop', {
         hasCsvData: !!csvData.length,
-        hasModel: !!trainedModel,
-        timestamp: new Date().toISOString()
+        hasModel: !!trainedModel
       });
       return;
     }
@@ -111,65 +114,53 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     
     setDates(currentDates => [...currentDates, new Date()].slice(-100));
 
-    const playerPredictions = await handlePlayerPredictions(
-      players,
-      trainedModel,
-      currentBoardNumbers,
-      nextConcurso,
-      setNeuralNetworkVisualization,
-      { lunarPhase, lunarPatterns }
-    );
+    try {
+      const playerPredictions = await handlePlayerPredictions(
+        players,
+        trainedModel,
+        currentBoardNumbers,
+        nextConcurso,
+        setNeuralNetworkVisualization,
+        { lunarPhase, lunarPatterns }
+      );
 
-    const { updatedPlayers, metrics } = updatePlayerStates(
-      players,
-      playerPredictions,
-      currentBoardNumbers,
-      nextConcurso,
-      gameActions.addLog,
-      (title, description) => toast({ title, description })
-    );
+      const updatedPlayers = players.map((player, index) => ({
+        ...player,
+        predictions: playerPredictions[index],
+        score: player.score + (playerPredictions[index].filter(n => currentBoardNumbers.includes(n)).length)
+      }));
 
-    setModelMetrics({
-      accuracy: metrics.totalMatches / (players.length * 15),
-      randomAccuracy: metrics.randomMatches / (players.length * 15),
-      totalPredictions: metrics.totalPredictions,
-      perGameAccuracy: metrics.currentGameMatches / (players.length * 15),
-      perGameRandomAccuracy: metrics.currentGameRandomMatches / (players.length * 15)
-    });
+      setPlayers(updatedPlayers);
+      setEvolutionData(prev => [
+        ...prev,
+        ...updatedPlayers.map(player => ({
+          generation,
+          playerId: player.id,
+          score: player.score,
+          fitness: player.fitness
+        }))
+      ]);
 
-    setPlayers(updatedPlayers);
-    setEvolutionData(prev => [
-      ...prev,
-      ...updatedPlayers.map(player => ({
-        generation,
-        playerId: player.id,
-        score: player.score,
-        fitness: player.fitness
-      }))
-    ]);
+      if (nextConcurso % Math.min(gameState.updateInterval, 50) === 0 && trainingData.length > 0) {
+        await updateModel(trainedModel, trainingData, gameActions.addLog);
+        setTrainingData([]);
+      }
 
-    const enhancedTrainingData = [...currentBoardNumbers, 
-      ...updatedPlayers[0].predictions,
-      lunarPhase === 'Cheia' ? 1 : 0,
-      lunarPhase === 'Nova' ? 1 : 0,
-      lunarPhase === 'Crescente' ? 1 : 0,
-      lunarPhase === 'Minguante' ? 1 : 0
-    ];
+      const modelCompileStatus = trainedModel.compiled;
+      systemLogger.log('game', 'Game loop completed', {
+        nextConcurso,
+        playersUpdated: updatedPlayers.length,
+        modelStatus: modelCompileStatus ? 'compiled' : 'not compiled'
+      });
 
-    setTrainingData(currentTrainingData => 
-      [...currentTrainingData, enhancedTrainingData]);
-
-    if (nextConcurso % Math.min(gameState.updateInterval, 50) === 0 && trainingData.length > 0) {
-      await updateModel(trainedModel, trainingData, { epochs: 5 });
-      setTrainingData([]);
+    } catch (error) {
+      systemLogger.error('game', 'Error in game loop', { error });
+      toast({
+        title: "Erro no Loop do Jogo",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive"
+      });
     }
-
-    systemLogger.log('game', 'Loop do jogo executado', {
-      nextConcurso,
-      playersCount: players.length,
-      modelStatus: trainedModel.isTraining ? 'training' : 'ready',
-      timestamp: new Date().toISOString()
-    });
   }, [
     players,
     setPlayers,
