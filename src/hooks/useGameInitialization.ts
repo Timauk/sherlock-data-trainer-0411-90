@@ -21,7 +21,7 @@ export const useGameInitialization = () => {
     const initialChampion = initialPlayers[0];
     systemLogger.log('player', `Campeão inicial selecionado: Jogador #${initialChampion.id}`);
     
-    return initialChampion;
+    return initialPlayers;
   }, []);
 
   return {
