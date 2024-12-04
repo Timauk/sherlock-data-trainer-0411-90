@@ -8,9 +8,7 @@ import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
 import { performCrossValidation } from '@/utils/validation/crossValidation';
 import { getLunarPhase, analyzeLunarPatterns } from '@/utils/lunarCalculations';
-import { makePrediction } from '@/utils/predictionUtils';
-import { TimeSeriesAnalysis } from '@/utils/analysis/timeSeriesAnalysis';
-import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
+import { handlePlayerPredictions } from '@/utils/prediction/predictionUtils';
 import { temporalAccuracyTracker } from '@/utils/prediction/temporalAccuracy';
 import { calculateReward, logReward } from '@/utils/rewardSystem';
 import { updateModelWithNewData } from '@/utils/modelUtils';
@@ -20,7 +18,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const gameState = useGameState();
   const gameActions = useGameActions(gameState);
   const { initializePlayers } = useGameInitialization();
-  
+
   const {
     players,
     setPlayers,
@@ -51,7 +49,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const gameLoop = useCallback(async () => {
     if (csvData.length === 0 || !trainedModel) return;
 
-    // Incrementa o número do concurso e reinicia se necessário
     const nextConcurso = (concursoNumber + 1) % csvData.length;
     setConcursoNumber(nextConcurso);
     setGameCount(prev => prev + 1);
@@ -75,24 +72,13 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     
     setDates(currentDates => [...currentDates, new Date()].slice(-100));
 
-    const playerPredictions = await Promise.all(
-      players.map(async player => {
-        const prediction = await makePrediction(
-          trainedModel, 
-          currentBoardNumbers, 
-          player.weights, 
-          nextConcurso,
-          (visualization) => setNeuralNetworkVisualization(visualization),
-          { lunarPhase, lunarPatterns },
-          { numbers: [[...currentBoardNumbers]], dates: [new Date()] }
-        );
-
-        const timeSeriesAnalyzer = new TimeSeriesAnalysis([[...currentBoardNumbers]]);
-        const arimaPredictor = timeSeriesAnalyzer.analyzeNumbers();
-        predictionMonitor.recordPrediction(prediction, currentBoardNumbers, arimaPredictor);
-
-        return prediction;
-      })
+    const playerPredictions = await handlePlayerPredictions(
+      players,
+      trainedModel,
+      currentBoardNumbers,
+      nextConcurso,
+      setNeuralNetworkVisualization,
+      { lunarPhase, lunarPatterns }
     );
 
     let totalMatches = 0;
@@ -112,18 +98,19 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       randomMatches += randomMatch;
       currentGameRandomMatches += randomMatch;
 
-      // Record temporal accuracy
-      temporalAccuracyTracker.recordAccuracy(matches, 15);
+      temporalAccuracyTracker.recordAccuracy(matches);
 
       const reward = calculateReward(matches);
       
       if (matches >= 11) {
         const logMessage = logReward(matches, player.id);
-        gameActions.addLog(logMessage, matches);
+        gameActions.addLog(logMessage);
         
         if (matches >= 13) {
-          toast?.("Desempenho Excepcional!", 
-            `Jogador ${player.id} acertou ${matches} números!`);
+          toast({
+            title: "Desempenho Excepcional!",
+            description: `Jogador ${player.id} acertou ${matches} números!`
+          });
         }
       }
 
@@ -166,17 +153,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       [...currentTrainingData, enhancedTrainingData]);
 
     if (nextConcurso % Math.min(gameState.updateInterval, 50) === 0 && trainingData.length > 0) {
-      await updateModelWithNewData(
-        trainedModel, 
-        trainingData, 
-        (message: string) => {
-          gameActions.addLog(message);
-          toast({
-            title: "Modelo Atualizado",
-            description: message,
-          });
-        }
-      );
+      await updateModelWithNewData(trainedModel, trainingData);
       setTrainingData([]);
     }
     
@@ -188,8 +165,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     concursoNumber,
     setEvolutionData,
     generation,
-    gameActions.addLog,
-    gameState.updateInterval,
+    gameActions,
     trainingData,
     setTrainingData,
     setNumbers,
@@ -199,7 +175,8 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     setModelMetrics,
     setConcursoNumber,
     setGameCount,
-    toast
+    toast,
+    gameState.updateInterval
   ]);
 
   return {
@@ -217,7 +194,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     }, [gameState]),
     dates,
     numbers,
-    updateFrequencyData: gameActions.updateFrequencyData,
     isInfiniteMode,
     boardNumbers,
     concursoNumber,
