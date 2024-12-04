@@ -26,7 +26,7 @@ export const generatePredictions = async (
     lastConcursoNumbers: lastConcursoNumbers.length,
     selectedNumbers: selectedNumbers.length,
     tfBackend: tf.getBackend(),
-    modelCompiled: trainedModel?.compiled,
+    modelStatus: trainedModel ? 'loaded' : 'not loaded',
     weightsLoaded: trainedModel?.weights.length > 0
   });
 
@@ -41,21 +41,22 @@ export const generatePredictions = async (
 
   try {
     // Verificação do estado do TensorFlow
+    const memoryInfo = tf.memory();
     systemLogger.log('prediction', 'Estado do TensorFlow', {
       backend: tf.getBackend(),
-      memory: tf.memory(),
+      memory: memoryInfo,
       engineReady: tf.engine().ready
     });
 
-  // Fatores técnicos do campeão
-  const championFactors = {
-    experience: champion.generation / 1000,
-    performance: champion.score / 1000,
-    consistency: champion.fitness / 15,
-    adaptability: champion.weights.reduce((a, b) => a + b, 0) / champion.weights.length
-  };
+    // Fatores técnicos do campeão
+    const championFactors = {
+      experience: champion.generation / 1000,
+      performance: champion.score / 1000,
+      consistency: champion.fitness / 15,
+      adaptability: champion.weights.reduce((a, b) => a + b, 0) / champion.weights.length
+    };
 
-  systemLogger.log('prediction', 'Fatores do campeão calculados', championFactors);
+    systemLogger.log('prediction', 'Fatores do campeão calculados', championFactors);
 
     for (const target of targets) {
       systemLogger.log('prediction', `Iniciando previsão para alvo ${target.matches}`, {
@@ -153,8 +154,8 @@ export const generatePredictions = async (
       championId: champion.id,
       memoryInfo: tf.memory(),
       modelState: {
-        compiled: trainedModel.compiled,
-        layers: trainedModel.layers.length
+        isCompiled: trainedModel ? true : false,
+        layers: trainedModel?.layers.length
       }
     });
 
@@ -170,13 +171,12 @@ export const generatePredictions = async (
       },
       modelState: {
         loaded: !!trainedModel,
-        compiled: trainedModel?.compiled,
-        layers: trainedModel?.layers.length
+        hasLayers: trainedModel?.layers.length > 0
       },
       tfState: {
         backend: tf.getBackend(),
         memory: tf.memory(),
-        lastError: tf.engine().lastError
+        engineReady: tf.engine().ready
       }
     });
     throw error;
