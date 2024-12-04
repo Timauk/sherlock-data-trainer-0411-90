@@ -58,9 +58,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     
     const validationMetrics = performCrossValidation(
       [players[0].predictions],
-      csvData.slice(Math.max(0, nextConcurso - 10), nextConcurso),
-      10, // minSamples
-      'accuracy' // metric type
+      csvData.slice(Math.max(0, nextConcurso - 10), nextConcurso)
     );
 
     const currentDate = new Date();
@@ -155,7 +153,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       [...currentTrainingData, enhancedTrainingData]);
 
     if (nextConcurso % Math.min(gameState.updateInterval, 50) === 0 && trainingData.length > 0) {
-      await updateModel(trainedModel, trainingData, { epochs: 5 });
+      await updateModel(trainedModel, trainingData);
       setTrainingData([]);
     }
     
