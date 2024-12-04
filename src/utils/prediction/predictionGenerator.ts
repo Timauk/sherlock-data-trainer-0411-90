@@ -20,6 +20,13 @@ export const generatePredictions = async (
   lastConcursoNumbers: number[],
   selectedNumbers: number[] = []
 ): Promise<PredictionResult[]> => {
+  systemLogger.log('prediction', 'Iniciando geração de previsões', {
+    championId: champion.id,
+    modelLoaded: !!trainedModel,
+    lastConcursoNumbers: lastConcursoNumbers.length,
+    selectedNumbers: selectedNumbers.length
+  });
+
   const predictions: PredictionResult[] = [];
   const targets = [
     { matches: 11, count: 2 },
@@ -37,8 +44,15 @@ export const generatePredictions = async (
     adaptability: champion.weights.reduce((a, b) => a + b, 0) / champion.weights.length
   };
 
+  systemLogger.log('prediction', 'Fatores do campeão calculados', championFactors);
+
   try {
     for (const target of targets) {
+      systemLogger.log('prediction', `Gerando previsão para alvo ${target.matches}`, {
+        targetMatches: target.matches,
+        count: target.count
+      });
+
       for (let i = 0; i < target.count; i++) {
         const inputTensor = tf.tidy(() => {
           const normalizedInput = [
@@ -52,8 +66,19 @@ export const generatePredictions = async (
           return tf.tensor2d([normalizedInput]);
         });
 
+        systemLogger.log('prediction', 'Tensor de entrada criado', {
+          shape: inputTensor.shape,
+          iteration: i,
+          target: target.matches
+        });
+
         const prediction = await trainedModel.predict(inputTensor) as tf.Tensor;
         const predictionArray = Array.from(await prediction.data());
+
+        systemLogger.log('prediction', 'Previsão bruta gerada', {
+          predictionLength: predictionArray.length,
+          sampleValues: predictionArray.slice(0, 5)
+        });
 
         // Cleanup tensors
         inputTensor.dispose();
@@ -77,6 +102,12 @@ export const generatePredictions = async (
         const estimatedAccuracy = (target.matches / 15) * 100 * 
                                 (1 + championFactors.performance * 0.1);
 
+        systemLogger.log('prediction', 'Números selecionados', {
+          numbers: selectedNumbers,
+          estimatedAccuracy,
+          targetMatches: target.matches
+        });
+
         const classicDecision = decisionTreeSystem.predict(selectedNumbers, 'Crescente');
         const tfDecision = tfDecisionTreeInstance.predict(selectedNumbers);
         const isGoodDecision = classicDecision && tfDecision;
@@ -88,15 +119,39 @@ export const generatePredictions = async (
           matchesWithSelected: selectedNumbers.filter(n => selectedNumbers.includes(n)).length,
           isGoodDecision
         });
+
+        systemLogger.log('prediction', 'Previsão finalizada', {
+          predictionCount: predictions.length,
+          lastPrediction: predictions[predictions.length - 1]
+        });
       }
     }
 
     // Ensure all tensors are cleaned up
     tf.disposeVariables();
     
+    systemLogger.log('prediction', 'Geração de previsões concluída', {
+      totalPredictions: predictions.length,
+      predictions: predictions.map(p => ({
+        numbers: p.numbers.length,
+        accuracy: p.estimatedAccuracy
+      }))
+    });
+
     return predictions;
   } catch (error) {
-    systemLogger.log('system', `Erro ao gerar previsões: ${error}`);
+    systemLogger.log('error', `Erro ao gerar previsões: ${error}`, {
+      error,
+      championState: {
+        id: champion.id,
+        generation: champion.generation,
+        weights: champion.weights.length
+      },
+      modelState: {
+        loaded: !!trainedModel,
+        layers: trainedModel?.layers.length
+      }
+    });
     throw error;
   }
-};
+}
