@@ -7,8 +7,7 @@ import { useGameControls } from '@/hooks/useGameControls';
 import { PlayPageHeader } from '@/components/PlayPageHeader';
 import PlayPageContent from '@/components/PlayPageContent';
 import SpeedControl from '@/components/SpeedControl';
-import { validateSystemState } from '@/utils/validation/systemValidation';
-import { validateCsvStructure } from '@/utils/validation/gameValidation';
+import { ModelInitializer } from '@/utils/tensorflow/modelInitializer';
 import { systemLogger } from '@/utils/logging/systemLogger';
 
 const PlayPage: React.FC = () => {
@@ -24,25 +23,16 @@ const PlayPage: React.FC = () => {
 
   const gameLogic = useGameLogic(csvData, trainedModel);
 
-  // Inicializa os dados do jogo quando o CSV é carregado
-  useEffect(() => {
-    if (csvData.length > 0 && trainedModel) {
-      initializeNeuralNetwork();
-    }
-  }, [csvData, trainedModel]);
-
   const initializeNeuralNetwork = async () => {
     try {
-      // Configura o backend do TensorFlow.js
-      await tf.setBackend('cpu');
-      await tf.ready();
+      const model = await ModelInitializer.initializeModel();
       
       // Prepara os dados para treinamento
       const xs = tf.tensor2d(csvData.map(row => row.slice(0, 15)));
       const ys = tf.tensor2d(csvData.map(row => row.slice(-15)));
       
       // Treina o modelo com os dados carregados
-      await trainedModel.fit(xs, ys, {
+      await model.fit(xs, ys, {
         epochs: 10,
         batchSize: 32,
         shuffle: true,
@@ -53,12 +43,13 @@ const PlayPage: React.FC = () => {
         }
       });
 
+      setTrainedModel(model);
       setIsDataLoaded(true);
       gameLogic.initializeGameData();
       
       toast({
-        title: "Dados Carregados com Sucesso",
-        description: "O modelo neural foi treinado e está pronto para iniciar o jogo.",
+        title: "Modelo Neural Treinado",
+        description: "O modelo foi treinado com sucesso e está pronto para iniciar o jogo.",
       });
 
       // Cleanup
@@ -68,8 +59,8 @@ const PlayPage: React.FC = () => {
     } catch (error) {
       systemLogger.error('training', 'Erro ao inicializar rede neural', { error });
       toast({
-        title: "Erro ao Carregar Dados",
-        description: "Ocorreu um erro ao treinar o modelo neural.",
+        title: "Erro no Treinamento",
+        description: "Ocorreu um erro ao treinar o modelo neural. Tente novamente.",
         variant: "destructive"
       });
     }
@@ -79,10 +70,6 @@ const PlayPage: React.FC = () => {
     try {
       const text = await file.text();
       
-      if (!validateCsvStructure(text)) {
-        throw new Error('Formato do CSV inválido');
-      }
-
       const lines = text.trim().split('\n').slice(1);
       const data = lines.map(line => {
         const values = line.split(',');
@@ -214,24 +201,23 @@ const PlayPage: React.FC = () => {
         onReset={resetGame}
         onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         onCsvUpload={loadCSV}
-        onModelUpload={(jsonFile, weightsFile) => {
-          tf.loadLayersModel(tf.io.browserFiles([jsonFile, weightsFile]))
-            .then(model => {
-              setTrainedModel(model);
-              systemLogger.log('model', 'Modelo carregado com sucesso');
-              toast({
-                title: "Modelo Carregado",
-                description: "O modelo foi carregado com sucesso. Aguarde o treinamento...",
-              });
-            })
-            .catch(error => {
-              systemLogger.error('model', 'Erro ao carregar modelo', { error });
-              toast({
-                title: "Erro ao Carregar Modelo",
-                description: "Ocorreu um erro ao carregar o modelo.",
-                variant: "destructive"
-              });
+        onModelUpload={async (jsonFile, weightsFile) => {
+          try {
+            const model = await ModelInitializer.initializeModel();
+            await model.loadWeights(tf.io.browserFiles([jsonFile, weightsFile]));
+            setTrainedModel(model);
+            toast({
+              title: "Modelo Carregado",
+              description: "O modelo foi carregado com sucesso.",
             });
+          } catch (error) {
+            systemLogger.error('model', 'Erro ao carregar modelo', { error });
+            toast({
+              title: "Erro ao Carregar",
+              description: "Ocorreu um erro ao carregar o modelo.",
+              variant: "destructive"
+            });
+          }
         }}
         onSaveModel={() => {
           if (trainedModel) {
