@@ -47,15 +47,15 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       
       if (!players || players.length === 0) {
         const initialPlayers = initializePlayers();
-        setPlayers(() => [...initialPlayers]); // Fixed: Now correctly setting array of players
+        setPlayers(prevPlayers => [...(Array.isArray(prevPlayers) ? prevPlayers : []), ...initialPlayers]);
         
         const initialChampion = {
           player: initialPlayers[0],
           generation: 1,
           score: 0,
-          trainingData: [] as number[][] // Fixed: Added required trainingData property with correct type
+          trainingData: [] as number[][]
         };
-        setChampion(() => initialChampion);
+        setChampion(prevChampion => ({ ...initialChampion }));
         
         systemLogger.log('game', 'Dados do jogo inicializados', {
           numbersLength: csvData.length,
