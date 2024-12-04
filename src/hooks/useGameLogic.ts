@@ -36,8 +36,37 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     gameCount,
     setGameCount,
     trainingData,
-    setTrainingData
+    setTrainingData,
+    setChampion
   } = gameState;
+
+  // Inicializa os números com os dados do CSV se disponíveis
+  const initializeGameData = useCallback(() => {
+    if (csvData && csvData.length > 0) {
+      setNumbers(csvData.slice(0, 1)); // Inicializa com o primeiro jogo
+      setBoardNumbers(csvData[0]); // Define os números iniciais do tabuleiro
+      
+      // Inicializa os jogadores se ainda não existirem
+      if (!players || players.length === 0) {
+        const initialPlayers = initializePlayers();
+        setPlayers(initialPlayers);
+        
+        // Define o campeão inicial
+        const initialChampion = {
+          player: initialPlayers[0],
+          generation: 1,
+          score: 0
+        };
+        setChampion(initialChampion);
+        
+        systemLogger.log('game', 'Dados do jogo inicializados', {
+          numbersLength: csvData.length,
+          playersInitialized: initialPlayers.length,
+          championId: initialChampion.player.id
+        });
+      }
+    }
+  }, [csvData, players, setNumbers, setBoardNumbers, setPlayers, setChampion, initializePlayers]);
 
   const gameLoop = useCallback(async () => {
     if (csvData.length === 0 || !trainedModel) return;
@@ -157,6 +186,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     isManualMode: gameState.isManualMode,
     toggleManualMode: gameActions.toggleManualMode,
     clonePlayer: gameActions.clonePlayer,
-    champion
+    champion,
+    initializeGameData // Exporta a função de inicialização
   };
 };

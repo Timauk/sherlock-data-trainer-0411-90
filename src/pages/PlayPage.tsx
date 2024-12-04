@@ -23,6 +23,13 @@ const PlayPage: React.FC = () => {
 
   const gameLogic = useGameLogic(csvData, trainedModel);
 
+  // Inicializa os dados do jogo quando o CSV é carregado
+  useEffect(() => {
+    if (csvData.length > 0 && trainedModel) {
+      gameLogic.initializeGameData();
+    }
+  }, [csvData, trainedModel, gameLogic]);
+
   const loadCSV = async (file: File) => {
     try {
       const text = await file.text();
