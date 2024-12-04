@@ -47,7 +47,10 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       
       if (!players || players.length === 0) {
         const initialPlayers = initializePlayers();
-        setPlayers(prevPlayers => [...(Array.isArray(prevPlayers) ? prevPlayers : []), ...initialPlayers]);
+        setPlayers(prevPlayers => {
+          const currentPlayers = Array.isArray(prevPlayers) ? prevPlayers : [];
+          return [...currentPlayers, ...initialPlayers];
+        });
         
         const initialChampion = {
           player: initialPlayers[0],
