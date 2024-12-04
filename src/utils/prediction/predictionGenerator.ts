@@ -24,7 +24,10 @@ export const generatePredictions = async (
     championId: champion.id,
     modelLoaded: !!trainedModel,
     lastConcursoNumbers: lastConcursoNumbers.length,
-    selectedNumbers: selectedNumbers.length
+    selectedNumbers: selectedNumbers.length,
+    tfBackend: tf.getBackend(),
+    modelCompiled: trainedModel?.compiled,
+    weightsLoaded: trainedModel?.weights.length > 0
   });
 
   const predictions: PredictionResult[] = [];
@@ -36,6 +39,14 @@ export const generatePredictions = async (
     { matches: 15, count: 1 }
   ];
 
+  try {
+    // Verificação do estado do TensorFlow
+    systemLogger.log('prediction', 'Estado do TensorFlow', {
+      backend: tf.getBackend(),
+      memory: tf.memory(),
+      engineReady: tf.engine().ready
+    });
+
   // Fatores técnicos do campeão
   const championFactors = {
     experience: champion.generation / 1000,
@@ -46,11 +57,12 @@ export const generatePredictions = async (
 
   systemLogger.log('prediction', 'Fatores do campeão calculados', championFactors);
 
-  try {
     for (const target of targets) {
-      systemLogger.log('prediction', `Gerando previsão para alvo ${target.matches}`, {
+      systemLogger.log('prediction', `Iniciando previsão para alvo ${target.matches}`, {
         targetMatches: target.matches,
-        count: target.count
+        count: target.count,
+        championId: champion.id,
+        timestamp: new Date().toISOString()
       });
 
       for (let i = 0; i < target.count; i++) {
@@ -125,23 +137,32 @@ export const generatePredictions = async (
           lastPrediction: predictions[predictions.length - 1]
         });
       }
+
+      systemLogger.log('prediction', 'Previsão finalizada para alvo', {
+        target: target.matches,
+        predictions: predictions.length,
+        memoryInfo: tf.memory()
+      });
     }
 
-    // Ensure all tensors are cleaned up
+    // Cleanup
     tf.disposeVariables();
     
-    systemLogger.log('prediction', 'Geração de previsões concluída', {
+    systemLogger.log('prediction', 'Geração de previsões concluída com sucesso', {
       totalPredictions: predictions.length,
-      predictions: predictions.map(p => ({
-        numbers: p.numbers.length,
-        accuracy: p.estimatedAccuracy
-      }))
+      championId: champion.id,
+      memoryInfo: tf.memory(),
+      modelState: {
+        compiled: trainedModel.compiled,
+        layers: trainedModel.layers.length
+      }
     });
 
     return predictions;
   } catch (error) {
-    systemLogger.log('error', `Erro ao gerar previsões: ${error}`, {
-      error,
+    systemLogger.log('error', 'Erro crítico na geração de previsões', {
+      error: error.message,
+      stack: error.stack,
       championState: {
         id: champion.id,
         generation: champion.generation,
@@ -149,9 +170,15 @@ export const generatePredictions = async (
       },
       modelState: {
         loaded: !!trainedModel,
+        compiled: trainedModel?.compiled,
         layers: trainedModel?.layers.length
+      },
+      tfState: {
+        backend: tf.getBackend(),
+        memory: tf.memory(),
+        lastError: tf.engine().lastError
       }
     });
     throw error;
   }
-}
+};
