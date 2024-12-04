@@ -56,9 +56,10 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     const currentBoardNumbers = csvData[nextConcurso];
     setBoardNumbers(currentBoardNumbers);
     
+    const validationData = csvData.slice(Math.max(0, nextConcurso - 10), nextConcurso);
     const validationMetrics = performCrossValidation(
       [players[0].predictions],
-      csvData.slice(Math.max(0, nextConcurso - 10), nextConcurso),
+      validationData,
       10
     );
 

@@ -1,11 +1,27 @@
 import { Player, ModelVisualization } from '@/types/gameTypes';
 import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
 import { TimeSeriesAnalysis } from '@/utils/analysis/timeSeriesAnalysis';
-import { makePrediction } from '@/utils/aiModel';
+import * as tf from '@tensorflow/tfjs';
 
 interface LunarData {
   lunarPhase: string;
   lunarPatterns: Record<string, number[]>;
+}
+
+async function makePrediction(
+  model: tf.LayersModel,
+  inputData: number[],
+  weights: number[],
+  config: { lunarPhase: string; patterns: any }
+): Promise<number[]> {
+  const inputTensor = tf.tensor2d([inputData]);
+  const predictions = model.predict(inputTensor) as tf.Tensor;
+  const result = Array.from(await predictions.data());
+  
+  inputTensor.dispose();
+  predictions.dispose();
+  
+  return result.map((n, i) => Math.round(n * weights[i % weights.length]));
 }
 
 export const handlePlayerPredictions = async (
