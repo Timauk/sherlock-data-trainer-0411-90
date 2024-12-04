@@ -1,6 +1,5 @@
 import * as tf from '@tensorflow/tfjs';
-import * as tfjsNode from '@tensorflow/tfjs-node-gpu';
-import { logger } from '../logging/logger';
+import { systemLogger } from '../logging/systemLogger';
 
 export class TensorFlowSetup {
   private static instance: TensorFlowSetup;
@@ -19,36 +18,29 @@ export class TensorFlowSetup {
     if (this.isInitialized) return;
 
     try {
-      await tf.setBackend('tensorflow');
-      await tfjsNode.ready();
+      // Try to initialize with WebGL first
+      await tf.setBackend('webgl');
+      await tf.ready();
       
-      // Verifica se GPU está disponível usando tf.env()
-      const gpuAvailable = tf.env().get('HAS_WEBGL');
-      
-      if (gpuAvailable) {
-        logger.info('\x1b[32m%s\x1b[0m', 'TensorFlow.js initialized with GPU support');
-        logger.info('\x1b[32m%s\x1b[0m', `GPU Memory: ${tf.memory().numBytes} bytes used`);
-      } else {
-        await tf.setBackend('cpu');
-        logger.info('\x1b[32m%s\x1b[0m', 'TensorFlow.js initialized with CPU backend (GPU not available)');
-      }
+      systemLogger.log('system', 'TensorFlow.js initialized with WebGL backend');
     } catch (error) {
-      logger.error('\x1b[31m%s\x1b[0m', 'Failed to initialize TensorFlow.js with GPU:', error);
+      systemLogger.log('system', 'WebGL initialization failed, falling back to CPU', { error });
       
       try {
+        // Fall back to CPU backend
         await tf.setBackend('cpu');
-        logger.info('\x1b[32m%s\x1b[0m', 'TensorFlow.js initialized with CPU backend (fallback)');
+        await tf.ready();
+        systemLogger.log('system', 'TensorFlow.js initialized with CPU backend');
       } catch (cpuError) {
-        logger.error('\x1b[31m%s\x1b[0m', 'Failed to initialize TensorFlow.js:', cpuError);
-        throw new Error('TensorFlow initialization failed');
+        systemLogger.error('system', 'Failed to initialize TensorFlow.js backends', { error: cpuError });
+        throw new Error('Could not initialize TensorFlow backend');
       }
     }
 
-    await tf.ready();
     this.isInitialized = true;
     
     const memoryInfo = tf.memory();
-    logger.info('\x1b[32m%s\x1b[0m', 'TensorFlow.js Memory Info:', {
+    systemLogger.log('system', 'TensorFlow.js Memory Info', {
       numTensors: memoryInfo.numTensors,
       numDataBuffers: memoryInfo.numDataBuffers,
       numBytes: memoryInfo.numBytes,
@@ -62,13 +54,15 @@ export class TensorFlowSetup {
 
     try {
       const model = tf.sequential();
+      
+      // Simplified model architecture for better CPU performance
       model.add(tf.layers.dense({ 
-        units: 256, 
+        units: 128, 
         activation: 'relu', 
         inputShape: [17] 
       }));
       model.add(tf.layers.dense({ 
-        units: 128, 
+        units: 64, 
         activation: 'relu' 
       }));
       model.add(tf.layers.dense({ 
@@ -77,14 +71,14 @@ export class TensorFlowSetup {
       }));
 
       model.compile({
-        optimizer: 'adam',
+        optimizer: tf.train.adam(0.001),
         loss: 'binaryCrossentropy',
         metrics: ['accuracy']
       });
 
       return model;
     } catch (error) {
-      logger.error('\x1b[31m%s\x1b[0m', 'Error creating TensorFlow model:', error);
+      systemLogger.error('system', 'Error creating TensorFlow model', { error });
       return null;
     }
   }
@@ -93,10 +87,15 @@ export class TensorFlowSetup {
     if (model) {
       try {
         model.dispose();
+        systemLogger.log('system', 'Model disposed successfully');
       } catch (error) {
-        logger.error('\x1b[31m%s\x1b[0m', 'Error disposing model:', error);
+        systemLogger.error('system', 'Error disposing model', { error });
       }
     }
+  }
+
+  getBackend(): string {
+    return tf.getBackend() || 'unknown';
   }
 }
 
