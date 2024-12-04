@@ -59,7 +59,8 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     const validationMetrics = performCrossValidation(
       [players[0].predictions],
       csvData.slice(Math.max(0, nextConcurso - 10), nextConcurso),
-      10 // minSamples as number
+      10, // minSamples
+      'accuracy' // metric type
     );
 
     const currentDate = new Date();
