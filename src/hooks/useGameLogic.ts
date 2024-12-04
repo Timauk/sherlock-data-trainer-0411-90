@@ -6,11 +6,6 @@ import { useGameActions } from './useGameActions';
 import { useGameInitialization } from './useGameInitialization';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
-import { validateGameState } from './useGameValidation';
-import { updatePlayerStates } from './useGameStateUpdates';
-import { handlePlayerPredictions } from '@/utils/prediction/predictionUtils';
-import { getLunarPhase, analyzeLunarPatterns } from '@/utils/lunarCalculations';
-import { updateModel } from '@/utils/aiModel';
 
 export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel | null) => {
   const { toast } = useToast();
@@ -41,36 +36,60 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   } = gameState;
 
   const initializeGameData = useCallback(() => {
+    systemLogger.log('game', 'Iniciando inicialização do jogo', {
+      hasCsvData: csvData?.length > 0,
+      hasTrainedModel: !!trainedModel,
+      modelConfig: trainedModel?.getConfig(),
+      timestamp: new Date().toISOString()
+    });
+
     if (csvData && csvData.length > 0) {
       setNumbers(csvData.slice(0, 1));
       setBoardNumbers(csvData[0]);
       
       if (!players || players.length === 0) {
-        const initialPlayers: Player[] = initializePlayers();
-        setPlayers((prevPlayers: Player[]) => {
-          const currentPlayers = Array.isArray(prevPlayers) ? prevPlayers : [];
-          return [...currentPlayers, ...initialPlayers];
-        });
-        
-        const initialChampion = {
-          player: initialPlayers[0],
-          generation: 1,
-          score: 0,
-          trainingData: [] as number[][]
-        };
-        setChampion(initialChampion);
-        
-        systemLogger.log('game', 'Dados do jogo inicializados', {
-          numbersLength: csvData.length,
-          playersInitialized: initialPlayers.length,
-          championId: initialChampion.player.id
-        });
+        try {
+          const initialPlayers: Player[] = initializePlayers();
+          systemLogger.log('player', 'Jogadores inicializados', {
+            count: initialPlayers.length,
+            firstPlayer: initialPlayers[0],
+            timestamp: new Date().toISOString()
+          });
+
+          setPlayers(initialPlayers);
+          
+          const initialChampion = {
+            player: initialPlayers[0],
+            generation: 1,
+            score: 0,
+            trainingData: [] as number[][]
+          };
+          setChampion(initialChampion);
+        } catch (error) {
+          systemLogger.log('error', 'Erro ao inicializar jogadores', {
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date().toISOString()
+          });
+          toast({
+            title: "Erro na Inicialização",
+            description: "Falha ao inicializar jogadores. Verifique o console para mais detalhes.",
+            variant: "destructive"
+          });
+        }
       }
     }
-  }, [csvData, players, setNumbers, setBoardNumbers, setPlayers, setChampion, initializePlayers]);
+  }, [csvData, players, setNumbers, setBoardNumbers, setPlayers, setChampion, initializePlayers, toast]);
 
   const gameLoop = useCallback(async () => {
-    if (csvData.length === 0 || !trainedModel) return;
+    if (!csvData.length || !trainedModel) {
+      systemLogger.log('error', 'Dados ou modelo ausentes para o loop do jogo', {
+        hasCsvData: !!csvData.length,
+        hasModel: !!trainedModel,
+        timestamp: new Date().toISOString()
+      });
+      return;
+    }
 
     const nextConcurso = (concursoNumber + 1) % csvData.length;
     setConcursoNumber(nextConcurso);
@@ -144,6 +163,13 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       await updateModel(trainedModel, trainingData, { epochs: 5 });
       setTrainingData([]);
     }
+
+    systemLogger.log('game', 'Loop do jogo executado', {
+      nextConcurso,
+      playersCount: players.length,
+      modelStatus: trainedModel.isTraining ? 'training' : 'ready',
+      timestamp: new Date().toISOString()
+    });
   }, [
     players,
     setPlayers,

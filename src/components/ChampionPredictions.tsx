@@ -43,13 +43,13 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
 
   useEffect(() => {
     const items = getMissingItems();
-    if (items.length > 0) {
-      systemLogger.log('system', 'Status dos componentes', {
-        champion: { exists: !!champion, type: typeof champion, hasId: champion?.id !== undefined },
-        model: { loaded: !!trainedModel, type: typeof trainedModel },
-        lastNumbers: { exists: !!lastConcursoNumbers, length: lastConcursoNumbers?.length },
-      });
-    }
+    systemLogger.log('system', 'Estado dos componentes de previsão', {
+      champion: { exists: !!champion, type: typeof champion, hasId: champion?.id !== undefined },
+      model: { loaded: !!trainedModel, type: typeof trainedModel },
+      lastNumbers: { exists: !!lastConcursoNumbers, length: lastConcursoNumbers?.length },
+      missingItems: items,
+      timestamp: new Date().toISOString()
+    });
   }, [champion, trainedModel, lastConcursoNumbers, getMissingItems]);
 
   const handleNumbersSelected = useCallback((numbers: number[]) => {

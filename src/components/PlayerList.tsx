@@ -3,6 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Player } from '@/types/gameTypes';
 import PlayerCard from './PlayerCard';
 import PlayerWeightsDialog from './PlayerWeightsDialog';
+import { systemLogger } from '@/utils/logging/systemLogger';
 
 export interface Weight {
   name: string;
@@ -48,19 +49,21 @@ const PlayerList: React.FC<PlayerListProps> = ({
   const maxScore = Math.max(...players.map(p => p.score));
 
   useEffect(() => {
-    if (selectedPlayer) {
-      const currentPlayer = players.find(p => p.id === selectedPlayer.id);
-      if (currentPlayer) {
-        const weights = currentPlayer.weights.map((value, index) => ({
-          ...WEIGHT_DESCRIPTIONS[index],
-          value: Math.round(value)
-        }));
-        setEditedWeights(weights);
-      }
-    }
-  }, [selectedPlayer, players]);
+    systemLogger.log('player', 'Estado da lista de jogadores atualizado', {
+      playersCount: players.length,
+      hasSelectedPlayer: !!selectedPlayer,
+      timestamp: new Date().toISOString()
+    });
+  }, [players, selectedPlayer]);
 
   const handlePlayerClick = (player: Player) => {
+    systemLogger.log('player', 'Jogador selecionado', {
+      playerId: player.id,
+      playerScore: player.score,
+      playerGeneration: player.generation,
+      timestamp: new Date().toISOString()
+    });
+
     setSelectedPlayer(player);
     const weights = player.weights.map((value, index) => ({
       ...WEIGHT_DESCRIPTIONS[index],
