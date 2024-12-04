@@ -49,21 +49,33 @@ const PlayerList: React.FC<PlayerListProps> = ({
   const maxScore = Math.max(...players.map(p => p.score));
 
   useEffect(() => {
-    systemLogger.log('player', 'Estado da lista de jogadores atualizado', {
-      playersCount: players.length,
-      hasSelectedPlayer: !!selectedPlayer,
+    systemLogger.log('player', 'Lista de jogadores atualizada', {
+      totalPlayers: players.length,
+      topScore: maxScore,
+      playersWithPredictions: players.filter(p => p.predictions.length > 0).length,
       timestamp: new Date().toISOString()
     });
-  }, [players, selectedPlayer]);
+
+    if (selectedPlayer) {
+      const currentPlayer = players.find(p => p.id === selectedPlayer.id);
+      if (currentPlayer) {
+        const weights = currentPlayer.weights.map((value, index) => ({
+          ...WEIGHT_DESCRIPTIONS[index],
+          value: Math.round(value)
+        }));
+        setEditedWeights(weights);
+        
+        systemLogger.log('player', `Jogador #${currentPlayer.id} selecionado`, {
+          score: currentPlayer.score,
+          predictions: currentPlayer.predictions,
+          fitness: currentPlayer.fitness,
+          weights: weights.map(w => ({ name: w.name, value: w.value }))
+        });
+      }
+    }
+  }, [selectedPlayer, players, maxScore]);
 
   const handlePlayerClick = (player: Player) => {
-    systemLogger.log('player', 'Jogador selecionado', {
-      playerId: player.id,
-      playerScore: player.score,
-      playerGeneration: player.generation,
-      timestamp: new Date().toISOString()
-    });
-
     setSelectedPlayer(player);
     const weights = player.weights.map((value, index) => ({
       ...WEIGHT_DESCRIPTIONS[index],
@@ -71,6 +83,13 @@ const PlayerList: React.FC<PlayerListProps> = ({
     }));
     setEditedWeights(weights);
     setIsDialogOpen(true);
+
+    systemLogger.log('player', `Detalhes do Jogador #${player.id}`, {
+      score: player.score,
+      predictions: player.predictions,
+      fitness: player.fitness,
+      isTopPlayer: player.score === maxScore
+    });
   };
 
   const handleWeightChange = (index: number, newValue: number) => {

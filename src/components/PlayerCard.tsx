@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Copy } from 'lucide-react';
 import { Player } from '@/types/gameTypes';
+import { systemLogger } from '@/utils/logging/systemLogger';
 
 interface PlayerCardProps {
   player: Player;
@@ -17,6 +18,17 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   onPlayerClick,
   onClonePlayer,
 }) => {
+  useEffect(() => {
+    if (player.predictions.length > 0) {
+      const matches = player.fitness;
+      if (matches >= 11) {
+        systemLogger.log('prediction', `[Jogador #${player.id}] Premiação: +${matches - 10} pontos por acertar ${matches} números!`, {
+          matches
+        });
+      }
+    }
+  }, [player.predictions, player.fitness, player.id]);
+
   const formatPredictions = (predictions: number[]) => {
     return predictions.length > 0 
       ? predictions.map(n => n.toString().padStart(2, '0')).join(', ')
