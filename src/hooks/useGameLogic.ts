@@ -40,25 +40,22 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     setChampion
   } = gameState;
 
-  // Inicializa os números com os dados do CSV se disponíveis
   const initializeGameData = useCallback(() => {
     if (csvData && csvData.length > 0) {
-      setNumbers(csvData.slice(0, 1)); // Inicializa com o primeiro jogo
-      setBoardNumbers(csvData[0]); // Define os números iniciais do tabuleiro
+      setNumbers(csvData.slice(0, 1));
+      setBoardNumbers(csvData[0]);
       
-      // Inicializa os jogadores se ainda não existirem
       if (!players || players.length === 0) {
         const initialPlayers = initializePlayers();
-        setPlayers(() => initialPlayers); // Fixed: Using callback form
+        setPlayers(() => [...initialPlayers]); // Fixed: Now correctly setting array of players
         
-        // Define o campeão inicial
         const initialChampion = {
           player: initialPlayers[0],
           generation: 1,
           score: 0,
-          trainingData: [] // Fixed: Added required trainingData property
+          trainingData: [] as number[][] // Fixed: Added required trainingData property with correct type
         };
-        setChampion(() => initialChampion); // Fixed: Using callback form
+        setChampion(() => initialChampion);
         
         systemLogger.log('game', 'Dados do jogo inicializados', {
           numbersLength: csvData.length,

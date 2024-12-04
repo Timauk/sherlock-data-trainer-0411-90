@@ -9,7 +9,7 @@ interface GameMetricsProps {
   modelMetrics: {
     accuracy: number;
     predictionConfidence?: number;
-  };
+  } | null;
 }
 
 const GameMetrics: React.FC<GameMetricsProps> = ({ progress, champion, modelMetrics }) => {
@@ -17,7 +17,7 @@ const GameMetrics: React.FC<GameMetricsProps> = ({ progress, champion, modelMetr
     <div className="space-y-4">
       <Progress value={progress} className="w-full" />
       <RealTimeFeedback
-        accuracy={modelMetrics.accuracy * 100}
+        accuracy={modelMetrics?.accuracy ? modelMetrics.accuracy * 100 : 0}
         predictionConfidence={champion?.fitness ? champion.fitness * 100 : 0}
         processingSpeed={90}
         memoryUsage={75}
