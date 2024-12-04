@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useGameState } from './useGameState';
 import { useGameActions } from './useGameActions';
 import { useGameInitialization } from './useGameInitialization';
-import { Player, Champion } from '@/types/gameTypes';
+import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
 import { performCrossValidation } from '@/utils/validation/crossValidation';
 import { getLunarPhase, analyzeLunarPatterns } from '@/utils/lunarCalculations';
@@ -20,21 +20,32 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   const gameState = useGameState();
   const gameActions = useGameActions(gameState);
   const { initializePlayers } = useGameInitialization();
+  
   const {
     players,
     setPlayers,
     generation,
     champion,
     evolutionData,
+    setEvolutionData,
     neuralNetworkVisualization,
+    setNeuralNetworkVisualization,
     modelMetrics,
+    setModelMetrics,
     dates,
+    setDates,
     numbers,
+    setNumbers,
     isInfiniteMode,
     boardNumbers,
+    setBoardNumbers,
     concursoNumber,
+    setConcursoNumber,
     gameCount,
-    isManualMode
+    setGameCount,
+    isManualMode,
+    trainingData,
+    setTrainingData
   } = gameState;
 
   const gameLoop = useCallback(async () => {
@@ -56,13 +67,13 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     const currentDate = new Date();
     const lunarPhase = getLunarPhase(currentDate);
     const lunarPatterns = analyzeLunarPatterns([currentDate], [currentBoardNumbers]);
-    
+
     setNumbers(currentNumbers => {
       const newNumbers = [...currentNumbers, currentBoardNumbers].slice(-100);
       return newNumbers;
     });
     
-    setDates(currentDates => [...currentDates, currentDate].slice(-100));
+    setDates(currentDates => [...currentDates, new Date()].slice(-100));
 
     const playerPredictions = await Promise.all(
       players.map(async player => {
@@ -71,12 +82,11 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
           currentBoardNumbers, 
           player.weights, 
           nextConcurso,
-          setNeuralNetworkVisualization,
+          (visualization) => setNeuralNetworkVisualization(visualization),
           { lunarPhase, lunarPatterns },
-          { numbers: [[...currentBoardNumbers]], dates: [currentDate] }
+          { numbers: [[...currentBoardNumbers]], dates: [new Date()] }
         );
 
-        // Monitorar previsões
         const timeSeriesAnalyzer = new TimeSeriesAnalysis([[...currentBoardNumbers]]);
         const arimaPredictor = timeSeriesAnalyzer.analyzeNumbers();
         predictionMonitor.recordPrediction(prediction, currentBoardNumbers, arimaPredictor);
@@ -155,9 +165,19 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     setTrainingData(currentTrainingData => 
       [...currentTrainingData, enhancedTrainingData]);
 
-    if (nextConcurso % Math.min(gameState.updateInterval, 50) === 0 && gameState.trainingData.length > 0) {
-      await updateModelWithNewData(trainedModel, gameState.trainingData, gameActions.addLog, toast);
-      gameState.setTrainingData([]);
+    if (nextConcurso % Math.min(gameState.updateInterval, 50) === 0 && trainingData.length > 0) {
+      await updateModelWithNewData(
+        trainedModel, 
+        trainingData, 
+        (message: string) => {
+          gameActions.addLog(message);
+          toast({
+            title: "Modelo Atualizado",
+            description: message,
+          });
+        }
+      );
+      setTrainingData([]);
     }
     
   }, [
@@ -170,15 +190,15 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     generation,
     gameActions.addLog,
     gameState.updateInterval,
-    gameState.trainingData,
-    gameState.setTrainingData,
-    gameState.setNumbers,
-    gameState.setDates,
-    gameState.setBoardNumbers,
-    gameState.setNeuralNetworkVisualization,
-    gameState.setModelMetrics,
-    gameState.setConcursoNumber,
-    gameState.setGameCount,
+    trainingData,
+    setTrainingData,
+    setNumbers,
+    setDates,
+    setBoardNumbers,
+    setNeuralNetworkVisualization,
+    setModelMetrics,
+    setConcursoNumber,
+    setGameCount,
     toast
   ]);
 
