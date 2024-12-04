@@ -1,70 +1,41 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import { useToast } from "@/components/ui/use-toast";
+import { useGameState } from './useGameState';
+import { useGameActions } from './useGameActions';
 import { useGameInitialization } from './useGameInitialization';
-import { useGameLoop } from './useGameLoop';
-import { updateModelWithNewData } from '@/utils/modelUtils';
-import { cloneChampion, updateModelWithChampionKnowledge } from '@/utils/playerEvolution';
-import { selectBestPlayers } from '@/utils/evolutionSystem';
-import { ModelVisualization, Player, Champion } from '@/types/gameTypes';
+import { Player, Champion } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
+import { performCrossValidation } from '@/utils/validation/crossValidation';
+import { getLunarPhase, analyzeLunarPatterns } from '@/utils/lunarCalculations';
+import { makePrediction } from '@/utils/predictionUtils';
+import { TimeSeriesAnalysis } from '@/utils/analysis/timeSeriesAnalysis';
+import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
+import { temporalAccuracyTracker } from '@/utils/prediction/temporalAccuracy';
+import { calculateReward, logReward } from '@/utils/rewardSystem';
+import { updateModelWithNewData } from '@/utils/modelUtils';
 
 export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel | null) => {
   const { toast } = useToast();
-  const { players, setPlayers, initializePlayers } = useGameInitialization();
-  const [generation, setGeneration] = useState(1);
-  const [gameCount, setGameCount] = useState(0);
-  const [champion, setChampion] = useState<Champion | null>(null);
-  const [evolutionData, setEvolutionData] = useState<Array<{
-    generation: number;
-    playerId: number;
-    score: number;
-    fitness: number;
-  }>>([]);
-  const [neuralNetworkVisualization, setNeuralNetworkVisualization] = useState<ModelVisualization | null>(null);
-  const [modelMetrics, setModelMetrics] = useState({
-    accuracy: 0,
-    randomAccuracy: 0,
-    totalPredictions: 0,
-  });
-  const [dates, setDates] = useState<Date[]>([]);
-  const [numbers, setNumbers] = useState<number[][]>([]);
-  const [frequencyData, setFrequencyData] = useState<{ [key: string]: number[] }>({});
-  const [updateInterval, setUpdateInterval] = useState(10);
-  const [isInfiniteMode, setIsInfiniteMode] = useState(false);
-  const [concursoNumber, setConcursoNumber] = useState(0);
-  const [trainingData, setTrainingData] = useState<number[][]>([]);
-  const [boardNumbers, setBoardNumbers] = useState<number[]>([]);
-  const [isManualMode, setIsManualMode] = useState(false);
-
-  // Automatically set initial champion when players are initialized
-  useEffect(() => {
-    if (players.length > 0 && !champion) {
-      const initialChampion = players[0];
-      setChampion({
-        player: initialChampion,
-        trainingData: []
-      });
-      systemLogger.log('player', `Campeão inicial selecionado: Jogador #${initialChampion.id}`);
-    }
-  }, [players, champion]);
-
-  // Update champion based on best score
-  useEffect(() => {
-    if (players.length > 0 && gameCount > 0) {
-      const bestPlayer = players.reduce((prev, current) => 
-        (current.score > prev.score) ? current : prev
-      );
-      
-      if (bestPlayer && (!champion || bestPlayer.score > champion.player.score)) {
-        setChampion({
-          player: bestPlayer,
-          trainingData: trainingData
-        });
-        systemLogger.log('player', `Novo campeão selecionado: Jogador #${bestPlayer.id} (Score: ${bestPlayer.score})`);
-      }
-    }
-  }, [players, gameCount]);
+  const gameState = useGameState();
+  const gameActions = useGameActions(gameState);
+  const { initializePlayers } = useGameInitialization();
+  const {
+    players,
+    setPlayers,
+    generation,
+    champion,
+    evolutionData,
+    neuralNetworkVisualization,
+    modelMetrics,
+    dates,
+    numbers,
+    isInfiniteMode,
+    boardNumbers,
+    concursoNumber,
+    gameCount,
+    isManualMode
+  } = gameState;
 
   const gameLoop = useCallback(async () => {
     if (csvData.length === 0 || !trainedModel) return;
@@ -138,10 +109,10 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       
       if (matches >= 11) {
         const logMessage = logReward(matches, player.id);
-        addLog(logMessage, matches);
+        gameActions.addLog(logMessage, matches);
         
         if (matches >= 13) {
-          showToast?.("Desempenho Excepcional!", 
+          toast?.("Desempenho Excepcional!", 
             `Jogador ${player.id} acertou ${matches} números!`);
         }
       }
@@ -184,9 +155,9 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     setTrainingData(currentTrainingData => 
       [...currentTrainingData, enhancedTrainingData]);
 
-    if (nextConcurso % Math.min(updateInterval, 50) === 0 && trainingData.length > 0) {
-      await updateModelWithNewData(trainedModel, trainingData, addLog, showToast);
-      setTrainingData([]);
+    if (nextConcurso % Math.min(gameState.updateInterval, 50) === 0 && gameState.trainingData.length > 0) {
+      await updateModelWithNewData(trainedModel, gameState.trainingData, gameActions.addLog, toast);
+      gameState.setTrainingData([]);
     }
     
   }, [
@@ -197,18 +168,18 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     concursoNumber,
     setEvolutionData,
     generation,
-    addLog,
-    updateInterval,
-    trainingData,
-    setTrainingData,
-    setNumbers,
-    setDates,
-    setBoardNumbers,
-    setNeuralNetworkVisualization,
-    setModelMetrics,
-    setConcursoNumber,
-    setGameCount,
-    showToast
+    gameActions.addLog,
+    gameState.updateInterval,
+    gameState.trainingData,
+    gameState.setTrainingData,
+    gameState.setNumbers,
+    gameState.setDates,
+    gameState.setBoardNumbers,
+    gameState.setNeuralNetworkVisualization,
+    gameState.setModelMetrics,
+    gameState.setConcursoNumber,
+    gameState.setGameCount,
+    toast
   ]);
 
   return {
@@ -219,22 +190,22 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     modelMetrics,
     initializePlayers,
     gameLoop,
-    evolveGeneration,
-    addLog,
+    evolveGeneration: gameActions.evolveGeneration,
+    addLog: gameActions.addLog,
     toggleInfiniteMode: useCallback(() => {
-      setIsInfiniteMode(prev => !prev);
-    }, []),
+      gameState.setIsInfiniteMode(prev => !prev);
+    }, [gameState]),
     dates,
     numbers,
-    updateFrequencyData,
+    updateFrequencyData: gameActions.updateFrequencyData,
     isInfiniteMode,
     boardNumbers,
     concursoNumber,
     trainedModel,
     gameCount,
     isManualMode,
-    toggleManualMode,
-    clonePlayer,
+    toggleManualMode: gameActions.toggleManualMode,
+    clonePlayer: gameActions.clonePlayer,
     champion
   };
 };
