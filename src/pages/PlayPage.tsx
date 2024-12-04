@@ -9,6 +9,7 @@ import PlayPageContent from '@/components/PlayPageContent';
 import SpeedControl from '@/components/SpeedControl';
 import { ModelInitializer } from '@/utils/tensorflow/modelInitializer';
 import { systemLogger } from '@/utils/logging/systemLogger';
+import { validateSystemState } from '@/utils/validation/systemValidation';
 
 const PlayPage: React.FC = () => {
   const [progress, setProgress] = useState(0);
@@ -31,7 +32,6 @@ const PlayPage: React.FC = () => {
       const xs = tf.tensor2d(csvData.map(row => row.slice(0, 15)));
       const ys = tf.tensor2d(csvData.map(row => row.slice(-15)));
       
-      // Treina o modelo com os dados carregados
       await model.fit(xs, ys, {
         epochs: 10,
         batchSize: 32,
@@ -52,7 +52,6 @@ const PlayPage: React.FC = () => {
         description: "O modelo foi treinado com sucesso e está pronto para iniciar o jogo.",
       });
 
-      // Cleanup
       xs.dispose();
       ys.dispose();
       
@@ -186,6 +185,24 @@ const PlayPage: React.FC = () => {
     return () => clearInterval(intervalId);
   }, [isPlaying, csvData, gameLogic, gameSpeed, pauseGame]);
 
+  const handleModelUpload = async (jsonFile: File, weightsFile: File) => {
+    try {
+      const model = await tf.loadLayersModel(tf.io.browserFiles([jsonFile, weightsFile]));
+      setTrainedModel(model);
+      toast({
+        title: "Modelo Carregado",
+        description: "O modelo foi carregado com sucesso.",
+      });
+    } catch (error) {
+      systemLogger.error('model', 'Erro ao carregar modelo', { error });
+      toast({
+        title: "Erro ao Carregar",
+        description: "Ocorreu um erro ao carregar o modelo.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="p-6">
       <PlayPageHeader />
@@ -201,24 +218,7 @@ const PlayPage: React.FC = () => {
         onReset={resetGame}
         onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         onCsvUpload={loadCSV}
-        onModelUpload={async (jsonFile, weightsFile) => {
-          try {
-            const model = await ModelInitializer.initializeModel();
-            await model.loadWeights(tf.io.browserFiles([jsonFile, weightsFile]));
-            setTrainedModel(model);
-            toast({
-              title: "Modelo Carregado",
-              description: "O modelo foi carregado com sucesso.",
-            });
-          } catch (error) {
-            systemLogger.error('model', 'Erro ao carregar modelo', { error });
-            toast({
-              title: "Erro ao Carregar",
-              description: "Ocorreu um erro ao carregar o modelo.",
-              variant: "destructive"
-            });
-          }
-        }}
+        onModelUpload={handleModelUpload}
         onSaveModel={() => {
           if (trainedModel) {
             trainedModel.save('downloads://modelo-atual');
