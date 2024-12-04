@@ -7,7 +7,8 @@ import { useGameControls } from '@/hooks/useGameControls';
 import { PlayPageHeader } from '@/components/PlayPageHeader';
 import PlayPageContent from '@/components/PlayPageContent';
 import SpeedControl from '@/components/SpeedControl';
-import { validateGameState, validateCsvStructure } from '@/utils/validation/gameValidation';
+import { validateSystemState } from '@/utils/validation/systemValidation';
+import { validateCsvStructure } from '@/utils/validation/gameValidation';
 import { systemLogger } from '@/utils/logging/systemLogger';
 
 const PlayPage: React.FC = () => {
@@ -77,9 +78,9 @@ const PlayPage: React.FC = () => {
   };
 
   const validateAndStartGame = () => {
-    const validation = validateGameState(
+    const validation = validateSystemState(
       csvData,
-      gameLogic.champion?.player || null,
+      gameLogic.champion,
       trainedModel,
       gameLogic.numbers
     );
@@ -87,7 +88,7 @@ const PlayPage: React.FC = () => {
     if (!validation.isValid) {
       toast({
         title: "Não é possível iniciar o jogo",
-        description: validation.errors.join('. '),
+        description: `Itens faltantes: ${validation.missingItems.join(', ')}`,
         variant: "destructive"
       });
       return false;
