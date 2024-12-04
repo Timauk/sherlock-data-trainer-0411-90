@@ -1,12 +1,12 @@
 import React from 'react';
-import ProcessingSelector from '../ProcessingSelector';
-import GameMetrics from '../GameMetrics';
-import ControlPanel from '../GameControls/ControlPanel';
+import ProcessingSelector from './ProcessingSelector';
+import GameMetrics from './GameMetrics';
+import ControlPanel from './GameControls/ControlPanel';
 import { Button } from "@/components/ui/button";
-import { Save, Download } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
-interface ProcessingPanelProps {
+interface PlayPageContentProps {
   isPlaying: boolean;
   onPlay: () => void;
   onPause: () => void;
@@ -21,7 +21,7 @@ interface ProcessingPanelProps {
   isDataLoaded: boolean;
 }
 
-const PlayPageContent: React.FC<ProcessingPanelProps> = ({
+const PlayPageContent: React.FC<PlayPageContentProps> = ({
   isPlaying,
   onPlay,
   onPause,
