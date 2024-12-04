@@ -43,10 +43,10 @@ export function validateSystemState(
     }
   }
 
-  // Champion Validation
-  if (!champion || !champion.player) {
-    missingItems.push('Campeão não selecionado');
-  } else if (!champion.player.id || !Array.isArray(champion.player.weights)) {
+  // Champion Validation - Now more lenient for initial state
+  if (!champion) {
+    details.championValid = true; // Allow null champion initially
+  } else if (!champion.player || !champion.player.id || !Array.isArray(champion.player.weights)) {
     missingItems.push('Estrutura do campeão inválida');
   } else {
     details.championValid = true;
