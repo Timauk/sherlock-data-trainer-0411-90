@@ -27,7 +27,7 @@ export const handlePlayerPredictions = async (
 
       const timeSeriesAnalyzer = new TimeSeriesAnalysis([[...currentBoardNumbers]]);
       const arimaPredictor = timeSeriesAnalyzer.analyzeNumbers();
-      predictionMonitor.recordPrediction(prediction, currentBoardNumbers, nextConcurso);
+      predictionMonitor.recordPrediction(prediction, currentBoardNumbers, [nextConcurso]);
 
       return prediction;
     })

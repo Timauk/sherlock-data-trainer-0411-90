@@ -7,6 +7,11 @@ export interface TrainingConfig {
   earlyStoppingPatience: number;
 }
 
+interface PredictionConfig {
+  lunarPhase: string;
+  patterns: Record<string, number[]>;
+}
+
 export function createModel(): tf.LayersModel {
   const model = tf.sequential();
   model.add(tf.layers.lstm({ units: 64, inputShape: [null, 17], returnSequences: true }));
@@ -39,6 +44,25 @@ export async function trainModel(
   return history;
 }
 
+export async function makePrediction(
+  model: tf.LayersModel | null,
+  inputData: number[],
+  weights: number[],
+  config: PredictionConfig
+): Promise<number[]> {
+  if (!model) return [];
+  
+  const inputTensor = tf.tensor2d([inputData]);
+  const predictions = model.predict(inputTensor) as tf.Tensor;
+  const result = Array.from(await predictions.data());
+  
+  inputTensor.dispose();
+  predictions.dispose();
+  
+  // Apply weights and configuration
+  return result.map((n, i) => Math.round(n * weights[i % weights.length]));
+}
+
 export function normalizeData(data: number[][]): number[][] {
   const maxValue = 25;
   return data.map(row => row.map(n => n / maxValue));
@@ -63,12 +87,16 @@ export function addDerivedFeatures(data: number[][]): number[][] {
   });
 }
 
-export async function updateModel(model: tf.LayersModel, newData: number[][]): Promise<tf.LayersModel> {
+export async function updateModel(
+  model: tf.LayersModel,
+  newData: number[][],
+  config: { epochs: number }
+): Promise<tf.LayersModel> {
   const xs = tf.tensor2d(newData.map(row => row.slice(0, -15)));
   const ys = tf.tensor2d(newData.map(row => row.slice(-15)));
 
   await model.fit(xs, ys, {
-    epochs: 1,
+    epochs: config.epochs,
     batchSize: 32,
   });
 

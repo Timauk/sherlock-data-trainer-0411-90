@@ -11,7 +11,7 @@ import { getLunarPhase, analyzeLunarPatterns } from '@/utils/lunarCalculations';
 import { handlePlayerPredictions } from '@/utils/prediction/predictionUtils';
 import { temporalAccuracyTracker } from '@/utils/prediction/temporalAccuracy';
 import { calculateReward, logReward } from '@/utils/rewardSystem';
-import { updateModelWithNewData } from '@/utils/modelUtils';
+import { updateModel } from '@/utils/aiModel';
 
 export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel | null) => {
   const { toast } = useToast();
@@ -59,7 +59,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     const validationMetrics = performCrossValidation(
       [players[0].predictions],
       csvData.slice(Math.max(0, nextConcurso - 10), nextConcurso),
-      { minSamples: 5 }
+      10 // minSamples as number
     );
 
     const currentDate = new Date();
@@ -154,7 +154,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       [...currentTrainingData, enhancedTrainingData]);
 
     if (nextConcurso % Math.min(gameState.updateInterval, 50) === 0 && trainingData.length > 0) {
-      await updateModelWithNewData(trainedModel, trainingData, { epochs: 5 });
+      await updateModel(trainedModel, trainingData, { epochs: 5 });
       setTrainingData([]);
     }
     
