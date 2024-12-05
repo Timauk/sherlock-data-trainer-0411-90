@@ -148,6 +148,50 @@ const PlayPage: React.FC = () => {
     return true;
   };
 
+  const onModelUpload = async (jsonFile: File, weightsFile: File) => {
+    try {
+      const model = await ModelInitializer.initializeModel();
+      
+      const modelJSON = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsText(jsonFile);
+      });
+
+      const modelConfig = JSON.parse(modelJSON);
+      
+      // Create a blob URL for the weights file
+      const weightsUrl = URL.createObjectURL(weightsFile);
+      
+      try {
+        // Load the model weights using tf.loadLayersModel
+        const loadedModel = await tf.loadLayersModel(tf.io.browserFiles(
+          [jsonFile, weightsFile]
+        ));
+        
+        // Copy the weights to our model
+        const weights = loadedModel.getWeights();
+        model.setWeights(weights);
+        
+        setTrainedModel(model);
+        toast({
+          title: "Modelo Carregado",
+          description: "O modelo foi carregado com sucesso.",
+        });
+      } finally {
+        // Clean up the blob URL
+        URL.revokeObjectURL(weightsUrl);
+      }
+    } catch (error) {
+      systemLogger.error('model', 'Erro ao carregar modelo', { error });
+      toast({
+        title: "Erro ao Carregar",
+        description: "Ocorreu um erro ao carregar o modelo.",
+        variant: "destructive"
+      });
+    }
+  };
+
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
     
@@ -182,40 +226,6 @@ const PlayPage: React.FC = () => {
     
     return () => clearInterval(intervalId);
   }, [isPlaying, csvData, gameLogic, gameSpeed, pauseGame]);
-
-  const onModelUpload = async (jsonFile: File, weightsFile: File) => {
-    try {
-      const model = await ModelInitializer.initializeModel();
-      
-      const modelJSON = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsText(jsonFile);
-      });
-
-      const modelConfig = JSON.parse(modelJSON);
-      
-      const weightsManifest = [{
-        paths: [weightsFile.name],
-        weights: modelConfig.weightsManifest[0].weights
-      }];
-
-      await model.loadWeights(weightsManifest, (path) => weightsFile);
-
-      setTrainedModel(model);
-      toast({
-        title: "Modelo Carregado",
-        description: "O modelo foi carregado com sucesso.",
-      });
-    } catch (error) {
-      systemLogger.error('model', 'Erro ao carregar modelo', { error });
-      toast({
-        title: "Erro ao Carregar",
-        description: "Ocorreu um erro ao carregar o modelo.",
-        variant: "destructive"
-      });
-    }
-  };
 
   return (
     <div className="p-6">
