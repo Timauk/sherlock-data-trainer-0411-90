@@ -4,15 +4,18 @@ import * as tf from '@tensorflow/tfjs';
 import { Upload, BarChart2, Save } from 'lucide-react';
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import TrainingChart from '@/components/TrainingChart';
 import { processarCSV } from '@/utils/dataProcessing';
 import { useToast } from "@/hooks/use-toast";
+import { ModelInitializer } from '@/utils/tensorflow/modelInitializer';
 
 const TrainingPage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [trainingProgress, setTrainingProgress] = useState(0);
   const [model, setModel] = useState<tf.LayersModel | null>(null);
   const [logs, setLogs] = useState<{ epoch: number; loss: number; val_loss: number }[]>([]);
+  const [batchSize, setBatchSize] = useState<"16" | "8">("16");
   const { toast } = useToast();
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,39 +37,52 @@ const TrainingPage: React.FC = () => {
   const startTraining = async () => {
     if (!trainingData) return;
 
-    const numeroDeBolas = trainingData[0].bolas.length;
+    try {
+      // Usar ModelInitializer para criar o modelo com a arquitetura correta
+      const newModel = await ModelInitializer.initializeModel();
+      console.log('Modelo inicializado com arquitetura:', newModel.summary());
 
-    const newModel = tf.sequential();
-    newModel.add(tf.layers.dense({ units: 128, activation: 'relu', inputShape: [numeroDeBolas + 2] }));
-    newModel.add(tf.layers.batchNormalization());
-    newModel.add(tf.layers.dense({ units: 128, activation: 'relu' }));
-    newModel.add(tf.layers.dense({ units: numeroDeBolas, activation: 'sigmoid' }));
+      const xs = tf.tensor2d(trainingData.map(d => [...d.bolas, d.numeroConcurso, d.dataSorteio]));
+      const ys = tf.tensor2d(trainingData.map(d => d.bolas));
 
-    newModel.compile({ optimizer: 'adam', loss: 'meanSquaredError' });
-
-    const xs = tf.tensor2d(trainingData.map(d => [...d.bolas, d.numeroConcurso, d.dataSorteio]));
-    const ys = tf.tensor2d(trainingData.map(d => d.bolas));
-
-    await newModel.fit(xs, ys, {
-      epochs: 100,
-      validationSplit: 0.1,
-      callbacks: {
-        onEpochEnd: (epoch, log) => {
-          if (log) {
-            setTrainingProgress(Math.floor(((epoch + 1) / 100) * 100));
-            setLogs(prevLogs => [...prevLogs, { epoch: epoch + 1, loss: log.loss, val_loss: log.val_loss }]);
+      console.log('Iniciando treinamento com batch size:', batchSize);
+      
+      await newModel.fit(xs, ys, {
+        epochs: 100,
+        batchSize: parseInt(batchSize),
+        validationSplit: 0.1,
+        callbacks: {
+          onEpochBegin: async (epoch) => {
+            console.log(`Iniciando época ${epoch + 1}`);
+          },
+          onEpochEnd: (epoch, log) => {
+            if (log) {
+              console.log(`Época ${epoch + 1} finalizada:`, log);
+              setTrainingProgress(Math.floor(((epoch + 1) / 100) * 100));
+              setLogs(prevLogs => [...prevLogs, { epoch: epoch + 1, loss: log.loss, val_loss: log.val_loss }]);
+            }
           }
         }
-      }
-    });
+      });
 
-    setModel(newModel);
+      setModel(newModel);
+      toast({
+        title: "Treinamento Concluído",
+        description: "O modelo foi treinado com sucesso usando a arquitetura completa.",
+      });
+    } catch (error) {
+      console.error('Erro durante o treinamento:', error);
+      toast({
+        title: "Erro no Treinamento",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive"
+      });
+    }
   };
 
   const saveModel = async () => {
     if (model) {
       try {
-        // Salva o modelo completo (arquitetura + pesos)
         await model.save('downloads://modelo-aprendiz');
         
         toast({
@@ -104,6 +120,18 @@ const TrainingPage: React.FC = () => {
       </div>
 
       <div className="space-y-4">
+        <div className="flex items-center gap-4">
+          <Select value={batchSize} onValueChange={(value: "16" | "8") => setBatchSize(value)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Batch Size" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="16">Batch Size: 16</SelectItem>
+              <SelectItem value="8">Batch Size: 8</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <Button
           onClick={startTraining}
           disabled={!trainingData}
