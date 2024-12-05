@@ -24,6 +24,11 @@ const PlayPage: React.FC = () => {
 
   const gameLogic = useGameLogic(csvData, trainedModel);
 
+  const handleSpeedChange = (value: number[]) => {
+    console.log('Speed changed:', value[0]);
+    setGameSpeed(value[0]);
+  };
+
   const initializeNeuralNetwork = async () => {
     try {
       const model = await ModelInitializer.initializeModel();

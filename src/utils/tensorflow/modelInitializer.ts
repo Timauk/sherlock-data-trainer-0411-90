@@ -2,87 +2,57 @@ import * as tf from '@tensorflow/tfjs';
 import { systemLogger } from '../logging/systemLogger';
 
 export class ModelInitializer {
-  static async initializeModel() {
+  static async initializeModel(): Promise<tf.LayersModel> {
     try {
-      systemLogger.log('tensorflow', 'Iniciando configuração do TensorFlow.js', {
-        currentBackend: tf.getBackend(),
-        availableBackends: tf.engine().registeredBackends
-      });
+      // Check available backends
+      const backends = Object.keys(tf.engine().backendNames);
+      systemLogger.log('model', 'Backends disponíveis:', { backends });
 
-      // Try to initialize with WebGL first
-      try {
+      // Try to use WebGL if available
+      if (backends.includes('webgl')) {
         await tf.setBackend('webgl');
-        await tf.ready();
-        systemLogger.log('tensorflow', 'TensorFlow.js inicializado com WebGL', {
-          backend: tf.getBackend(),
-          memory: tf.memory()
-        });
-      } catch (error) {
-        systemLogger.warn('tensorflow', 'Fallback para CPU', { 
-          error,
-          reason: error instanceof Error ? error.message : 'Unknown error'
-        });
-        // Fallback to CPU
+        systemLogger.log('model', 'Usando backend WebGL');
+      } else {
         await tf.setBackend('cpu');
-        await tf.ready();
+        systemLogger.log('model', 'Usando backend CPU (WebGL não disponível)');
       }
 
-      systemLogger.log('tensorflow', 'Criando modelo sequencial');
       const model = tf.sequential();
       
-      // Model configuration
-      systemLogger.log('tensorflow', 'Configurando camadas do modelo');
-      
-      model.add(tf.layers.dense({ 
-        units: 256, 
-        activation: 'relu', 
-        inputShape: [17],
-        kernelInitializer: 'glorotNormal'
+      model.add(tf.layers.dense({
+        units: 128,
+        activation: 'relu',
+        inputShape: [15]
       }));
       
-      model.add(tf.layers.dense({ 
-        units: 128, 
+      model.add(tf.layers.dense({
+        units: 64,
         activation: 'relu'
       }));
       
-      model.add(tf.layers.dense({ 
-        units: 15, 
+      model.add(tf.layers.dense({
+        units: 15,
         activation: 'sigmoid'
       }));
 
-      systemLogger.log('tensorflow', 'Compilando modelo', {
-        layersCount: model.layers.length,
-        totalParams: model.countParams(),
-        modelConfig: model.getConfig()
-      });
-
-      // Compile the model
-      model.compile({ 
-        optimizer: tf.train.adam(0.001),
-        loss: 'binaryCrossentropy',
+      model.compile({
+        optimizer: 'adam',
+        loss: 'meanSquaredError',
         metrics: ['accuracy']
       });
 
-      systemLogger.log('tensorflow', 'Modelo inicializado com sucesso', {
+      systemLogger.log('model', 'Modelo neural inicializado com sucesso', {
         backend: tf.getBackend(),
-        memory: tf.memory(),
-        modelSummary: {
-          layers: model.layers.length,
-          trainable: model.trainable,
-          optimizer: model.optimizer?.constructor.name
-        }
+        layers: model.layers.length,
+        config: model.getConfig()
       });
 
       return model;
     } catch (error) {
-      systemLogger.error('tensorflow', 'Erro ao inicializar modelo', {
+      systemLogger.error('model', 'Erro ao inicializar modelo', {
         error,
         stack: error instanceof Error ? error.stack : undefined,
-        tfState: {
-          backend: tf.getBackend(),
-          memory: tf.memory(),
-          engineReady: tf.engine().ready
-        }
+        backend: tf.getBackend()
       });
       throw error;
     }

@@ -27,7 +27,6 @@ export const updateModel = async (
       metrics: ['accuracy']
     });
 
-    // Reshape the input data to match expected shape [*,17]
     const processedData = trainingData.map(row => {
       return row.slice(0, 17);
     });
@@ -64,6 +63,9 @@ export const updateModel = async (
       }
     });
 
+    // Check if model is compiled by checking if optimizer exists
+    const isModelCompiled = trainedModel.optimizer !== undefined;
+
     systemLogger.log('training', 'Treinamento finalizado', {
       finalLoss: result.history.loss?.slice(-1)[0],
       finalAccuracy: result.history.acc?.slice(-1)[0],
@@ -71,7 +73,7 @@ export const updateModel = async (
       modelState: {
         layers: trainedModel.layers.length,
         trainable: trainedModel.trainable,
-        compiled: trainedModel.compiled
+        isCompiled: isModelCompiled
       }
     });
 
@@ -92,7 +94,7 @@ export const updateModel = async (
       },
       modelState: {
         layers: trainedModel.layers.length,
-        compiled: trainedModel.compiled
+        isCompiled: trainedModel.optimizer !== undefined
       },
       tfState: {
         backend: tf.getBackend(),
