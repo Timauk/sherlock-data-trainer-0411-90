@@ -65,9 +65,12 @@ const PlayPage: React.FC = () => {
 
   const loadCSV = async (file: File) => {
     try {
+      systemLogger.log('csv', 'Iniciando carregamento do CSV', { fileName: file.name });
       const text = await file.text();
       
       const lines = text.trim().split('\n').slice(1);
+      systemLogger.log('csv', 'Processando linhas do CSV', { totalLines: lines.length });
+      
       const data = lines.map(line => {
         const values = line.split(',');
         return {
@@ -83,24 +86,29 @@ const PlayPage: React.FC = () => {
       );
 
       if (!isValidNumbers) {
+        systemLogger.error('csv', 'Números inválidos encontrados no CSV');
         throw new Error('Números inválidos encontrados no CSV');
       }
 
-      setCsvData(data.map(d => d.bolas));
-      setCsvDates(data.map(d => d.data));
-      
-      systemLogger.log('csv', 'CSV processado com sucesso', {
+      systemLogger.log('csv', 'Dados processados com sucesso', {
         totalRegistros: data.length,
         primeiraLinha: data[0],
-        ultimaLinha: data[data.length - 1]
+        ultimaLinha: data[data.length - 1],
+        amostras: data.slice(0, 5).map(d => d.bolas)
       });
+
+      setCsvData(data.map(d => d.bolas));
+      setCsvDates(data.map(d => d.data));
 
       toast({
         title: "Dados Carregados",
         description: `${data.length} registros foram carregados. Iniciando treinamento...`,
       });
     } catch (error) {
-      systemLogger.error('csv', 'Erro ao carregar CSV', { error });
+      systemLogger.error('csv', 'Erro ao carregar CSV', { 
+        error,
+        stack: error instanceof Error ? error.stack : undefined
+      });
       toast({
         title: "Erro ao Carregar Dados",
         description: error instanceof Error ? error.message : "Erro desconhecido",
@@ -109,8 +117,58 @@ const PlayPage: React.FC = () => {
     }
   };
 
-  const handleSpeedChange = (value: number[]) => {
-    setGameSpeed(2000 - value[0]);
+  const onModelUpload = async (jsonFile: File, weightsFile: File) => {
+    try {
+      systemLogger.log('model', 'Iniciando carregamento do modelo', {
+        jsonFileName: jsonFile.name,
+        weightsFileName: weightsFile.name
+      });
+
+      const model = await ModelInitializer.initializeModel();
+      systemLogger.log('model', 'Modelo base inicializado', {
+        layers: model.layers.length,
+        config: model.getConfig()
+      });
+      
+      try {
+        const loadedModel = await tf.loadLayersModel(tf.io.browserFiles(
+          [jsonFile, weightsFile]
+        ));
+        
+        systemLogger.log('model', 'Modelo carregado com sucesso', {
+          loadedLayers: loadedModel.layers.length,
+          weightsCount: loadedModel.getWeights().length,
+          memoryInfo: tf.memory()
+        });
+        
+        const weights = loadedModel.getWeights();
+        model.setWeights(weights);
+        
+        setTrainedModel(model);
+        toast({
+          title: "Modelo Carregado",
+          description: "O modelo foi carregado com sucesso.",
+        });
+      } catch (loadError) {
+        systemLogger.error('model', 'Erro ao carregar pesos do modelo', { 
+          error: loadError,
+          stack: loadError instanceof Error ? loadError.stack : undefined
+        });
+        throw loadError;
+      }
+    } catch (error) {
+      systemLogger.error('model', 'Erro ao carregar modelo', { 
+        error,
+        stack: error instanceof Error ? error.stack : undefined,
+        tfBackend: tf.getBackend(),
+        memoryInfo: tf.memory()
+      });
+      toast({
+        title: "Erro ao Carregar",
+        description: "Ocorreu um erro ao carregar o modelo.",
+        variant: "destructive"
+      });
+    }
   };
 
   const validateAndStartGame = () => {
@@ -146,50 +204,6 @@ const PlayPage: React.FC = () => {
     });
 
     return true;
-  };
-
-  const onModelUpload = async (jsonFile: File, weightsFile: File) => {
-    try {
-      const model = await ModelInitializer.initializeModel();
-      
-      const modelJSON = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsText(jsonFile);
-      });
-
-      const modelConfig = JSON.parse(modelJSON);
-      
-      // Create a blob URL for the weights file
-      const weightsUrl = URL.createObjectURL(weightsFile);
-      
-      try {
-        // Load the model weights using tf.loadLayersModel
-        const loadedModel = await tf.loadLayersModel(tf.io.browserFiles(
-          [jsonFile, weightsFile]
-        ));
-        
-        // Copy the weights to our model
-        const weights = loadedModel.getWeights();
-        model.setWeights(weights);
-        
-        setTrainedModel(model);
-        toast({
-          title: "Modelo Carregado",
-          description: "O modelo foi carregado com sucesso.",
-        });
-      } finally {
-        // Clean up the blob URL
-        URL.revokeObjectURL(weightsUrl);
-      }
-    } catch (error) {
-      systemLogger.error('model', 'Erro ao carregar modelo', { error });
-      toast({
-        title: "Erro ao Carregar",
-        description: "Ocorreu um erro ao carregar o modelo.",
-        variant: "destructive"
-      });
-    }
   };
 
   useEffect(() => {
