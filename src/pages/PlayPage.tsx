@@ -28,11 +28,9 @@ const PlayPage: React.FC = () => {
     try {
       const model = await ModelInitializer.initializeModel();
       
-      // Prepara os dados para treinamento
       const xs = tf.tensor2d(csvData.map(row => row.slice(0, 15)));
       const ys = tf.tensor2d(csvData.map(row => row.slice(-15)));
       
-      // Treina o modelo com os dados carregados
       await model.fit(xs, ys, {
         epochs: 10,
         batchSize: 32,
@@ -52,7 +50,6 @@ const PlayPage: React.FC = () => {
         description: "O modelo foi treinado com sucesso e está pronto para iniciar o jogo.",
       });
 
-      // Cleanup
       xs.dispose();
       ys.dispose();
       
@@ -190,32 +187,20 @@ const PlayPage: React.FC = () => {
     try {
       const model = await ModelInitializer.initializeModel();
       
-      // Create file readers for both files
-      const jsonReader = new FileReader();
-      const weightsReader = new FileReader();
-      
-      // Read the JSON file first
       const modelJSON = await new Promise<string>((resolve) => {
-        jsonReader.onload = () => resolve(jsonReader.result as string);
-        jsonReader.readAsText(jsonFile);
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsText(jsonFile);
       });
 
-      // Read the weights file
-      const weightsData = await new Promise<ArrayBuffer>((resolve) => {
-        weightsReader.onload = () => resolve(weightsReader.result as ArrayBuffer);
-        weightsReader.readAsArrayBuffer(weightsFile);
-      });
-
-      // Parse the model architecture
       const modelConfig = JSON.parse(modelJSON);
       
-      // Set the weights
-      await model.loadWeights(
-        new tf.io.WeightsManifestEntry(
-          modelConfig.weightsManifest[0].weights,
-          new Uint8Array(weightsData)
-        )
-      );
+      const weightsManifest = [{
+        paths: [weightsFile.name],
+        weights: modelConfig.weightsManifest[0].weights
+      }];
+
+      await model.loadWeights(weightsManifest, (path) => weightsFile);
 
       setTrainedModel(model);
       toast({
