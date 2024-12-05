@@ -43,11 +43,15 @@ const TrainingPage: React.FC = () => {
         formato: trainingData[0]
       });
 
-      // Preparar os dados de entrada (apenas as bolas, sem número do concurso e data)
-      const xs = tf.tensor2d(trainingData.map(d => d.bolas));
+      // Preparar os dados de entrada (incluindo bolas, número do concurso e data)
+      const xs = tf.tensor2d(trainingData.map(d => [
+        ...d.bolas,
+        d.numeroConcurso,
+        d.dataSorteio
+      ]));
       console.log('Tensor de entrada criado:', xs.shape);
 
-      // Preparar os dados de saída (mesmas bolas para autoencoder)
+      // Preparar os dados de saída (apenas as bolas para predição)
       const ys = tf.tensor2d(trainingData.map(d => d.bolas));
       console.log('Tensor de saída criado:', ys.shape);
 
@@ -57,7 +61,7 @@ const TrainingPage: React.FC = () => {
       newModel.add(tf.layers.dense({ 
         units: 256, 
         activation: 'relu', 
-        inputShape: [15],
+        inputShape: [17], // 15 bolas + concurso + data
         kernelInitializer: 'glorotNormal',
         kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
       }));
