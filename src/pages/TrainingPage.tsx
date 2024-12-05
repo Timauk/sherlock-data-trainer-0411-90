@@ -38,13 +38,53 @@ const TrainingPage: React.FC = () => {
     if (!trainingData) return;
 
     try {
-      // Usar ModelInitializer para criar o modelo com a arquitetura correta
-      const newModel = await ModelInitializer.initializeModel();
-      console.log('Modelo inicializado com arquitetura:', newModel.summary());
+      console.log('Iniciando treinamento com dados:', {
+        amostras: trainingData.length,
+        formato: trainingData[0]
+      });
 
-      const xs = tf.tensor2d(trainingData.map(d => [...d.bolas, d.numeroConcurso, d.dataSorteio]));
+      // Preparar os dados de entrada (apenas as bolas, sem número do concurso e data)
+      const xs = tf.tensor2d(trainingData.map(d => d.bolas));
+      console.log('Tensor de entrada criado:', xs.shape);
+
+      // Preparar os dados de saída (mesmas bolas para autoencoder)
       const ys = tf.tensor2d(trainingData.map(d => d.bolas));
+      console.log('Tensor de saída criado:', ys.shape);
 
+      // Criar modelo com arquitetura correta
+      const newModel = tf.sequential();
+      
+      newModel.add(tf.layers.dense({ 
+        units: 256, 
+        activation: 'relu', 
+        inputShape: [15],
+        kernelInitializer: 'glorotNormal',
+        kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
+      }));
+      newModel.add(tf.layers.batchNormalization());
+      newModel.add(tf.layers.dropout({ rate: 0.3 }));
+      
+      newModel.add(tf.layers.dense({ 
+        units: 128, 
+        activation: 'relu',
+        kernelInitializer: 'glorotNormal',
+        kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
+      }));
+      newModel.add(tf.layers.batchNormalization());
+      
+      newModel.add(tf.layers.dense({ 
+        units: 15, 
+        activation: 'sigmoid',
+        kernelInitializer: 'glorotNormal'
+      }));
+
+      newModel.compile({ 
+        optimizer: tf.train.adam(0.001),
+        loss: 'binaryCrossentropy',
+        metrics: ['accuracy']
+      });
+
+      console.log('Modelo compilado com sucesso');
       console.log('Iniciando treinamento com batch size:', batchSize);
       
       await newModel.fit(xs, ys, {
@@ -59,7 +99,11 @@ const TrainingPage: React.FC = () => {
             if (log) {
               console.log(`Época ${epoch + 1} finalizada:`, log);
               setTrainingProgress(Math.floor(((epoch + 1) / 100) * 100));
-              setLogs(prevLogs => [...prevLogs, { epoch: epoch + 1, loss: log.loss, val_loss: log.val_loss }]);
+              setLogs(prevLogs => [...prevLogs, { 
+                epoch: epoch + 1, 
+                loss: log.loss, 
+                val_loss: log.val_loss 
+              }]);
             }
           }
         }
@@ -70,6 +114,11 @@ const TrainingPage: React.FC = () => {
         title: "Treinamento Concluído",
         description: "O modelo foi treinado com sucesso usando a arquitetura completa.",
       });
+
+      // Cleanup
+      xs.dispose();
+      ys.dispose();
+
     } catch (error) {
       console.error('Erro durante o treinamento:', error);
       toast({
