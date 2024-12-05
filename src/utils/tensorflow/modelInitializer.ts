@@ -4,20 +4,20 @@ import { systemLogger } from '../logging/systemLogger';
 export class ModelInitializer {
   static async initializeModel() {
     try {
-      // Tenta inicializar com WebGL primeiro
+      // Try to initialize with WebGL first
       await tf.setBackend('webgl');
       await tf.ready();
       systemLogger.log('system', 'TensorFlow.js inicializado com WebGL');
     } catch (error) {
       systemLogger.log('system', 'Fallback para CPU', { error });
-      // Fallback para CPU
+      // Fallback to CPU
       await tf.setBackend('cpu');
       await tf.ready();
     }
 
     const model = tf.sequential();
     
-    // Configuração do modelo
+    // Model configuration
     model.add(tf.layers.dense({ 
       units: 256, 
       activation: 'relu', 
@@ -35,7 +35,7 @@ export class ModelInitializer {
       activation: 'sigmoid'
     }));
 
-    // Compilação do modelo - IMPORTANTE
+    // Compile the model - IMPORTANT
     model.compile({ 
       optimizer: tf.train.adam(0.001),
       loss: 'binaryCrossentropy',
