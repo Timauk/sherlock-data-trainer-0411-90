@@ -18,34 +18,43 @@ async function getOrCreateModel() {
   if (!globalModel) {
     globalModel = tf.sequential();
     
-    globalModel.add(tf.layers.dense({ 
-      units: 256, 
-      activation: 'relu', 
-      inputShape: [17],
-      kernelInitializer: 'glorotNormal',
-      kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
-    }));
-    globalModel.add(tf.layers.batchNormalization());
-    globalModel.add(tf.layers.dropout({ rate: 0.3 }));
-    
+    // Primeira camada com regularização L2 mais suave
     globalModel.add(tf.layers.dense({ 
       units: 128, 
+      activation: 'relu', 
+      inputShape: [17],
+      kernelInitializer: 'heNormal',
+      kernelRegularizer: tf.regularizers.l2({ l2: 0.001 })
+    }));
+    globalModel.add(tf.layers.batchNormalization());
+    globalModel.add(tf.layers.dropout({ rate: 0.2 }));
+    
+    // Segunda camada com menos unidades
+    globalModel.add(tf.layers.dense({ 
+      units: 64, 
       activation: 'relu',
-      kernelInitializer: 'glorotNormal',
-      kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
+      kernelInitializer: 'heNormal',
+      kernelRegularizer: tf.regularizers.l2({ l2: 0.001 })
     }));
     globalModel.add(tf.layers.batchNormalization());
     
+    // Camada de saída com sigmoid para probabilidades
     globalModel.add(tf.layers.dense({ 
       units: 15, 
       activation: 'sigmoid',
       kernelInitializer: 'glorotNormal'
     }));
 
+    // Otimizador com learning rate menor
     globalModel.compile({ 
-      optimizer: tf.train.adam(0.001),
+      optimizer: tf.train.adam(0.0001),
       loss: 'binaryCrossentropy',
       metrics: ['accuracy']
+    });
+
+    logger.info('Modelo criado com nova arquitetura', {
+      layers: globalModel.layers.length,
+      parameters: globalModel.countParams()
     });
   }
   return globalModel;
@@ -97,19 +106,31 @@ router.post('/train', async (req, res) => {
     const patterns = analyzePatterns(combinedData);
     const enhancedData = enrichDataWithPatterns(combinedData, patterns);
     
+    // Normalização dos dados de entrada
     const xs = tf.tensor2d(enhancedData.map(d => d.slice(0, -15)));
     const ys = tf.tensor2d(enhancedData.map(d => d.slice(-15)));
     
+    // Treinamento com early stopping mais paciente
     const result = await model.fit(xs, ys, {
-      epochs: 50,
-      batchSize: 32,
+      epochs: 30,
+      batchSize: 16,
       validationSplit: 0.2,
       callbacks: [
         tf.callbacks.earlyStopping({
           monitor: 'val_loss',
-          patience: 5,
+          patience: 8,
           restoreBestWeights: true
-        })
+        }),
+        {
+          onEpochEnd: (epoch, logs) => {
+            logger.info(`Época ${epoch + 1} finalizada`, {
+              loss: logs.loss,
+              accuracy: logs.acc,
+              val_loss: logs.val_loss,
+              val_acc: logs.val_acc
+            });
+          }
+        }
       ]
     });
     
