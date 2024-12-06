@@ -24,7 +24,7 @@ export const serializeModel = async (model: tf.LayersModel, metadata: ModelMetad
     systemLogger.log('system', 'Modelo serializado com sucesso', {
       metadata,
       saveResult,
-      weightsManifest: saveResult.weightData ? 'presente' : 'ausente'
+      weightsPresent: saveResult.modelArtifactsInfo?.weightDataBytes ? 'sim' : 'não'
     });
     return true;
   } catch (error) {
