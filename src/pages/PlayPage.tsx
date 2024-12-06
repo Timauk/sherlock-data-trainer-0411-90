@@ -10,6 +10,7 @@ import SpeedControl from '@/components/SpeedControl';
 import { ModelInitializer } from '@/utils/tensorflow/modelInitializer';
 import { systemLogger } from '@/utils/logging/systemLogger';
 import { validateSystemState } from '@/utils/validation/systemValidation';
+import { deserializeModel } from '@/utils/modelSerialization';
 
 const PlayPage: React.FC = () => {
   const [progress, setProgress] = useState(0);
@@ -125,51 +126,23 @@ const PlayPage: React.FC = () => {
   const onModelUpload = async (jsonFile: File, weightsFile: File) => {
     try {
       systemLogger.log('model', 'Iniciando carregamento do modelo', {
-        jsonFileName: jsonFile.name,
-        weightsFileName: weightsFile.name
+        jsonFile: jsonFile.name,
+        weightsFile: weightsFile.name
       });
 
-      // Verifica se ambos os arquivos foram fornecidos
-      if (!jsonFile || !weightsFile) {
-        throw new Error('É necessário fornecer tanto o arquivo JSON quanto o arquivo de pesos (bin)');
+      const { model: loadedModel, metadata } = await deserializeModel(jsonFile, weightsFile);
+      
+      if (!loadedModel) {
+        throw new Error('Falha ao carregar o modelo');
       }
 
-      // Inicializa o modelo base
-      const model = await ModelInitializer.initializeModel();
+      setTrainedModel(loadedModel);
       
-      systemLogger.log('model', 'Modelo base inicializado', {
-        layers: model.layers.length,
-        config: model.getConfig()
+      toast({
+        title: "Modelo Carregado",
+        description: "O modelo e seus pesos foram carregados com sucesso.",
       });
-      
-      try {
-        // Carrega o modelo com os dois arquivos
-        const loadedModel = await tf.loadLayersModel(tf.io.browserFiles(
-          [jsonFile, weightsFile]
-        ));
-        
-        systemLogger.log('model', 'Modelo carregado com sucesso', {
-          loadedLayers: loadedModel.layers.length,
-          weightsCount: loadedModel.getWeights().length,
-          memoryInfo: tf.memory()
-        });
-        
-        // Transfere os pesos do modelo carregado para o modelo base
-        const weights = loadedModel.getWeights();
-        model.setWeights(weights);
-        
-        setTrainedModel(model);
-        toast({
-          title: "Modelo Carregado",
-          description: "O modelo e seus pesos foram carregados com sucesso.",
-        });
-      } catch (loadError) {
-        systemLogger.error('model', 'Erro ao carregar pesos do modelo', { 
-          error: loadError,
-          stack: loadError instanceof Error ? loadError.stack : undefined
-        });
-        throw loadError;
-      }
+
     } catch (error) {
       systemLogger.error('model', 'Erro ao carregar modelo', { 
         error,
@@ -177,6 +150,7 @@ const PlayPage: React.FC = () => {
         tfBackend: tf.getBackend(),
         memoryInfo: tf.memory()
       });
+      
       toast({
         title: "Erro ao Carregar",
         description: error instanceof Error ? error.message : "Erro ao carregar o modelo e seus pesos.",
