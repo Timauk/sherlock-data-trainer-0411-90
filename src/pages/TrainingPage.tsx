@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import TrainingChart from '@/components/TrainingChart';
 import { processarCSV } from '@/utils/dataProcessing';
 import { useToast } from "@/hooks/use-toast";
-import { ModelInitializer } from '@/utils/tensorflow/modelInitializer';
+import { enrichTrainingData } from '@/utils/features/lotteryFeatureEngineering';
+import { extractDateFromCSV } from '@/utils/csvUtils';
 
 const TrainingPage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -29,7 +30,17 @@ const TrainingPage: React.FC = () => {
     queryFn: async () => {
       if (!file) return null;
       const text = await file.text();
-      return processarCSV(text);
+      const numbers = processarCSV(text);
+      const dates = extractDateFromCSV(text);
+      const enrichedData = enrichTrainingData(numbers, dates);
+      
+      console.log('Dados de treinamento processados:', {
+        originalLength: numbers.length,
+        enrichedLength: enrichedData.length,
+        featuresPerGame: enrichedData[0].length
+      });
+      
+      return enrichedData;
     },
     enabled: !!file,
   });
@@ -38,28 +49,26 @@ const TrainingPage: React.FC = () => {
     if (!trainingData) return;
 
     try {
-      console.log('Iniciando treinamento com dados:', {
+      console.log('Iniciando treinamento com dados enriquecidos:', {
         amostras: trainingData.length,
-        formato: trainingData[0]
+        caracteristicas: trainingData[0].length
       });
 
-      const xs = tf.tensor2d(trainingData.map(d => [
-        ...d.bolas,
-        d.numeroConcurso,
-        d.dataSorteio
-      ]));
-      console.log('Tensor de entrada criado:', xs.shape);
+      const xs = tf.tensor2d(trainingData.map(d => d.slice(15))); // Características após os 15 números originais
+      const ys = tf.tensor2d(trainingData.map(d => d.slice(0, 15))); // 15 números originais
 
-      const ys = tf.tensor2d(trainingData.map(d => d.bolas));
-      console.log('Tensor de saída criado:', ys.shape);
+      console.log('Tensores criados:', {
+        entrada: xs.shape,
+        saida: ys.shape
+      });
 
       const newModel = tf.sequential();
       
       // Primeira camada com mais unidades
       newModel.add(tf.layers.dense({ 
-        units: 1024, // Aumentado para 1024
+        units: 1024,
         activation: 'relu',
-        inputShape: [17],
+        inputShape: [xs.shape[1]], // Adaptado para o número de características
         kernelInitializer: 'glorotNormal',
         kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
       }));
@@ -96,14 +105,14 @@ const TrainingPage: React.FC = () => {
       newModel.add(tf.layers.batchNormalization());
       newModel.add(tf.layers.dropout({ rate: 0.2 }));
 
-      // Camada de atenção para capturar relações complexas
+      // Camada de atenção
       newModel.add(tf.layers.dense({ 
         units: 64,
         activation: 'tanh',
         kernelInitializer: 'glorotNormal'
       }));
       
-      // Camada de saída mantida com 15 unidades para compatibilidade
+      // Camada de saída
       newModel.add(tf.layers.dense({ 
         units: 15,
         activation: 'sigmoid',
@@ -111,15 +120,14 @@ const TrainingPage: React.FC = () => {
       }));
 
       newModel.compile({
-        optimizer: tf.train.adam(0.0005), // Learning rate reduzido para treino mais estável
+        optimizer: tf.train.adam(0.0005),
         loss: 'binaryCrossentropy',
         metrics: ['accuracy']
       });
 
-      console.log('Modelo compilado com sucesso');
-      console.log('Iniciando treinamento com batch size:', batchSize);
+      console.log('Modelo compilado com arquitetura:', newModel.summary());
       
-      await newModel.fit(xs, ys, {
+      const result = await newModel.fit(xs, ys, {
         epochs: 100,
         batchSize: parseInt(batchSize),
         validationSplit: 0.1,
@@ -144,10 +152,9 @@ const TrainingPage: React.FC = () => {
       setModel(newModel);
       toast({
         title: "Treinamento Concluído",
-        description: "O modelo foi treinado com sucesso usando a arquitetura complexa.",
+        description: "O modelo foi treinado com sucesso usando características enriquecidas.",
       });
 
-      // Cleanup
       xs.dispose();
       ys.dispose();
 
