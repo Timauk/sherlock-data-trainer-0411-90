@@ -43,7 +43,7 @@ const TrainingPage: React.FC = () => {
         formato: trainingData[0]
       });
 
-      // Preparar os dados de entrada (incluindo bolas, número do concurso e data)
+      // Preparar os dados de entrada (mantendo número do concurso e data)
       const xs = tf.tensor2d(trainingData.map(d => [
         ...d.bolas,
         d.numeroConcurso,
@@ -51,38 +51,51 @@ const TrainingPage: React.FC = () => {
       ]));
       console.log('Tensor de entrada criado:', xs.shape);
 
-      // Preparar os dados de saída (apenas as bolas para predição)
       const ys = tf.tensor2d(trainingData.map(d => d.bolas));
       console.log('Tensor de saída criado:', ys.shape);
 
-      // Criar modelo com arquitetura correta
+      // Criar modelo com arquitetura mais complexa
       const newModel = tf.sequential();
       
+      // Primeira camada densa com mais unidades
       newModel.add(tf.layers.dense({ 
-        units: 256, 
-        activation: 'relu', 
-        inputShape: [17], // 15 bolas + concurso + data
+        units: 512, // Aumentado de 256 para 512
+        activation: 'relu',
+        inputShape: [17], // Mantendo inputShape para compatibilidade
         kernelInitializer: 'glorotNormal',
         kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
       }));
       newModel.add(tf.layers.batchNormalization());
       newModel.add(tf.layers.dropout({ rate: 0.3 }));
       
+      // Segunda camada densa intermediária
       newModel.add(tf.layers.dense({ 
-        units: 128, 
+        units: 256,
         activation: 'relu',
         kernelInitializer: 'glorotNormal',
         kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
       }));
       newModel.add(tf.layers.batchNormalization());
-      
+      newModel.add(tf.layers.dropout({ rate: 0.2 }));
+
+      // Terceira camada densa intermediária
       newModel.add(tf.layers.dense({ 
-        units: 15, 
+        units: 128,
+        activation: 'relu',
+        kernelInitializer: 'glorotNormal',
+        kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
+      }));
+      newModel.add(tf.layers.batchNormalization());
+      newModel.add(tf.layers.dropout({ rate: 0.2 }));
+
+      // Camada de saída mantida com 15 unidades para compatibilidade
+      newModel.add(tf.layers.dense({ 
+        units: 15,
         activation: 'sigmoid',
         kernelInitializer: 'glorotNormal'
       }));
 
-      newModel.compile({ 
+      newModel.compile({
         optimizer: tf.train.adam(0.001),
         loss: 'binaryCrossentropy',
         metrics: ['accuracy']
@@ -116,7 +129,7 @@ const TrainingPage: React.FC = () => {
       setModel(newModel);
       toast({
         title: "Treinamento Concluído",
-        description: "O modelo foi treinado com sucesso usando a arquitetura completa.",
+        description: "O modelo foi treinado com sucesso usando a arquitetura complexa.",
       });
 
       // Cleanup
