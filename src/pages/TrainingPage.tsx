@@ -43,7 +43,6 @@ const TrainingPage: React.FC = () => {
         formato: trainingData[0]
       });
 
-      // Preparar os dados de entrada (mantendo número do concurso e data)
       const xs = tf.tensor2d(trainingData.map(d => [
         ...d.bolas,
         d.numeroConcurso,
@@ -54,21 +53,30 @@ const TrainingPage: React.FC = () => {
       const ys = tf.tensor2d(trainingData.map(d => d.bolas));
       console.log('Tensor de saída criado:', ys.shape);
 
-      // Criar modelo com arquitetura mais complexa
       const newModel = tf.sequential();
       
-      // Primeira camada densa com mais unidades
+      // Primeira camada com mais unidades
       newModel.add(tf.layers.dense({ 
-        units: 512, // Aumentado de 256 para 512
+        units: 1024, // Aumentado para 1024
         activation: 'relu',
-        inputShape: [17], // Mantendo inputShape para compatibilidade
+        inputShape: [17],
+        kernelInitializer: 'glorotNormal',
+        kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
+      }));
+      newModel.add(tf.layers.batchNormalization());
+      newModel.add(tf.layers.dropout({ rate: 0.4 }));
+      
+      // Segunda camada
+      newModel.add(tf.layers.dense({ 
+        units: 512,
+        activation: 'relu',
         kernelInitializer: 'glorotNormal',
         kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
       }));
       newModel.add(tf.layers.batchNormalization());
       newModel.add(tf.layers.dropout({ rate: 0.3 }));
-      
-      // Segunda camada densa intermediária
+
+      // Terceira camada
       newModel.add(tf.layers.dense({ 
         units: 256,
         activation: 'relu',
@@ -76,9 +84,9 @@ const TrainingPage: React.FC = () => {
         kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
       }));
       newModel.add(tf.layers.batchNormalization());
-      newModel.add(tf.layers.dropout({ rate: 0.2 }));
+      newModel.add(tf.layers.dropout({ rate: 0.3 }));
 
-      // Terceira camada densa intermediária
+      // Quarta camada
       newModel.add(tf.layers.dense({ 
         units: 128,
         activation: 'relu',
@@ -88,6 +96,13 @@ const TrainingPage: React.FC = () => {
       newModel.add(tf.layers.batchNormalization());
       newModel.add(tf.layers.dropout({ rate: 0.2 }));
 
+      // Camada de atenção para capturar relações complexas
+      newModel.add(tf.layers.dense({ 
+        units: 64,
+        activation: 'tanh',
+        kernelInitializer: 'glorotNormal'
+      }));
+      
       // Camada de saída mantida com 15 unidades para compatibilidade
       newModel.add(tf.layers.dense({ 
         units: 15,
@@ -96,7 +111,7 @@ const TrainingPage: React.FC = () => {
       }));
 
       newModel.compile({
-        optimizer: tf.train.adam(0.001),
+        optimizer: tf.train.adam(0.0005), // Learning rate reduzido para treino mais estável
         loss: 'binaryCrossentropy',
         metrics: ['accuracy']
       });
