@@ -1,29 +1,23 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import * as tf from '@tensorflow/tfjs';
-import { Upload, BarChart2, Save } from 'lucide-react';
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/hooks/use-toast";
 import TrainingChart from '@/components/TrainingChart';
 import { processarCSV } from '@/utils/dataProcessing';
-import { useToast } from "@/hooks/use-toast";
 import { enrichTrainingData } from '@/utils/features/lotteryFeatureEngineering';
 import { extractDateFromCSV } from '@/utils/csvUtils';
+import TrainingControls from '@/components/training/TrainingControls';
+import TrainingProgress from '@/components/training/TrainingProgress';
+import TrainingActions from '@/components/training/TrainingActions';
 
 const TrainingPage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [trainingProgress, setTrainingProgress] = useState(0);
   const [model, setModel] = useState<tf.LayersModel | null>(null);
   const [logs, setLogs] = useState<{ epoch: number; loss: number; val_loss: number }[]>([]);
-  const [batchSize, setBatchSize] = useState<"16" | "8">("16");
+  const [batchSize, setBatchSize] = useState<string>("16");
+  const [epochs, setEpochs] = useState<number>(100);
   const { toast } = useToast();
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      setFile(event.target.files[0]);
-    }
-  };
 
   const { data: trainingData, isLoading, isError } = useQuery({
     queryKey: ['trainingData', file],
@@ -44,6 +38,12 @@ const TrainingPage: React.FC = () => {
     },
     enabled: !!file,
   });
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      setFile(event.target.files[0]);
+    }
+  };
 
   const startTraining = async () => {
     if (!trainingData) return;
@@ -68,7 +68,7 @@ const TrainingPage: React.FC = () => {
       newModel.add(tf.layers.dense({ 
         units: 1024,
         activation: 'relu',
-        inputShape: [xs.shape[1]], // Adaptado para o número de características
+        inputShape: [xs.shape[1]],
         kernelInitializer: 'glorotNormal',
         kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
       }));
@@ -105,30 +105,31 @@ const TrainingPage: React.FC = () => {
       newModel.add(tf.layers.batchNormalization());
       newModel.add(tf.layers.dropout({ rate: 0.2 }));
 
-      // Camada de atenção
+      // Quinta camada
       newModel.add(tf.layers.dense({ 
         units: 64,
-        activation: 'tanh',
+        activation: 'relu',
         kernelInitializer: 'glorotNormal'
       }));
       
       // Camada de saída
       newModel.add(tf.layers.dense({ 
         units: 15,
-        activation: 'sigmoid',
+        activation: 'softmax', // Mudado para softmax
         kernelInitializer: 'glorotNormal'
       }));
 
       newModel.compile({
         optimizer: tf.train.adam(0.0005),
-        loss: 'binaryCrossentropy',
+        loss: 'categoricalCrossentropy', // Mudado para categorical crossentropy
         metrics: ['accuracy']
       });
 
-      console.log('Modelo compilado com arquitetura:', newModel.summary());
+      console.log('Modelo compilado com arquitetura:');
+      newModel.summary();
       
       const result = await newModel.fit(xs, ys, {
-        epochs: 100,
+        epochs: epochs,
         batchSize: parseInt(batchSize),
         validationSplit: 0.1,
         callbacks: {
@@ -138,7 +139,7 @@ const TrainingPage: React.FC = () => {
           onEpochEnd: (epoch, log) => {
             if (log) {
               console.log(`Época ${epoch + 1} finalizada:`, log);
-              setTrainingProgress(Math.floor(((epoch + 1) / 100) * 100));
+              setTrainingProgress(Math.floor(((epoch + 1) / epochs) * 100));
               setLogs(prevLogs => [...prevLogs, { 
                 epoch: epoch + 1, 
                 loss: log.loss, 
@@ -191,60 +192,22 @@ const TrainingPage: React.FC = () => {
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-4">Página de Treinamento</h2>
       
-      <div className="mb-4">
-        <label htmlFor="fileInput" className="block mb-2">Carregar dados (CSV):</label>
-        <input
-          type="file"
-          id="fileInput"
-          accept=".csv"
-          onChange={handleFileUpload}
-          className="block w-full text-sm text-gray-500
-            file:mr-4 file:py-2 file:px-4
-            file:rounded-full file:border-0
-            file:text-sm file:font-semibold
-            file:bg-blue-50 file:text-blue-700
-            hover:file:bg-blue-100"
-        />
-      </div>
+      <TrainingControls 
+        batchSize={batchSize}
+        setBatchSize={setBatchSize}
+        epochs={epochs}
+        setEpochs={setEpochs}
+      />
 
-      <div className="space-y-4">
-        <div className="flex items-center gap-4">
-          <Select value={batchSize} onValueChange={(value: "16" | "8") => setBatchSize(value)}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Batch Size" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="16">Batch Size: 16</SelectItem>
-              <SelectItem value="8">Batch Size: 8</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <TrainingActions 
+        startTraining={startTraining}
+        saveModel={saveModel}
+        trainingData={trainingData}
+        model={model}
+        handleFileUpload={handleFileUpload}
+      />
 
-        <Button
-          onClick={startTraining}
-          disabled={!trainingData}
-          className="w-full"
-        >
-          <BarChart2 className="inline-block mr-2" />
-          Iniciar Treinamento
-        </Button>
-
-        <Button
-          onClick={saveModel}
-          disabled={!model}
-          className="w-full"
-        >
-          <Save className="inline-block mr-2" />
-          Salvar Modelo Base
-        </Button>
-      </div>
-
-      {trainingProgress > 0 && (
-        <div className="mt-4">
-          <Progress value={trainingProgress} className="w-full" />
-          <p className="text-center mt-2">{trainingProgress}% Concluído</p>
-        </div>
-      )}
+      <TrainingProgress trainingProgress={trainingProgress} />
 
       <div className="mt-8">
         <h3 className="text-xl font-bold mb-4">Gráfico de Perda de Treinamento e Validação</h3>
