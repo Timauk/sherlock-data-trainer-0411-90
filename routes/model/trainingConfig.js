@@ -1,23 +1,27 @@
 export const trainingConfig = {
-  epochs: 50,
-  batchSize: 32,
-  validationSplit: 0.2,
+  epochs: 30,
+  batchSize: 16,
   shuffle: true,
+  validationSplit: 0.2,
   callbacks: [
     {
       onEpochBegin: async (epoch) => {
-        console.log(`Iniciando época ${epoch + 1}`);
+        console.log('Iniciando época', epoch + 1);
       },
-      onEpochEnd: (epoch, logs) => {
-        if (logs) {
-          console.log(`Época ${epoch + 1} métricas:`, {
-            loss: logs.loss.toFixed(4),
-            accuracy: logs.acc.toFixed(4),
-            val_loss: logs.val_loss?.toFixed(4),
-            val_acc: logs.val_acc?.toFixed(4)
-          });
+      onEpochEnd: async (epoch, logs) => {
+        console.log('Época', epoch + 1, 'finalizada:', logs);
+      },
+      onBatchEnd: async (batch, logs) => {
+        if (batch % 10 === 0) {
+          console.log('Batch', batch, 'métricas:', logs);
         }
       }
-    }
-  ]
+    },
+    tf.callbacks.earlyStopping({
+      monitor: 'val_loss',
+      patience: 8,
+      restoreBestWeights: true
+    })
+  ],
+  metrics: ['accuracy']
 };
