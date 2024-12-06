@@ -129,13 +129,21 @@ const PlayPage: React.FC = () => {
         weightsFileName: weightsFile.name
       });
 
+      // Verifica se ambos os arquivos foram fornecidos
+      if (!jsonFile || !weightsFile) {
+        throw new Error('É necessário fornecer tanto o arquivo JSON quanto o arquivo de pesos (bin)');
+      }
+
+      // Inicializa o modelo base
       const model = await ModelInitializer.initializeModel();
+      
       systemLogger.log('model', 'Modelo base inicializado', {
         layers: model.layers.length,
         config: model.getConfig()
       });
       
       try {
+        // Carrega o modelo com os dois arquivos
         const loadedModel = await tf.loadLayersModel(tf.io.browserFiles(
           [jsonFile, weightsFile]
         ));
@@ -146,13 +154,14 @@ const PlayPage: React.FC = () => {
           memoryInfo: tf.memory()
         });
         
+        // Transfere os pesos do modelo carregado para o modelo base
         const weights = loadedModel.getWeights();
         model.setWeights(weights);
         
         setTrainedModel(model);
         toast({
           title: "Modelo Carregado",
-          description: "O modelo foi carregado com sucesso.",
+          description: "O modelo e seus pesos foram carregados com sucesso.",
         });
       } catch (loadError) {
         systemLogger.error('model', 'Erro ao carregar pesos do modelo', { 
@@ -170,7 +179,7 @@ const PlayPage: React.FC = () => {
       });
       toast({
         title: "Erro ao Carregar",
-        description: "Ocorreu um erro ao carregar o modelo.",
+        description: error instanceof Error ? error.message : "Erro ao carregar o modelo e seus pesos.",
         variant: "destructive"
       });
     }
