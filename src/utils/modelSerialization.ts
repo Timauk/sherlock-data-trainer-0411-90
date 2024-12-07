@@ -23,7 +23,6 @@ export const serializeModel = async (model: tf.LayersModel, metadata: ModelMetad
   try {
     const saveResult = await model.save('downloads://modelo-aprendiz');
     
-    // Save metadata in localStorage for later retrieval
     localStorage.setItem('model-metadata', JSON.stringify({
       ...metadata,
       modelConfig: model.getConfig(),
@@ -42,6 +41,46 @@ export const serializeModel = async (model: tf.LayersModel, metadata: ModelMetad
   }
 };
 
+const extractModelMetadata = (jsonContent: string): ModelMetadata | null => {
+  try {
+    const modelJSON = JSON.parse(jsonContent);
+    
+    // Verifica se temos a estrutura necessária
+    if (!modelJSON || !modelJSON.modelTopology || !modelJSON.modelTopology.model_config) {
+      systemLogger.error('system', 'Estrutura do JSON do modelo inválida', { modelJSON });
+      return null;
+    }
+
+    const config = modelJSON.modelTopology.model_config;
+    const layers = config.layers || [];
+    
+    // Extrai informações básicas do modelo
+    const metadata: ModelMetadata = {
+      timestamp: new Date().toISOString(),
+      architecture: {
+        layers: layers.length,
+        inputShape: layers[0]?.config?.batch_input_shape || [],
+        outputShape: layers[layers.length - 1]?.config?.units ? [layers[layers.length - 1].config.units] : []
+      },
+      performance: {
+        accuracy: 0,
+        loss: 0
+      },
+      training: {
+        epochs: config.training_config?.epochs || 50,
+        batchSize: config.training_config?.batch_size || 32,
+        optimizer: config.training_config?.optimizer_config?.class_name || 'adam'
+      }
+    };
+
+    systemLogger.log('system', 'Metadados extraídos com sucesso', { metadata });
+    return metadata;
+  } catch (error) {
+    systemLogger.error('system', 'Erro ao extrair metadados do modelo', { error });
+    return null;
+  }
+};
+
 export const deserializeModel = async (jsonFile: File, weightsFile: File): Promise<{
   model: tf.LayersModel | null;
   metadata: ModelMetadata | null;
@@ -52,35 +91,22 @@ export const deserializeModel = async (jsonFile: File, weightsFile: File): Promi
       weightsFileName: weightsFile.name
     });
 
-    // Extract metadata from JSON file
+    // Primeiro lê o conteúdo do arquivo JSON
     const jsonContent = await jsonFile.text();
-    const modelJSON = JSON.parse(jsonContent);
     
-    // Create metadata from model configuration
-    const extractedMetadata: ModelMetadata = {
-      timestamp: new Date().toISOString(),
-      architecture: {
-        layers: modelJSON.config.layers.length,
-        inputShape: modelJSON.config.layers[0].config.batch_input_shape,
-        outputShape: modelJSON.config.layers[modelJSON.config.layers.length - 1].config.units
-      },
-      performance: {
-        accuracy: 0, // Will be updated during training
-        loss: 0
-      },
-      training: {
-        epochs: modelJSON.config.epochs || 50,
-        batchSize: modelJSON.config.batch_size || 32,
-        optimizer: modelJSON.config.optimizer_config?.class_name || 'adam'
-      }
-    };
+    // Extrai os metadados do JSON
+    const extractedMetadata = extractModelMetadata(jsonContent);
+    if (!extractedMetadata) {
+      throw new Error('Não foi possível extrair os metadados do modelo');
+    }
 
-    // Load the model using both files
-    const model = await tf.loadLayersModel(tf.io.browserFiles(
-      [jsonFile, weightsFile]
-    ));
+    // Carrega o modelo
+    const model = await tf.loadLayersModel(tf.io.browserFiles([jsonFile, weightsFile]));
+    if (!model) {
+      throw new Error('Falha ao carregar o modelo');
+    }
 
-    // Store metadata for future use
+    // Armazena os metadados
     localStorage.setItem('model-metadata', JSON.stringify(extractedMetadata));
 
     systemLogger.log('system', 'Modelo carregado com sucesso', {
