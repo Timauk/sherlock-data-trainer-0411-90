@@ -52,7 +52,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         toggleManualMode={gameLogic.toggleManualMode}
         isInfiniteMode={gameLogic.isInfiniteMode}
         isManualMode={gameLogic.isManualMode}
-        disabled={!isDataLoaded}
+        disabled={!isDataLoaded && (!gameLogic.csvData?.length || !gameLogic.trainedModel)}
       />
 
       <GameMetrics 
@@ -64,7 +64,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
       {!isDataLoaded && (
         <div className="p-4 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
           <p className="text-center text-yellow-800 dark:text-yellow-200">
-            Aguarde o treinamento do modelo neural antes de iniciar o jogo...
+            Aguarde o carregamento dos dados antes de iniciar o jogo...
           </p>
         </div>
       )}
