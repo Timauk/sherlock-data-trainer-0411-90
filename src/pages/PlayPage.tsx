@@ -25,6 +25,32 @@ const PlayPage: React.FC = () => {
     setGameSpeed(value[0]);
   };
 
+  const handleCsvUpload = async (file: File) => {
+    try {
+      const text = await file.text();
+      const lines = text.trim().split('\n').slice(1);
+      
+      const data = lines.map(line => {
+        const values = line.split(',');
+        return values.slice(2).map(Number);
+      });
+
+      setCsvData(data);
+      setIsDataLoaded(true);
+    } catch (error) {
+      console.error('Error loading CSV:', error);
+    }
+  };
+
+  const handleModelUpload = async (jsonFile: File, weightsFile: File) => {
+    try {
+      const model = await tf.loadLayersModel(tf.io.browserFiles([jsonFile, weightsFile]));
+      setTrainedModel(model);
+    } catch (error) {
+      console.error('Error loading model:', error);
+    }
+  };
+
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
     
@@ -73,8 +99,8 @@ const PlayPage: React.FC = () => {
         onPause={pauseGame}
         onReset={resetGame}
         onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        onCsvUpload={(file) => gameLogic.loadCSV(file)}
-        onModelUpload={gameLogic.onModelUpload}
+        onCsvUpload={handleCsvUpload}
+        onModelUpload={handleModelUpload}
         onSaveModel={() => {
           if (trainedModel) {
             trainedModel.save('downloads://modelo-atual');
