@@ -52,7 +52,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         toggleManualMode={gameLogic.toggleManualMode}
         isInfiniteMode={gameLogic.isInfiniteMode}
         isManualMode={gameLogic.isManualMode}
-        disabled={!isDataLoaded && (!gameLogic.csvData?.length || !gameLogic.trainedModel)}
+        disabled={false}
       />
 
       <GameMetrics 
@@ -73,7 +73,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         onClick={onSaveModel}
         className="w-full"
         variant="secondary"
-        disabled={!isDataLoaded}
+        disabled={false}
       >
         <Save className="inline-block mr-2" />
         Salvar Modelo Atual
