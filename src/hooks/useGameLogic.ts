@@ -43,7 +43,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     systemLogger.log('game', 'Iniciando inicialização do jogo', {
       hasCsvData: csvData?.length > 0,
       hasTrainedModel: !!trainedModel,
-      modelConfig: trainedModel?.getConfig(),
       timestamp: new Date().toISOString()
     });
 
@@ -54,12 +53,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       if (!players || players.length === 0) {
         try {
           const initialPlayers: Player[] = initializePlayers();
-          systemLogger.log('player', 'Jogadores inicializados', {
-            count: initialPlayers.length,
-            firstPlayer: initialPlayers[0],
-            timestamp: new Date().toISOString()
-          });
-
           setPlayers(initialPlayers);
           
           const initialChampion = {
@@ -69,21 +62,16 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
             trainingData: [] as number[][]
           };
           setChampion(initialChampion);
+          
+          return true;
         } catch (error) {
-          systemLogger.log('error', 'Erro ao inicializar jogadores', {
-            error: error.message,
-            stack: error.stack,
-            timestamp: new Date().toISOString()
-          });
-          toast({
-            title: "Erro na Inicialização",
-            description: "Falha ao inicializar jogadores. Verifique o console para mais detalhes.",
-            variant: "destructive"
-          });
+          systemLogger.error('game', 'Erro ao inicializar jogadores', { error });
+          return false;
         }
       }
     }
-  }, [csvData, players, setNumbers, setBoardNumbers, setPlayers, setChampion, initializePlayers, toast]);
+    return false;
+  }, [csvData, players, setNumbers, setBoardNumbers, setPlayers, setChampion, trainedModel]);
 
   const gameLoop = useCallback(async () => {
     if (!csvData.length || !trainedModel) {

@@ -160,35 +160,18 @@ const PlayPage: React.FC = () => {
   };
 
   const validateAndStartGame = () => {
-    if (!isDataLoaded) {
+    if (!csvData?.length || !trainedModel) {
       toast({
-        title: "Aguarde",
-        description: "O modelo neural ainda está sendo treinado...",
+        title: "Dados Necessários",
+        description: "É necessário carregar o CSV e o modelo antes de iniciar.",
         variant: "destructive"
       });
       return false;
     }
 
-    const validation = validateSystemState(
-      csvData,
-      gameLogic.champion,
-      trainedModel,
-      gameLogic.numbers
-    );
-
-    if (!validation.isValid) {
-      toast({
-        title: "Não é possível iniciar o jogo",
-        description: `Itens faltantes: ${validation.missingItems.join(', ')}`,
-        variant: "destructive"
-      });
-      return false;
-    }
-
-    systemLogger.log('game', 'Jogo iniciado com sucesso', {
+    systemLogger.log('game', 'Iniciando jogo', {
       csvRegistros: csvData.length,
-      modeloCarregado: !!trainedModel,
-      campeaoId: gameLogic.champion?.player?.id
+      modeloCarregado: !!trainedModel
     });
 
     return true;

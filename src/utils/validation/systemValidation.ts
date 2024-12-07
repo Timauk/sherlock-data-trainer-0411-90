@@ -1,4 +1,3 @@
-import { Player, Champion } from '@/types/gameTypes';
 import { systemLogger } from '../logging/systemLogger';
 
 export interface SystemValidationResult {
@@ -12,9 +11,7 @@ export interface SystemValidationResult {
 
 export function validateSystemState(
   csvData: number[][],
-  champion: Champion | null,
-  trainedModel: any | null,
-  numbers: number[][]
+  trainedModel: any | null
 ): SystemValidationResult {
   const missingItems: string[] = [];
   const details = {
