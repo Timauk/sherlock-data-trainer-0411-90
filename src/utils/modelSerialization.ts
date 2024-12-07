@@ -43,17 +43,40 @@ export const serializeModel = async (model: tf.LayersModel, metadata: ModelMetad
 
 const extractModelMetadata = (jsonContent: string): ModelMetadata | null => {
   try {
+    systemLogger.log('system', 'Iniciando extração de metadados do JSON', {
+      contentLength: jsonContent.length
+    });
+
     const modelJSON = JSON.parse(jsonContent);
     
+    // Log da estrutura do JSON para debug
+    systemLogger.log('system', 'Estrutura do JSON recebido', {
+      hasModelTopology: !!modelJSON?.modelTopology,
+      hasModelConfig: !!modelJSON?.modelTopology?.model_config,
+      rawJSON: modelJSON
+    });
+
     // Verifica se temos a estrutura necessária
     if (!modelJSON || !modelJSON.modelTopology || !modelJSON.modelTopology.model_config) {
-      systemLogger.error('system', 'Estrutura do JSON do modelo inválida', { modelJSON });
+      systemLogger.error('system', 'Estrutura do JSON do modelo inválida', { 
+        modelJSON,
+        expectedStructure: {
+          modelTopology: 'object',
+          'modelTopology.model_config': 'object'
+        }
+      });
       return null;
     }
 
     const config = modelJSON.modelTopology.model_config;
     const layers = config.layers || [];
     
+    systemLogger.log('system', 'Configuração das camadas encontrada', {
+      totalLayers: layers.length,
+      firstLayer: layers[0],
+      lastLayer: layers[layers.length - 1]
+    });
+
     // Extrai informações básicas do modelo
     const metadata: ModelMetadata = {
       timestamp: new Date().toISOString(),
@@ -73,10 +96,20 @@ const extractModelMetadata = (jsonContent: string): ModelMetadata | null => {
       }
     };
 
-    systemLogger.log('system', 'Metadados extraídos com sucesso', { metadata });
+    systemLogger.log('system', 'Metadados extraídos com sucesso', { 
+      metadata,
+      validationChecks: {
+        hasLayers: metadata.architecture.layers > 0,
+        hasInputShape: metadata.architecture.inputShape.length > 0,
+        hasOutputShape: metadata.architecture.outputShape.length > 0
+      }
+    });
     return metadata;
   } catch (error) {
-    systemLogger.error('system', 'Erro ao extrair metadados do modelo', { error });
+    systemLogger.error('system', 'Erro ao extrair metadados do modelo', { 
+      error,
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return null;
   }
 };
@@ -88,7 +121,9 @@ export const deserializeModel = async (jsonFile: File, weightsFile: File): Promi
   try {
     systemLogger.log('system', 'Iniciando carregamento do modelo', {
       jsonFileName: jsonFile.name,
-      weightsFileName: weightsFile.name
+      weightsFileName: weightsFile.name,
+      jsonFileSize: jsonFile.size,
+      weightsFileSize: weightsFile.size
     });
 
     // Primeiro lê o conteúdo do arquivo JSON
