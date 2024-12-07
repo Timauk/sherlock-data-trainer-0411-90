@@ -35,10 +35,12 @@ export const deserializeModel = async (jsonFile: File, weightsFile: File): Promi
       architecture: {
         layers: model.layers.map(l => {
           const config = l.getConfig();
-          return config && 'units' in config ? config.units : 0;
+          const units = config && typeof config === 'object' && 'units' in config ? 
+            Number(config.units) || 0 : 0;
+          return units;
         }),
-        inputShape: model.inputs[0].shape as number[],
-        outputShape: model.outputs[0].shape as number[]
+        inputShape: (model.inputs[0].shape as number[]) || [],
+        outputShape: (model.outputs[0].shape as number[]) || []
       }
     };
 
