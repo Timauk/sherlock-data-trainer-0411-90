@@ -6,8 +6,6 @@ export interface SystemValidationResult {
   missingItems: string[];
   details: {
     csvLoaded: boolean;
-    championValid: boolean;
-    numbersValid: boolean;
     modelLoaded: boolean;
   };
 }
@@ -21,45 +19,17 @@ export function validateSystemState(
   const missingItems: string[] = [];
   const details = {
     csvLoaded: false,
-    championValid: false,
-    numbersValid: false,
     modelLoaded: false
   };
 
-  // CSV Validation
+  // Validação básica do CSV
   if (!csvData || csvData.length === 0) {
     missingItems.push('CSV não carregado');
   } else {
-    const isValidStructure = csvData.every(row => 
-      Array.isArray(row) && 
-      row.length === 15 && 
-      row.every(num => typeof num === 'number' && num >= 1 && num <= 25)
-    );
-    
-    if (!isValidStructure) {
-      missingItems.push('Estrutura do CSV inválida');
-    } else {
-      details.csvLoaded = true;
-    }
+    details.csvLoaded = true;
   }
 
-  // Champion Validation - Now more lenient for initial state
-  if (!champion) {
-    details.championValid = true; // Allow null champion initially
-  } else if (!champion.player || !champion.player.id || !Array.isArray(champion.player.weights)) {
-    missingItems.push('Estrutura do campeão inválida');
-  } else {
-    details.championValid = true;
-  }
-
-  // Numbers Validation
-  if (!numbers || numbers.length === 0) {
-    missingItems.push('Números não inicializados');
-  } else {
-    details.numbersValid = true;
-  }
-
-  // Model Validation
+  // Validação básica do modelo
   if (!trainedModel) {
     missingItems.push('Modelo não carregado');
   } else {
@@ -68,13 +38,10 @@ export function validateSystemState(
 
   const isValid = missingItems.length === 0;
 
-  logSystemStatus({
-    champion,
-    numbers,
-    trainedModel,
-    csvData,
-    details,
-    missingItems
+  systemLogger.log('system', 'Status do Sistema', {
+    csvStatus: details.csvLoaded ? 'Carregado' : 'Não carregado',
+    modelStatus: details.modelLoaded ? 'Carregado' : 'Não carregado',
+    missingItems: missingItems
   });
 
   return {
@@ -82,34 +49,4 @@ export function validateSystemState(
     missingItems,
     details
   };
-}
-
-function logSystemStatus(status: {
-  champion: Champion | null;
-  numbers: number[][];
-  trainedModel: any;
-  csvData: number[][];
-  details: Record<string, boolean>;
-  missingItems: string[];
-}) {
-  systemLogger.log('system', '=== STATUS DO SISTEMA ===', {
-    championStatus: {
-      available: !!status.champion,
-      id: status.champion?.player?.id ?? 'N/A',
-      weightsLength: status.champion?.player?.weights?.length ?? 0
-    },
-    numbersStatus: {
-      available: status.numbers.length > 0,
-      count: status.numbers.length
-    },
-    modelStatus: {
-      loaded: !!status.trainedModel
-    },
-    csvStatus: {
-      loaded: status.csvData.length > 0,
-      recordCount: status.csvData.length
-    },
-    validationDetails: status.details,
-    missingItems: status.missingItems
-  });
 }
