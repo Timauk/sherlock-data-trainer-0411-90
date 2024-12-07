@@ -19,56 +19,63 @@ export interface ModelMetadata {
   };
 }
 
-export const serializeModel = async (model: tf.LayersModel, metadata: ModelMetadata) => {
-  try {
-    const saveResult = await model.save('downloads://modelo-aprendiz');
-    
-    localStorage.setItem('model-metadata', JSON.stringify({
-      ...metadata,
-      modelConfig: model.getConfig(),
-      weightsManifest: saveResult.modelArtifactsInfo?.weightDataBytes ? 'presente' : 'ausente'
-    }));
-    
-    systemLogger.log('system', 'Modelo serializado com sucesso', {
-      metadata,
-      saveResult,
-      weightsPresent: saveResult.modelArtifactsInfo?.weightDataBytes ? 'sim' : 'não'
-    });
-    return true;
-  } catch (error) {
-    systemLogger.error('system', 'Erro ao serializar modelo', { error });
-    return false;
+const extractModelConfig = (modelJSON: any): any => {
+  // Tenta diferentes caminhos para encontrar a configuração
+  if (modelJSON.modelTopology?.model_config) {
+    return modelJSON.modelTopology.model_config;
   }
-};
+  
+  if (modelJSON.config) {
+    return modelJSON.config;
+  }
+  
+  if (modelJSON.modelTopology?.config) {
+    return modelJSON.modelTopology.config;
+  }
+
+  // Se não encontrar config, tenta extrair do próprio modelTopology
+  if (modelJSON.modelTopology) {
+    return {
+      layers: modelJSON.modelTopology.layers || [],
+      input_layers: modelJSON.modelTopology.input_layers,
+      output_layers: modelJSON.modelTopology.output_layers
+    };
+  }
+
+  return null;
+}
 
 const extractModelMetadata = (jsonContent: string): ModelMetadata | null => {
   try {
     systemLogger.log('system', 'Iniciando extração de metadados do JSON', {
-      contentLength: jsonContent.length
+      contentLength: jsonContent.length,
+      preview: jsonContent.substring(0, 200) // Primeiros 200 caracteres para debug
     });
 
     const modelJSON = JSON.parse(jsonContent);
     
-    // Log da estrutura do JSON para debug
     systemLogger.log('system', 'Estrutura do JSON recebido', {
       hasModelTopology: !!modelJSON?.modelTopology,
-      hasModelConfig: !!modelJSON?.modelTopology?.model_config,
-      rawJSON: modelJSON
+      hasConfig: !!modelJSON?.config,
+      hasWeights: !!modelJSON?.weightsManifest,
+      modelKeys: Object.keys(modelJSON)
     });
 
-    // Verifica se temos a estrutura necessária
-    if (!modelJSON || !modelJSON.modelTopology || !modelJSON.modelTopology.model_config) {
+    const config = extractModelConfig(modelJSON);
+    
+    if (!config) {
       systemLogger.error('system', 'Estrutura do JSON do modelo inválida', { 
         modelJSON,
-        expectedStructure: {
-          modelTopology: 'object',
-          'modelTopology.model_config': 'object'
+        availablePaths: {
+          'modelTopology.model_config': !!modelJSON?.modelTopology?.model_config,
+          'config': !!modelJSON?.config,
+          'modelTopology.config': !!modelJSON?.modelTopology?.config,
+          'modelTopology': !!modelJSON?.modelTopology
         }
       });
       return null;
     }
 
-    const config = modelJSON.modelTopology.model_config;
     const layers = config.layers || [];
     
     systemLogger.log('system', 'Configuração das camadas encontrada', {
@@ -86,7 +93,7 @@ const extractModelMetadata = (jsonContent: string): ModelMetadata | null => {
         outputShape: layers[layers.length - 1]?.config?.units ? [layers[layers.length - 1].config.units] : []
       },
       performance: {
-        accuracy: 0,
+        accuracy: 0, // Será atualizado durante o treinamento
         loss: 0
       },
       training: {
@@ -104,6 +111,7 @@ const extractModelMetadata = (jsonContent: string): ModelMetadata | null => {
         hasOutputShape: metadata.architecture.outputShape.length > 0
       }
     });
+
     return metadata;
   } catch (error) {
     systemLogger.error('system', 'Erro ao extrair metadados do modelo', { 
@@ -158,5 +166,27 @@ export const deserializeModel = async (jsonFile: File, weightsFile: File): Promi
       stack: error instanceof Error ? error.stack : undefined
     });
     return { model: null, metadata: null };
+  }
+};
+
+export const serializeModel = async (model: tf.LayersModel, metadata: ModelMetadata) => {
+  try {
+    const saveResult = await model.save('downloads://modelo-aprendiz');
+    
+    localStorage.setItem('model-metadata', JSON.stringify({
+      ...metadata,
+      modelConfig: model.getConfig(),
+      weightsManifest: saveResult.modelArtifactsInfo?.weightDataBytes ? 'presente' : 'ausente'
+    }));
+    
+    systemLogger.log('system', 'Modelo serializado com sucesso', {
+      metadata,
+      saveResult,
+      weightsPresent: saveResult.modelArtifactsInfo?.weightDataBytes ? 'sim' : 'não'
+    });
+    return true;
+  } catch (error) {
+    systemLogger.error('system', 'Erro ao serializar modelo', { error });
+    return false;
   }
 };
