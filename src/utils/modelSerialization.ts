@@ -33,7 +33,10 @@ export const deserializeModel = async (jsonFile: File, weightsFile: File): Promi
     const metadata: ModelMetadata = {
       timestamp: new Date().toISOString(),
       architecture: {
-        layers: model.layers.map(l => l.units || 0),
+        layers: model.layers.map(l => {
+          const config = l.getConfig();
+          return config && 'units' in config ? config.units : 0;
+        }),
         inputShape: model.inputs[0].shape as number[],
         outputShape: model.outputs[0].shape as number[]
       }
