@@ -25,6 +25,8 @@ const GameInitializer: React.FC<GameInitializerProps> = ({
 
   const initializeNeuralNetwork = async () => {
     try {
+      systemLogger.log('initialization', 'Iniciando inicialização da rede neural');
+      
       const model = await ModelInitializer.initializeModel();
       
       const xs = tf.tensor2d(csvData.map(row => row.slice(0, 15)));
@@ -46,6 +48,13 @@ const GameInitializer: React.FC<GameInitializerProps> = ({
       // Initialize game data and set initial numbers
       if (gameLogic.initializeGameData()) {
         gameLogic.setNumbers([csvData[0]]);
+        const initializedPlayers = gameLogic.initializePlayers();
+        
+        systemLogger.log('initialization', 'Jogo inicializado com sucesso', {
+          playersCount: initializedPlayers.length,
+          modelCompiled: model.compiled,
+          firstNumbers: csvData[0]
+        });
       }
       
       toast({

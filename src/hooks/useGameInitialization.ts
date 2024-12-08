@@ -6,6 +6,8 @@ export const useGameInitialization = () => {
   const [players, setPlayers] = useState<Player[]>([]);
 
   const initializePlayers = useCallback(() => {
+    systemLogger.log('initialization', 'Iniciando criação dos jogadores');
+    
     const initialPlayers: Player[] = Array.from({ length: 100 }, (_, index) => ({
       id: index + 1,
       score: 0,
@@ -15,12 +17,12 @@ export const useGameInitialization = () => {
       generation: 1
     }));
 
+    systemLogger.log('initialization', 'Jogadores criados com sucesso', {
+      totalPlayers: initialPlayers.length,
+      samplePlayer: initialPlayers[0]
+    });
+
     setPlayers(initialPlayers);
-    
-    // Seleciona o primeiro campeão baseado em critérios iniciais
-    const initialChampion = initialPlayers[0];
-    systemLogger.log('player', `Campeão inicial selecionado: Jogador #${initialChampion.id}`);
-    
     return initialPlayers;
   }, []);
 
