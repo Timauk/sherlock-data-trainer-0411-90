@@ -43,7 +43,7 @@ const PlayPage: React.FC = () => {
       // Initialize game data after CSV is loaded
       if (data.length > 0) {
         gameLogic.setNumbers([data[0]]);
-        gameLogic.initializePlayers(100);
+        gameLogic.initializePlayers(100); // Now passing the required argument
         systemLogger.log('game', 'Game initialized after CSV upload', {
           dataLength: data.length,
           firstNumbers: data[0],
