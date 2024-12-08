@@ -8,6 +8,7 @@ import PlayPageContent from '@/components/PlayPageContent';
 import SpeedControl from '@/components/SpeedControl';
 import GameInitializer from '@/components/GameInitializer';
 import { systemLogger } from '@/utils/logging/systemLogger';
+import { useToast } from '@/hooks/use-toast';
 
 const PlayPage: React.FC = () => {
   const [progress, setProgress] = useState(0);
@@ -18,6 +19,7 @@ const PlayPage: React.FC = () => {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const { theme, setTheme } = useTheme();
   const { isPlaying, playGame, pauseGame, resetGame } = useGameControls();
+  const { toast } = useToast();
 
   const gameLogic = useGameLogic(csvData, trainedModel);
 
@@ -37,8 +39,24 @@ const PlayPage: React.FC = () => {
 
       setCsvData(data);
       setIsDataLoaded(true);
+      
+      // Initialize game data after CSV is loaded
+      if (data.length > 0) {
+        gameLogic.setNumbers([data[0]]);
+        gameLogic.initializePlayers();
+        systemLogger.log('game', 'Game initialized after CSV upload', {
+          dataLength: data.length,
+          firstNumbers: data[0],
+          playersInitialized: true
+        });
+      }
     } catch (error) {
       console.error('Error loading CSV:', error);
+      toast({
+        title: "Erro ao carregar CSV",
+        description: "Ocorreu um erro ao processar o arquivo CSV.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -46,40 +64,41 @@ const PlayPage: React.FC = () => {
     try {
       const model = await tf.loadLayersModel(tf.io.browserFiles([jsonFile, weightsFile]));
       setTrainedModel(model);
+      toast({
+        title: "Modelo Carregado",
+        description: "O modelo neural foi carregado com sucesso.",
+      });
     } catch (error) {
       console.error('Error loading model:', error);
+      toast({
+        title: "Erro ao Carregar Modelo",
+        description: "Ocorreu um erro ao carregar o modelo neural.",
+        variant: "destructive"
+      });
     }
   };
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
     
-    if (isPlaying) {
+    if (isPlaying && csvData.length > 0 && gameLogic.numbers.length > 0) {
       intervalId = setInterval(() => {
-        if (csvData.length > 0 && gameLogic.numbers.length > 0) {
-          gameLogic.gameLoop();
-          setProgress((prevProgress) => {
-            const newProgress = prevProgress + (100 / csvData.length);
-            if (newProgress >= 100) {
-              if (!gameLogic.isManualMode) {
-                gameLogic.evolveGeneration();
-              }
-              return gameLogic.isInfiniteMode ? 0 : 100;
+        gameLogic.gameLoop();
+        setProgress((prevProgress) => {
+          const newProgress = prevProgress + (100 / csvData.length);
+          if (newProgress >= 100) {
+            if (!gameLogic.isManualMode) {
+              gameLogic.evolveGeneration();
             }
-            return newProgress;
-          });
-        } else {
-          systemLogger.log('warning', 'Loop do jogo interrompido', {
-            csvLength: csvData.length,
-            numbersLength: gameLogic.numbers.length
-          });
-          pauseGame();
-        }
+            return gameLogic.isInfiniteMode ? 0 : 100;
+          }
+          return newProgress;
+        });
       }, gameSpeed);
     }
     
     return () => clearInterval(intervalId);
-  }, [isPlaying, csvData, gameLogic, gameSpeed, pauseGame]);
+  }, [isPlaying, csvData, gameLogic, gameSpeed]);
 
   return (
     <div className="p-6">

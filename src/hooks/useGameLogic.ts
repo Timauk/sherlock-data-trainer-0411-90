@@ -47,12 +47,12 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     });
 
     if (csvData && csvData.length > 0) {
-      setNumbers(csvData.slice(0, 1));
+      setNumbers([csvData[0]]);
       setBoardNumbers(csvData[0]);
       
       if (!players || players.length === 0) {
         try {
-          const initialPlayers: Player[] = initializePlayers();
+          const initialPlayers = initializePlayers();
           setPlayers(initialPlayers);
           
           const initialChampion = {
@@ -62,6 +62,12 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
             trainingData: [] as number[][]
           };
           setChampion(initialChampion);
+          
+          systemLogger.log('game', 'Jogo inicializado com sucesso', {
+            playersCount: initialPlayers.length,
+            initialChampionId: initialChampion.player.id,
+            firstNumbers: csvData[0]
+          });
           
           return true;
         } catch (error) {
@@ -185,6 +191,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     }, [gameState]),
     dates: gameState.dates,
     numbers: gameState.numbers,
+    setNumbers, // Add this line to expose setNumbers
     isInfiniteMode: gameState.isInfiniteMode,
     boardNumbers,
     concursoNumber,
