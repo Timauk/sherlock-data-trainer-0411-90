@@ -50,7 +50,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       setBoardNumbers(csvData[0]);
       
       if (!players || players.length === 0) {
-        initializePlayers();
+        initializePlayers(100);
         return true;
       }
     }
@@ -106,7 +106,9 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       ]);
 
       if (nextConcurso % 50 === 0 && gameState.trainingData.length > 0) {
-        await updateModel(trainedModel, gameState.trainingData, generation);
+        await updateModel(trainedModel, gameState.trainingData, (message: string) => {
+          systemLogger.log('training', message);
+        });
         gameState.setTrainingData([]);
       }
 
