@@ -106,7 +106,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       ]);
 
       if (nextConcurso % 50 === 0 && gameState.trainingData.length > 0) {
-        await updateModel(trainedModel, gameState.trainingData);
+        await updateModel(trainedModel, gameState.trainingData, generation);
         gameState.setTrainingData([]);
       }
 
