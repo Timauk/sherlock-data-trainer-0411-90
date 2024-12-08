@@ -52,7 +52,7 @@ const GameInitializer: React.FC<GameInitializerProps> = ({
         
         systemLogger.log('initialization', 'Jogo inicializado com sucesso', {
           playersCount: initializedPlayers.length,
-          modelCompiled: model.compiled,
+          modelStatus: model.optimizer ? 'compiled' : 'not compiled',
           firstNumbers: csvData[0]
         });
       }
