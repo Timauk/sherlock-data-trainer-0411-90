@@ -50,7 +50,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
       setBoardNumbers(csvData[0]);
       
       if (!players || players.length === 0) {
-        initializePlayers(); // Removed argument as per TypeScript definition
+        initializePlayers(100); // Initialize with 100 players
         return true;
       }
     }
@@ -72,7 +72,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     updateBank(currentBoardNumbers, nextConcurso);
     gameState.setGameCount(prev => prev + 1);
     
-    validateGameState(players, csvData, nextConcurso, generation); // Added generation as required by signature
+    validateGameState(players, csvData, nextConcurso); // Removed extra generation argument
 
     try {
       const playerPredictions = await handlePlayerPredictions(
