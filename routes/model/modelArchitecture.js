@@ -3,11 +3,11 @@ import * as tf from '@tensorflow/tfjs';
 export const createModelArchitecture = () => {
   const model = tf.sequential();
   
-  // Input layer
+  // Input layer - adjusted to match our input shape of 15 numbers
   model.add(tf.layers.dense({
-    units: 64,
+    units: 128,
     activation: 'relu',
-    inputShape: [23], // 7 engineered features + 16 original values
+    inputShape: [15], // Changed from [23] to [15] to match our input
     kernelInitializer: 'heNormal',
     kernelRegularizer: tf.regularizers.l2({ l2: 0.001 })
   }));
@@ -17,7 +17,7 @@ export const createModelArchitecture = () => {
   
   // Hidden layer
   model.add(tf.layers.dense({
-    units: 32,
+    units: 64,
     activation: 'relu',
     kernelInitializer: 'heNormal',
     kernelRegularizer: tf.regularizers.l2({ l2: 0.001 })
