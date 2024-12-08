@@ -86,12 +86,12 @@ const PlayPage: React.FC = () => {
     
     if (isPlaying && csvData.length > 0 && gameLogic.numbers.length > 0) {
       intervalId = setInterval(() => {
-        gameLogic.gameLoop();
+        gameLogic.gameLoop(100); // Pass the required numPlayers argument
         setProgress((prevProgress) => {
           const newProgress = prevProgress + (100 / csvData.length);
           if (newProgress >= 100) {
             if (!gameLogic.isManualMode) {
-              gameLogic.evolveGeneration();
+              gameLogic.evolveGeneration(100); // Pass the required numPlayers argument
             }
             return gameLogic.isInfiniteMode ? 0 : 100;
           }
