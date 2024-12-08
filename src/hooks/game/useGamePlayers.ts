@@ -6,10 +6,10 @@ export const useGamePlayers = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [champion, setChampion] = useState<Player | null>(null);
 
-  const initializePlayers = useCallback(() => {
+  const initializePlayers = useCallback((numPlayers: number = 100) => {
     systemLogger.log('initialization', 'Iniciando criação dos jogadores');
     
-    const initialPlayers: Player[] = Array.from({ length: 100 }, (_, index) => ({
+    const initialPlayers: Player[] = Array.from({ length: numPlayers }, (_, index) => ({
       id: index + 1,
       score: 0,
       predictions: [],
