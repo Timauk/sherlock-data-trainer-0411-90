@@ -40,17 +40,14 @@ const PlayPage: React.FC = () => {
       setCsvData(data);
       setIsDataLoaded(true);
       
-      // Initialize game data after CSV is loaded
       if (data.length > 0) {
         gameLogic.setNumbers([data[0]]);
-        const numPlayers = 100; // Define number of players
-        gameLogic.initializePlayers(numPlayers); // Pass the required argument
+        gameLogic.initializePlayers(100);
         
         systemLogger.log('game', 'Game initialized after CSV upload', {
           dataLength: data.length,
           firstNumbers: data[0],
-          playersInitialized: true,
-          numPlayers
+          playersInitialized: true
         });
       }
     } catch (error) {
@@ -86,12 +83,12 @@ const PlayPage: React.FC = () => {
     
     if (isPlaying && csvData.length > 0 && gameLogic.numbers.length > 0) {
       intervalId = setInterval(() => {
-        gameLogic.gameLoop(100); // Pass the required numPlayers argument
+        gameLogic.gameLoop();
         setProgress((prevProgress) => {
           const newProgress = prevProgress + (100 / csvData.length);
           if (newProgress >= 100) {
             if (!gameLogic.isManualMode) {
-              gameLogic.evolveGeneration(100); // Pass the required numPlayers argument
+              gameLogic.evolveGeneration(gameLogic.players);
             }
             return gameLogic.isInfiniteMode ? 0 : 100;
           }
