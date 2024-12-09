@@ -23,10 +23,25 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
   const handleJsonFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     setHasJsonFile(!!file);
-    if (file && !file.name.endsWith('.json')) {
+    
+    if (!file) return;
+    
+    if (!file.name.endsWith('.json')) {
       toast({
         title: "Arquivo Inválido",
-        description: "Por favor, selecione um arquivo JSON do modelo",
+        description: "Por favor, selecione o arquivo modelo-aprendiz.json",
+        variant: "destructive"
+      });
+      e.target.value = '';
+      setHasJsonFile(false);
+      return;
+    }
+
+    // Verifica se o nome do arquivo está correto
+    if (file.name !== 'modelo-aprendiz.json') {
+      toast({
+        title: "Nome do Arquivo Incorreto",
+        description: "O arquivo JSON deve se chamar 'modelo-aprendiz.json'",
         variant: "destructive"
       });
       e.target.value = '';
@@ -37,10 +52,25 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
   const handleWeightsFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     setHasWeightsFile(!!file);
-    if (file && !file.name.endsWith('.bin')) {
+    
+    if (!file) return;
+    
+    if (!file.name.endsWith('.bin')) {
       toast({
         title: "Arquivo Inválido",
-        description: "Por favor, selecione um arquivo .bin de pesos",
+        description: "Por favor, selecione o arquivo modelo-aprendiz.weights.bin",
+        variant: "destructive"
+      });
+      e.target.value = '';
+      setHasWeightsFile(false);
+      return;
+    }
+
+    // Verifica se o nome do arquivo está correto
+    if (file.name !== 'modelo-aprendiz.weights.bin') {
+      toast({
+        title: "Nome do Arquivo Incorreto",
+        description: "O arquivo de pesos deve se chamar 'modelo-aprendiz.weights.bin'",
         variant: "destructive"
       });
       e.target.value = '';
@@ -55,7 +85,7 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
     if (!jsonFile || !weightsFile) {
       toast({
         title: "Arquivos Necessários",
-        description: "Por favor, selecione tanto o arquivo JSON quanto o arquivo de pesos (.bin)",
+        description: "Selecione os arquivos modelo-aprendiz.json e modelo-aprendiz.weights.bin",
         variant: "destructive"
       });
       return;
@@ -90,9 +120,9 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
           
           <Alert className="my-4">
             <AlertDescription>
-              Para carregar o modelo treinado, você precisa selecionar DOIS arquivos:
-              1. O arquivo JSON do modelo (.json)
-              2. O arquivo de pesos do modelo (.bin)
+              Para carregar o modelo treinado, você precisa selecionar os arquivos gerados na página de treinamento:
+              1. modelo-aprendiz.json
+              2. modelo-aprendiz.weights.bin
             </AlertDescription>
           </Alert>
 
