@@ -5,6 +5,7 @@ import ControlPanel from './GameControls/ControlPanel';
 import { Button } from "@/components/ui/button";
 import { Save } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface PlayPageContentProps {
   isPlaying: boolean;
@@ -52,7 +53,7 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         toggleManualMode={gameLogic.toggleManualMode}
         isInfiniteMode={gameLogic.isInfiniteMode}
         isManualMode={gameLogic.isManualMode}
-        disabled={false}
+        disabled={!isDataLoaded}
       />
 
       <GameMetrics 
@@ -62,18 +63,19 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
       />
 
       {!isDataLoaded && (
-        <div className="p-4 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
-          <p className="text-center text-yellow-800 dark:text-yellow-200">
-            Aguarde o carregamento dos dados antes de iniciar o jogo...
-          </p>
-        </div>
+        <Alert>
+          <AlertDescription>
+            Para começar, carregue o arquivo CSV com os dados históricos e o modelo treinado.
+            Se não tiver um modelo salvo, você precisará treinar um novo.
+          </AlertDescription>
+        </Alert>
       )}
 
       <Button
         onClick={onSaveModel}
         className="w-full"
         variant="secondary"
-        disabled={false}
+        disabled={!isDataLoaded}
       >
         <Save className="inline-block mr-2" />
         Salvar Modelo Atual
