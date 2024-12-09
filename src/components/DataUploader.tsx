@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Upload } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import CheckpointControls from './CheckpointControls';
 
 interface DataUploaderProps {
@@ -16,6 +17,56 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
   const weightsFileRef = useRef<HTMLInputElement>(null);
   const [savePath, setSavePath] = useState(localStorage.getItem('checkpointPath') || '');
   const { toast } = useToast();
+  const [hasJsonFile, setHasJsonFile] = useState(false);
+  const [hasWeightsFile, setHasWeightsFile] = useState(false);
+
+  const handleJsonFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setHasJsonFile(!!file);
+    if (file && !file.name.endsWith('.json')) {
+      toast({
+        title: "Arquivo Inválido",
+        description: "Por favor, selecione um arquivo JSON do modelo",
+        variant: "destructive"
+      });
+      e.target.value = '';
+      setHasJsonFile(false);
+    }
+  };
+
+  const handleWeightsFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setHasWeightsFile(!!file);
+    if (file && !file.name.endsWith('.bin')) {
+      toast({
+        title: "Arquivo Inválido",
+        description: "Por favor, selecione um arquivo .bin de pesos",
+        variant: "destructive"
+      });
+      e.target.value = '';
+      setHasWeightsFile(false);
+    }
+  };
+
+  const handleModelUpload = () => {
+    const jsonFile = jsonFileRef.current?.files?.[0];
+    const weightsFile = weightsFileRef.current?.files?.[0];
+    
+    if (!jsonFile || !weightsFile) {
+      toast({
+        title: "Arquivos Necessários",
+        description: "Por favor, selecione tanto o arquivo JSON quanto o arquivo de pesos (.bin)",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    onModelUpload(jsonFile, weightsFile);
+    toast({
+      title: "Arquivos Enviados",
+      description: "Modelo e pesos estão sendo carregados..."
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -36,6 +87,15 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
               className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
           </div>
+          
+          <Alert className="my-4">
+            <AlertDescription>
+              Para carregar o modelo treinado, você precisa selecionar DOIS arquivos:
+              1. O arquivo JSON do modelo (.json)
+              2. O arquivo de pesos do modelo (.bin)
+            </AlertDescription>
+          </Alert>
+
           <div>
             <label htmlFor="modelJsonInput" className="block mb-2">Carregar Modelo Treinado (JSON):</label>
             <input
@@ -43,6 +103,7 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
               id="modelJsonInput"
               accept=".json"
               ref={jsonFileRef}
+              onChange={handleJsonFileChange}
               className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
           </div>
@@ -53,16 +114,14 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
               id="modelWeightsInput"
               accept=".bin"
               ref={weightsFileRef}
+              onChange={handleWeightsFileChange}
               className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
           </div>
-          <Button onClick={() => {
-            const jsonFile = jsonFileRef.current?.files?.[0];
-            const weightsFile = weightsFileRef.current?.files?.[0];
-            if (jsonFile && weightsFile) {
-              onModelUpload(jsonFile, weightsFile);
-            }
-          }}>
+          <Button 
+            onClick={handleModelUpload}
+            disabled={!hasJsonFile || !hasWeightsFile}
+          >
             <Upload className="mr-2 h-4 w-4" /> Carregar Modelo
           </Button>
         </TabsContent>
