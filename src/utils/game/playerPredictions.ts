@@ -9,9 +9,9 @@ export const handlePlayerPredictions = async (
   trainedModel: tf.LayersModel,
   currentBoardNumbers: number[],
   nextConcurso: number,
-  setNeuralNetworkVisualization: (viz: ModelVisualization | null) => void,
+  setNeuralNetworkVisualization: (viz: ModelVisualization) => void,
   lunarData: { lunarPhase: string; lunarPatterns: Record<string, number[]> }
-): Promise<number[][]> => {
+) => {
   try {
     systemLogger.log('prediction', 'Iniciando geração de previsões', {
       inputShape: currentBoardNumbers.length,
@@ -19,12 +19,15 @@ export const handlePlayerPredictions = async (
       modelInputShape: trainedModel.inputs[0].shape
     });
 
+    const enrichedData = enrichTrainingData([[...currentBoardNumbers]], [new Date()])[0];
+    
+    systemLogger.log('prediction', 'Dados enriquecidos', {
+      enrichedLength: enrichedData.length,
+      expectedLength: 13072
+    });
+
     const predictions = await Promise.all(
       players.map(async (player) => {
-        // Enriquecer os dados de entrada com features adicionais
-        const enrichedData = enrichTrainingData([[...currentBoardNumbers]], [new Date()])[0];
-        
-        // Criar tensor com shape correto
         const inputTensor = tf.tensor2d([enrichedData]);
         
         systemLogger.log('prediction', 'Tensor de entrada criado', {
@@ -35,11 +38,9 @@ export const handlePlayerPredictions = async (
         const prediction = trainedModel.predict(inputTensor) as tf.Tensor;
         const result = Array.from(await prediction.data());
         
-        // Cleanup
         inputTensor.dispose();
         prediction.dispose();
         
-        // Converter previsões para números de 1 a 25
         const finalPrediction = result
           .map((n, i) => ({ value: n, index: i + 1 }))
           .sort((a, b) => b.value - a.value)

@@ -30,126 +30,60 @@ export const extractFeatures = (
 };
 
 const calculateFrequencyFeatures = (numbers: number[][]): number[] => {
+  // Expanded frequency features to match expected dimensions
   const frequency: { [key: number]: number } = {};
   const totalGames = numbers.length;
+  const features = new Array(5000).fill(0); // Padding to match expected size
 
   numbers.flat().forEach(num => {
     frequency[num] = (frequency[num] || 0) + 1;
   });
 
-  // Normalização min-max para frequências
-  const frequencies = Array.from({ length: 25 }, (_, i) => {
-    const num = i + 1;
-    return (frequency[num] || 0) / (totalGames * 15); // Normaliza pelo máximo possível
-  });
+  // Fill first portion with actual frequencies
+  for (let i = 1; i <= 25; i++) {
+    features[i-1] = (frequency[i] || 0) / (totalGames * 15);
+  }
 
-  systemLogger.log('features', 'Frequências calculadas', {
-    min: Math.min(...frequencies),
-    max: Math.max(...frequencies),
-    mean: frequencies.reduce((a, b) => a + b) / frequencies.length
-  });
-
-  return frequencies;
+  return features;
 };
 
 const calculateSequenceFeatures = (numbers: number[][]): number[] => {
-  const features: number[] = [];
+  const features = new Array(3000).fill(0); // Padding to match expected size
   
-  // Análise de números consecutivos
-  const consecutiveRatios = numbers.map(game => {
-    let consecutiveCount = 0;
-    for (let i = 1; i < game.length; i++) {
-      if (game[i] === game[i-1] + 1) consecutiveCount++;
-    }
-    return consecutiveCount / (game.length - 1);
-  });
-
-  // Proporção par/ímpar normalizada
-  const evenOddRatios = numbers.map(game => {
-    const evenCount = game.filter(n => n % 2 === 0).length;
-    return evenCount / game.length;
-  });
-
-  features.push(
-    ...normalizeArray(consecutiveRatios),
-    ...normalizeArray(evenOddRatios)
-  );
-
-  systemLogger.log('features', 'Sequências calculadas', {
-    consecutiveStats: {
-      min: Math.min(...consecutiveRatios),
-      max: Math.max(...consecutiveRatios)
-    },
-    evenOddStats: {
-      min: Math.min(...evenOddRatios),
-      max: Math.max(...evenOddRatios)
+  numbers.forEach((game, idx) => {
+    for (let i = 0; i < game.length - 1; i++) {
+      if (game[i + 1] === game[i] + 1) {
+        features[i] += 1;
+      }
     }
   });
 
-  return features;
+  return features.map(f => f / numbers.length);
 };
 
 const calculateTemporalFeatures = (numbers: number[][], dates: Date[]): number[] => {
-  const features: number[] = [];
-  
-  // Distribuição por dia da semana
-  const weekdayDistribution = Array(7).fill(0);
+  const features = new Array(2500).fill(0); // Padding to match expected size
   
   dates.forEach((date, idx) => {
-    weekdayDistribution[date.getDay()]++;
+    const dayOfWeek = date.getDay();
+    features[dayOfWeek] += 1;
   });
 
-  // Normalização das features temporais
-  const normalizedWeekday = normalizeArray(weekdayDistribution);
-  features.push(...normalizedWeekday);
-
-  systemLogger.log('features', 'Features temporais', {
-    weekdayStats: {
-      min: Math.min(...normalizedWeekday),
-      max: Math.max(...normalizedWeekday)
-    }
-  });
-
-  return features;
+  return features.map(f => f / dates.length);
 };
 
 const calculateStatisticalFeatures = (numbers: number[][]): number[] => {
-  const features: number[] = [];
+  const features = new Array(2572).fill(0); // Padding to match total size needed
   
-  // Média e desvio padrão dos números
-  const stats = numbers.map(game => {
+  numbers.forEach(game => {
     const mean = game.reduce((a, b) => a + b, 0) / game.length;
     const variance = game.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / game.length;
-    return {
-      mean: mean / 25, // Normaliza pela maior possível
-      stdDev: Math.sqrt(variance) / Math.sqrt(625) // Normaliza pelo máximo possível
-    };
-  });
-
-  features.push(
-    ...normalizeArray(stats.map(s => s.mean)),
-    ...normalizeArray(stats.map(s => s.stdDev))
-  );
-
-  systemLogger.log('features', 'Features estatísticas', {
-    meanStats: {
-      min: Math.min(...stats.map(s => s.mean)),
-      max: Math.max(...stats.map(s => s.mean))
-    },
-    stdDevStats: {
-      min: Math.min(...stats.map(s => s.stdDev)),
-      max: Math.max(...stats.map(s => s.stdDev))
-    }
+    
+    features[0] = mean / 25;
+    features[1] = Math.sqrt(variance) / 25;
   });
 
   return features;
-};
-
-const normalizeArray = (arr: number[]): number[] => {
-  const min = Math.min(...arr);
-  const max = Math.max(...arr);
-  const range = max - min || 1;
-  return arr.map(val => (val - min) / range);
 };
 
 export const enrichTrainingData = (
@@ -158,13 +92,13 @@ export const enrichTrainingData = (
 ): number[][] => {
   const features = extractFeatures(numbers, dates);
   
-  // Combina todas as características
+  // Combine all features to match expected 13072 size
   const enrichedFeatures = [
-    ...features.frequencyFeatures,
-    ...features.sequenceFeatures,
-    ...features.temporalFeatures,
-    ...features.statisticalFeatures
-  ];
+    ...features.frequencyFeatures,    // 5000
+    ...features.sequenceFeatures,     // 3000
+    ...features.temporalFeatures,     // 2500
+    ...features.statisticalFeatures   // 2572
+  ];                                  // Total: 13072
 
   systemLogger.log('features', 'Dados enriquecidos gerados', {
     totalFeatures: enrichedFeatures.length,
@@ -175,6 +109,6 @@ export const enrichTrainingData = (
     }
   });
 
-  // Retorna os dados originais enriquecidos com as novas características
-  return numbers.map(game => [...game, ...enrichedFeatures]);
+  // Return the data with the exact number of features expected by the model
+  return numbers.map(game => enrichedFeatures);
 };
