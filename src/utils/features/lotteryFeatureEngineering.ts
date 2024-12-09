@@ -19,7 +19,7 @@ export const extractFeatures = (
     statisticalFeatures: calculateStatisticalFeatures(numbers)
   };
 
-  systemLogger.log('features', 'Features extraídas', {
+  systemLogger.log('features', 'Features extracted', {
     frequencyLength: features.frequencyFeatures.length,
     sequenceLength: features.sequenceFeatures.length,
     temporalLength: features.temporalFeatures.length,
@@ -30,7 +30,6 @@ export const extractFeatures = (
 };
 
 const calculateFrequencyFeatures = (numbers: number[][]): number[] => {
-  // Expanded frequency features to match expected dimensions
   const frequency: { [key: number]: number } = {};
   const totalGames = numbers.length;
   const features = new Array(5000).fill(0); // Padding to match expected size
@@ -100,7 +99,15 @@ export const enrichTrainingData = (
     ...features.statisticalFeatures   // 2572
   ];                                  // Total: 13072
 
-  systemLogger.log('features', 'Dados enriquecidos gerados', {
+  if (enrichedFeatures.length !== 13072) {
+    systemLogger.error('features', 'Incorrect feature length', {
+      actualLength: enrichedFeatures.length,
+      expectedLength: 13072
+    });
+    throw new Error(`Feature length mismatch: expected 13072, got ${enrichedFeatures.length}`);
+  }
+
+  systemLogger.log('features', 'Enriched data generated', {
     totalFeatures: enrichedFeatures.length,
     sampleStats: {
       min: Math.min(...enrichedFeatures),
@@ -110,5 +117,5 @@ export const enrichTrainingData = (
   });
 
   // Return the data with the exact number of features expected by the model
-  return numbers.map(game => enrichedFeatures);
+  return numbers.map(() => enrichedFeatures);
 };
