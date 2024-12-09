@@ -8,11 +8,11 @@ export async function getOrCreateModel() {
     if (!globalModel) {
       globalModel = tf.sequential();
       
-      // Ajustando a camada de entrada para 15 números
+      // Primeira camada com input shape correto para dados enriquecidos
       globalModel.add(tf.layers.dense({ 
         units: 256, 
         activation: 'relu', 
-        inputShape: [15],  // Alterado de 17 para 15
+        inputShape: [13072],  // Ajustado para o número correto de features
         kernelInitializer: 'glorotNormal',
         kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
       }));
@@ -110,8 +110,9 @@ export function enrichDataWithPatterns(data, patterns) {
       return entry;
     }
 
-    // Retornando apenas os 15 números originais sem adicionar features extras
-    return entry.slice(0, 15);
+    // Enriquecer os dados com todas as features necessárias
+    const enrichedData = enrichTrainingData([entry], [new Date()])[0];
+    return enrichedData;
   });
 }
 

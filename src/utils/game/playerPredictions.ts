@@ -2,6 +2,7 @@ import * as tf from '@tensorflow/tfjs';
 import { Player } from '@/types/gameTypes';
 import { ModelVisualization } from '@/types/gameTypes';
 import { systemLogger } from '../logging/systemLogger';
+import { enrichTrainingData } from '../features/lotteryFeatureEngineering';
 
 export const handlePlayerPredictions = async (
   players: Player[],
@@ -20,15 +21,15 @@ export const handlePlayerPredictions = async (
 
     const predictions = await Promise.all(
       players.map(async (player) => {
-        // Garantir que temos exatamente 15 números
-        const normalizedInput = currentBoardNumbers.slice(0, 15);
+        // Enriquecer os dados de entrada com features adicionais
+        const enrichedData = enrichTrainingData([[...currentBoardNumbers]], [new Date()])[0];
         
-        // Criar tensor com shape correto [1, 15]
-        const inputTensor = tf.tensor2d([normalizedInput]);
+        // Criar tensor com shape correto
+        const inputTensor = tf.tensor2d([enrichedData]);
         
         systemLogger.log('prediction', 'Tensor de entrada criado', {
           shape: inputTensor.shape,
-          values: normalizedInput
+          values: enrichedData.length
         });
 
         const prediction = trainedModel.predict(inputTensor) as tf.Tensor;
@@ -39,7 +40,14 @@ export const handlePlayerPredictions = async (
         prediction.dispose();
         
         // Converter previsões para números de 1 a 25
-        return result.map(n => Math.round(n * 24) + 1);
+        const finalPrediction = result
+          .map((n, i) => ({ value: n, index: i + 1 }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 15)
+          .map(item => item.index)
+          .sort((a, b) => a - b);
+
+        return finalPrediction;
       })
     );
 
