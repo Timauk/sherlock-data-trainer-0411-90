@@ -8,10 +8,11 @@ export async function getOrCreateModel() {
     if (!globalModel) {
       globalModel = tf.sequential();
       
+      // Ajustando a camada de entrada para 15 números
       globalModel.add(tf.layers.dense({ 
         units: 256, 
         activation: 'relu', 
-        inputShape: [17],
+        inputShape: [15],  // Alterado de 17 para 15
         kernelInitializer: 'glorotNormal',
         kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
       }));
@@ -37,6 +38,8 @@ export async function getOrCreateModel() {
         loss: 'binaryCrossentropy',
         metrics: ['accuracy']
       });
+
+      console.log('Modelo criado com shape de entrada:', globalModel.inputs[0].shape);
     }
     return globalModel;
   } catch (error) {
@@ -107,13 +110,8 @@ export function enrichDataWithPatterns(data, patterns) {
       return entry;
     }
 
-    const patternFeatures = [
-      patterns.filter(p => p.type === 'consecutive').length / (patterns.length || 1),
-      patterns.find(p => p.type === 'evenOdd')?.evenPercentage / 100 || 0.5,
-      patterns.find(p => p.type === 'prime')?.primePercentage / 100 || 0.5
-    ];
-    
-    return [...entry, ...patternFeatures];
+    // Retornando apenas os 15 números originais sem adicionar features extras
+    return entry.slice(0, 15);
   });
 }
 
