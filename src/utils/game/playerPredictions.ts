@@ -32,18 +32,23 @@ export const handlePlayerPredictions = async (
 
     const predictions = await Promise.all(
       players.map(async (player) => {
-        // Aplicar pesos individuais do jogador aos dados enriquecidos
+        // Aplicação mais forte dos pesos individuais
         const weightedData = enrichedData.map((value, index) => {
-          const weight = player.weights[index % player.weights.length];
-          // Normalização do peso para evitar valores extremos
-          const normalizedWeight = (weight / 1000) * 2; // Fator de escala ajustável
-          return value * normalizedWeight;
+          // Usa o peso específico do jogador de forma cíclica
+          const playerWeight = player.weights[index % player.weights.length];
+          
+          // Normalização adaptativa baseada no fitness do jogador
+          const fitnessBonus = (player.fitness / 15) + 0.5; // Bonus de 0.5 a 1.5 baseado no fitness
+          
+          // Aplica o peso com influência do fitness
+          return value * (playerWeight / 500) * fitnessBonus;
         });
 
         const inputTensor = tf.tensor2d([weightedData]);
         
         systemLogger.log('prediction', `Previsão para jogador ${player.id}`, {
           weightsSample: player.weights.slice(0, 5),
+          fitness: player.fitness,
           tensorShape: inputTensor.shape
         });
 
@@ -53,11 +58,17 @@ export const handlePlayerPredictions = async (
         inputTensor.dispose();
         prediction.dispose();
         
-        // Converter previsões em números (1-25) com influência dos pesos
-        const weightedPredictions = result.map((value, index) => ({
-          value: value * (player.weights[index % player.weights.length] / 500),
-          index: index + 1
-        }));
+        // Aplicação dos pesos na seleção final dos números
+        const weightedPredictions = result.map((value, index) => {
+          const weight = player.weights[index % player.weights.length];
+          const scoreInfluence = player.score > 0 ? Math.log10(player.score) / 10 : 0;
+          const generationBonus = Math.log1p(player.generation) / 10;
+          
+          return {
+            value: value * (1 + weight/1000) * (1 + scoreInfluence) * (1 + generationBonus),
+            index: index + 1
+          };
+        });
 
         const finalPrediction = weightedPredictions
           .sort((a, b) => b.value - a.value)
@@ -67,7 +78,10 @@ export const handlePlayerPredictions = async (
 
         systemLogger.log('prediction', `Previsão finalizada para jogador ${player.id}`, {
           prediction: finalPrediction,
-          originalWeights: player.weights.slice(0, 5)
+          weights: player.weights.slice(0, 5),
+          score: player.score,
+          generation: player.generation,
+          fitness: player.fitness
         });
 
         return finalPrediction;
