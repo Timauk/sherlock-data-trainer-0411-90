@@ -32,16 +32,32 @@ export const handlePlayerPredictions = async (
 
     const predictions = await Promise.all(
       players.map(async (player) => {
-        // Aplicação mais forte dos pesos individuais
+        // Aplicação dos pesos específicos para cada característica do jogador
         const weightedData = enrichedData.map((value, index) => {
-          // Usa o peso específico do jogador de forma cíclica
-          const playerWeight = player.weights[index % player.weights.length];
+          const weightIndex = index % player.weights.length;
+          const playerWeight = player.weights[weightIndex];
           
-          // Normalização adaptativa baseada no fitness do jogador
-          const fitnessBonus = (player.fitness / 15) + 0.5; // Bonus de 0.5 a 1.5 baseado no fitness
+          // Fatores de influência baseados nas características do jogador
+          const learningFactor = (weightIndex === 0) ? playerWeight * 1.5 : 1;
+          const adaptabilityFactor = (weightIndex === 1) ? playerWeight * 1.3 : 1;
+          const memoryFactor = (weightIndex === 2) ? playerWeight * 1.4 : 1;
+          const intuitionFactor = (weightIndex === 3) ? playerWeight * 1.6 : 1;
           
-          // Aplica o peso com influência do fitness
-          return value * (playerWeight / 500) * fitnessBonus;
+          // Bônus baseado no histórico do jogador
+          const experienceBonus = (player.fitness / 15) + 0.5;
+          const generationBonus = Math.log1p(player.generation) / 10;
+          
+          // Combinação dos fatores de peso
+          const weightMultiplier = (
+            learningFactor * 
+            adaptabilityFactor * 
+            memoryFactor * 
+            intuitionFactor * 
+            experienceBonus * 
+            (1 + generationBonus)
+          );
+          
+          return value * (playerWeight / 500) * weightMultiplier;
         });
 
         const inputTensor = tf.tensor2d([weightedData]);
@@ -49,6 +65,7 @@ export const handlePlayerPredictions = async (
         systemLogger.log('prediction', `Previsão para jogador ${player.id}`, {
           weightsSample: player.weights.slice(0, 5),
           fitness: player.fitness,
+          generation: player.generation,
           tensorShape: inputTensor.shape
         });
 
@@ -60,12 +77,30 @@ export const handlePlayerPredictions = async (
         
         // Aplicação dos pesos na seleção final dos números
         const weightedPredictions = result.map((value, index) => {
-          const weight = player.weights[index % player.weights.length];
-          const scoreInfluence = player.score > 0 ? Math.log10(player.score) / 10 : 0;
-          const generationBonus = Math.log1p(player.generation) / 10;
+          const weightIndex = index % player.weights.length;
+          const weight = player.weights[weightIndex];
+          
+          // Influências específicas de cada peso
+          const precisionInfluence = (weightIndex === 4) ? weight * 1.2 : 1;
+          const consistencyInfluence = (weightIndex === 5) ? weight * 1.3 : 1;
+          const innovationInfluence = (weightIndex === 6) ? weight * 1.4 : 1;
+          const focusInfluence = (weightIndex === 8) ? weight * 1.5 : 1;
+          
+          // Bônus de evolução
+          const scoreInfluence = player.score > 0 ? Math.log10(player.score) / 8 : 0;
+          const evolutionBonus = player.weights[14] * 0.2; // Peso específico para evolução
+          
+          const finalWeight = (
+            precisionInfluence * 
+            consistencyInfluence * 
+            innovationInfluence * 
+            focusInfluence * 
+            (1 + scoreInfluence) * 
+            (1 + evolutionBonus)
+          );
           
           return {
-            value: value * (1 + weight/1000) * (1 + scoreInfluence) * (1 + generationBonus),
+            value: value * finalWeight,
             index: index + 1
           };
         });
