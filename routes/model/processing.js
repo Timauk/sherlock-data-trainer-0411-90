@@ -4,6 +4,7 @@ import { analyzePatterns, enrichDataWithPatterns, getOrCreateModel } from './uti
 import { logger } from '../../src/utils/logging/logger.js';
 import { validateInputData, validatePlayerWeights } from './validation.js';
 import { processGameLogic } from './gameLogic.js';
+import { enrichTrainingData } from '../../src/utils/features/lotteryFeatureEngineering.js';
 
 const router = express.Router();
 
@@ -48,29 +49,16 @@ router.post('/process-game', async (req, res) => {
       });
     }
 
-    if (typeof generation !== 'number') {
-      logger.error('Geração inválida', { 
-        generation,
-        type: typeof generation,
-        timestamp: new Date().toISOString()
-      });
-      return res.status(400).json({
-        error: 'Generation must be a number',
-        details: 'generation deve ser um número'
-      });
-    }
-
-    logger.info('Validação de entrada concluída com sucesso', {
-      inputDataLength: inputData.length,
-      playerWeightsLength: playerWeights.length,
-      generation,
-      isInfiniteMode,
-      isManualMode,
+    // Enriquecer os dados antes do processamento
+    const enrichedData = enrichTrainingData([inputData], [new Date()]);
+    logger.info('Dados enriquecidos:', {
+      originalLength: inputData.length,
+      enrichedLength: enrichedData[0].length,
       timestamp: new Date().toISOString()
     });
 
     const result = await processGameLogic(
-      inputData,
+      enrichedData[0], // Usar dados enriquecidos
       generation,
       playerWeights,
       isInfiniteMode,

@@ -3,11 +3,11 @@ import * as tf from '@tensorflow/tfjs';
 export const createModelArchitecture = () => {
   const model = tf.sequential();
   
-  // Input layer com shape correspondente aos 15 números + features adicionais
+  // Input layer ajustado para receber os dados enriquecidos (13072 features)
   model.add(tf.layers.dense({
     units: 256,
     activation: 'relu',
-    inputShape: [15], // Ajustado para receber apenas os 15 números
+    inputShape: [13072], // Ajustado para o número correto de features
     kernelInitializer: 'heNormal',
     kernelRegularizer: tf.regularizers.l2({ l2: 0.001 })
   }));

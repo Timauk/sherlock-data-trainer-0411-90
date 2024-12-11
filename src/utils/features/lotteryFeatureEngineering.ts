@@ -89,33 +89,37 @@ export const enrichTrainingData = (
   numbers: number[][],
   dates: Date[]
 ): number[][] => {
-  const features = extractFeatures(numbers, dates);
-  
-  // Combine all features to match expected 13072 size
-  const enrichedFeatures = [
-    ...features.frequencyFeatures,    // 5000
-    ...features.sequenceFeatures,     // 3000
-    ...features.temporalFeatures,     // 2500
-    ...features.statisticalFeatures   // 2572
-  ];                                  // Total: 13072
+  try {
+    const features = extractFeatures(numbers, dates);
+    
+    // Combine all features to match expected 13072 size
+    const enrichedFeatures = numbers.map(() => {
+      const combined = [
+        ...features.frequencyFeatures,    // 5000
+        ...features.sequenceFeatures,     // 3000
+        ...features.temporalFeatures,     // 2500
+        ...features.statisticalFeatures   // 2572
+      ];                                  // Total: 13072
 
-  if (enrichedFeatures.length !== 13072) {
-    systemLogger.error('features', 'Incorrect feature length', {
-      actualLength: enrichedFeatures.length,
-      expectedLength: 13072
+      if (combined.length !== 13072) {
+        throw new Error(`Feature length mismatch: expected 13072, got ${combined.length}`);
+      }
+
+      return combined;
     });
-    throw new Error(`Feature length mismatch: expected 13072, got ${enrichedFeatures.length}`);
+
+    systemLogger.log('features', 'Enriched data generated', {
+      totalFeatures: enrichedFeatures[0].length,
+      sampleStats: {
+        min: Math.min(...enrichedFeatures[0]),
+        max: Math.max(...enrichedFeatures[0]),
+        mean: enrichedFeatures[0].reduce((a, b) => a + b) / enrichedFeatures[0].length
+      }
+    });
+
+    return enrichedFeatures;
+  } catch (error) {
+    systemLogger.error('features', 'Error enriching data', { error });
+    throw error;
   }
-
-  systemLogger.log('features', 'Enriched data generated', {
-    totalFeatures: enrichedFeatures.length,
-    sampleStats: {
-      min: Math.min(...enrichedFeatures),
-      max: Math.max(...enrichedFeatures),
-      mean: enrichedFeatures.reduce((a, b) => a + b) / enrichedFeatures.length
-    }
-  });
-
-  // Return the data with the exact number of features expected by the model
-  return numbers.map(() => enrichedFeatures);
 };
