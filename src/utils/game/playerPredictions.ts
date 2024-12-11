@@ -18,7 +18,7 @@ export const handlePlayerPredictions = async (
       playersCount: players.length,
       modelInputShape: trainedModel.inputs[0].shape,
       modelState: {
-        compiled: trainedModel.compiled,
+        isCompiled: trainedModel.optimizer !== null,
         optimizer: trainedModel.optimizer ? 'present' : 'missing'
       }
     });
@@ -33,7 +33,6 @@ export const handlePlayerPredictions = async (
 
     const predictions = await Promise.all(
       players.map(async (player) => {
-        // Log detalhado dos pesos do jogador
         systemLogger.log('prediction', `Processando jogador ${player.id}`, {
           weights: player.weights,
           fitness: player.fitness,
@@ -41,18 +40,15 @@ export const handlePlayerPredictions = async (
           score: player.score
         });
 
-        // Aplicação dos pesos específicos para cada característica
         const weightedData = enrichedData.map((value, index) => {
           const weightIndex = index % player.weights.length;
           const weight = player.weights[weightIndex];
           
-          // Fatores de influência baseados nas características
           const learningFactor = weightIndex === 0 ? weight * 1.5 : 1;
           const adaptabilityFactor = weightIndex === 1 ? weight * 1.3 : 1;
           const memoryFactor = weightIndex === 2 ? weight * 1.4 : 1;
           const intuitionFactor = weightIndex === 3 ? weight * 1.6 : 1;
           
-          // Bônus baseado no histórico
           const experienceBonus = (player.fitness / 15) + 0.5;
           const generationBonus = Math.log1p(player.generation) / 10;
           
@@ -70,7 +66,6 @@ export const handlePlayerPredictions = async (
 
         const inputTensor = tf.tensor2d([weightedData]);
         
-        // Log do tensor de entrada
         systemLogger.log('prediction', `Tensor de entrada para jogador ${player.id}`, {
           shape: inputTensor.shape,
           weightedDataSample: weightedData.slice(0, 5)
@@ -79,12 +74,10 @@ export const handlePlayerPredictions = async (
         const prediction = trainedModel.predict(inputTensor) as tf.Tensor;
         const result = Array.from(await prediction.data());
 
-        // Log do resultado bruto da predição
         systemLogger.log('prediction', `Resultado bruto da predição para jogador ${player.id}`, {
           rawPrediction: result.slice(0, 5)
         });
         
-        // Seleção dos números com base nos pesos e predições
         const weightedPredictions = result.map((value, index) => {
           const weightIndex = index % player.weights.length;
           const weight = player.weights[weightIndex];
@@ -112,14 +105,12 @@ export const handlePlayerPredictions = async (
           };
         });
 
-        // Seleção dos 15 números com maiores pesos
         const selectedNumbers = weightedPredictions
           .sort((a, b) => b.value - a.value)
           .slice(0, 15)
           .map(item => item.number)
           .sort((a, b) => a - b);
 
-        // Log da predição final
         systemLogger.log('prediction', `Predição final para jogador ${player.id}`, {
           selectedNumbers,
           originalWeights: player.weights.slice(0, 5),
@@ -127,7 +118,6 @@ export const handlePlayerPredictions = async (
           generation: player.generation
         });
 
-        // Cleanup
         inputTensor.dispose();
         prediction.dispose();
 
@@ -141,7 +131,7 @@ export const handlePlayerPredictions = async (
       error: error.message,
       stack: error instanceof Error ? error.stack : undefined,
       modelState: {
-        compiled: trainedModel.compiled,
+        isCompiled: trainedModel.optimizer !== null,
         optimizer: trainedModel.optimizer ? 'present' : 'missing'
       }
     });
