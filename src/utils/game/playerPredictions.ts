@@ -33,17 +33,11 @@ export const handlePlayerPredictions = async (
 
     const predictions = await Promise.all(
       players.map(async (player) => {
-        systemLogger.log('prediction', `Processando jogador ${player.id}`, {
-          weights: player.weights,
-          fitness: player.fitness,
-          generation: player.generation,
-          score: player.score
-        });
-
         const weightedData = enrichedData.map((value, index) => {
           const weightIndex = index % player.weights.length;
           const weight = player.weights[weightIndex];
           
+          // Aplicação dos pesos específicos
           const learningFactor = weightIndex === 0 ? weight * 1.5 : 1;
           const adaptabilityFactor = weightIndex === 1 ? weight * 1.3 : 1;
           const memoryFactor = weightIndex === 2 ? weight * 1.4 : 1;
@@ -52,7 +46,7 @@ export const handlePlayerPredictions = async (
           const experienceBonus = (player.fitness / 15) + 0.5;
           const generationBonus = Math.log1p(player.generation) / 10;
           
-          const weightMultiplier = (
+          return value * weight * (
             learningFactor * 
             adaptabilityFactor * 
             memoryFactor * 
@@ -60,60 +54,28 @@ export const handlePlayerPredictions = async (
             experienceBonus * 
             (1 + generationBonus)
           );
-          
-          return value * (weight / 500) * weightMultiplier;
         });
 
         const inputTensor = tf.tensor2d([weightedData]);
-        
-        systemLogger.log('prediction', `Tensor de entrada para jogador ${player.id}`, {
-          shape: inputTensor.shape,
-          weightedDataSample: weightedData.slice(0, 5)
-        });
-
         const prediction = trainedModel.predict(inputTensor) as tf.Tensor;
-        const result = Array.from(await prediction.data());
+        const probabilities = Array.from(await prediction.data());
 
-        systemLogger.log('prediction', `Resultado bruto da predição para jogador ${player.id}`, {
-          rawPrediction: result.slice(0, 5)
-        });
-        
-        const weightedPredictions = result.map((value, index) => {
-          const weightIndex = index % player.weights.length;
-          const weight = player.weights[weightIndex];
-          
-          const precisionInfluence = weightIndex === 4 ? weight * 1.2 : 1;
-          const consistencyInfluence = weightIndex === 5 ? weight * 1.3 : 1;
-          const innovationInfluence = weightIndex === 6 ? weight * 1.4 : 1;
-          const focusInfluence = weightIndex === 8 ? weight * 1.5 : 1;
-          
-          const scoreInfluence = player.score > 0 ? Math.log10(player.score) / 8 : 0;
-          const evolutionBonus = player.weights[14] * 0.2;
-          
-          const finalWeight = (
-            precisionInfluence * 
-            consistencyInfluence * 
-            innovationInfluence * 
-            focusInfluence * 
-            (1 + scoreInfluence) * 
-            (1 + evolutionBonus)
-          );
-          
-          return {
-            value: value * finalWeight,
-            number: index + 1
-          };
-        });
+        // Converte probabilidades em números de 1 a 25
+        const numbersWithProbabilities = probabilities.map((prob, index) => ({
+          number: index + 1,
+          probability: prob
+        })).filter(item => item.number <= 25);
 
-        const selectedNumbers = weightedPredictions
-          .sort((a, b) => b.value - a.value)
+        // Seleciona os 15 números com maiores probabilidades
+        const selectedNumbers = numbersWithProbabilities
+          .sort((a, b) => b.probability - a.probability)
           .slice(0, 15)
           .map(item => item.number)
           .sort((a, b) => a - b);
 
         systemLogger.log('prediction', `Predição final para jogador ${player.id}`, {
           selectedNumbers,
-          originalWeights: player.weights.slice(0, 5),
+          weights: player.weights.slice(0, 5),
           fitness: player.fitness,
           generation: player.generation
         });
