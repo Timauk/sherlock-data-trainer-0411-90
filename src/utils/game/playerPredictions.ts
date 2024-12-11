@@ -13,68 +13,84 @@ export const handlePlayerPredictions = async (
   lunarData: { lunarPhase: string; lunarPatterns: Record<string, number[]> }
 ) => {
   try {
-    systemLogger.log('prediction', 'Iniciando geração de previsões', {
-      inputNumbers: currentBoardNumbers,
+    systemLogger.log('prediction', 'Iniciando processo de predição', {
       playersCount: players.length,
-      modelInputShape: trainedModel.inputs[0].shape,
+      currentBoardNumbers,
       modelState: {
-        isCompiled: trainedModel.optimizer !== null,
-        optimizer: trainedModel.optimizer ? 'present' : 'missing'
-      }
+        hasOptimizer: trainedModel.optimizer !== null,
+        layersCount: trainedModel.layers.length,
+        inputShape: trainedModel.inputs[0].shape
+      },
+      timestamp: new Date().toISOString()
     });
 
     const enrichedData = enrichTrainingData([[...currentBoardNumbers]], [new Date()])[0];
     
-    systemLogger.log('prediction', 'Dados enriquecidos', {
+    systemLogger.log('prediction', 'Dados enriquecidos gerados', {
       enrichedDataLength: enrichedData.length,
-      expectedLength: 13072,
-      sampleData: enrichedData.slice(0, 5)
+      sampleData: enrichedData.slice(0, 5),
+      timestamp: new Date().toISOString()
     });
 
     const predictions = await Promise.all(
       players.map(async (player) => {
-        // Criar tensor de entrada com os dados enriquecidos
+        systemLogger.log('prediction', `Gerando predição para Jogador #${player.id}`, {
+          weights: player.weights.slice(0, 5),
+          fitness: player.fitness,
+          timestamp: new Date().toISOString()
+        });
+
         const inputTensor = tf.tensor2d([enrichedData]);
-        
-        // Fazer predição usando o modelo
         const prediction = trainedModel.predict(inputTensor) as tf.Tensor;
         const probabilities = Array.from(await prediction.data());
 
-        // Aplicar os pesos do jogador nas probabilidades
-        const weightedProbabilities = probabilities.map((prob, idx) => ({
-          number: idx + 1,
-          probability: prob * player.weights[idx % player.weights.length]
-        }));
+        // Aplicar pesos do jogador com características específicas
+        const weightedProbabilities = probabilities.map((prob, idx) => {
+          const number = idx + 1;
+          if (number > 25) return { number: 0, probability: 0 };
 
-        // Ordenar por probabilidade e selecionar os 15 números mais prováveis
+          const weight = player.weights[idx % player.weights.length];
+          const experienceFactor = Math.log1p(player.generation) / 10;
+          const fitnessFactor = player.fitness + 0.1;
+          
+          return {
+            number,
+            probability: prob * weight * (1 + experienceFactor) * fitnessFactor
+          };
+        }).filter(item => item.number > 0);
+
         const selectedNumbers = weightedProbabilities
           .sort((a, b) => b.probability - a.probability)
           .slice(0, 15)
           .map(item => item.number)
           .sort((a, b) => a - b);
 
-        // Calcular acertos
         const matches = selectedNumbers.filter(num => 
           currentBoardNumbers.includes(num)
         ).length;
 
-        // Atualizar fitness do jogador baseado nos acertos
         player.fitness = matches / 15;
 
-        systemLogger.log('prediction', `Predição final para jogador ${player.id}`, {
+        systemLogger.log('prediction', `Predição finalizada para Jogador #${player.id}`, {
           selectedNumbers,
           matches,
           fitness: player.fitness,
-          weights: player.weights.slice(0, 5)
+          probabilities: weightedProbabilities.slice(0, 5),
+          timestamp: new Date().toISOString()
         });
 
-        // Limpar tensores
         inputTensor.dispose();
         prediction.dispose();
 
         return selectedNumbers;
       })
     );
+
+    systemLogger.log('prediction', 'Processo de predição concluído', {
+      totalPredictions: predictions.length,
+      memoryInfo: tf.memory(),
+      timestamp: new Date().toISOString()
+    });
 
     return predictions;
 
@@ -83,9 +99,10 @@ export const handlePlayerPredictions = async (
       error: error.message,
       stack: error instanceof Error ? error.stack : undefined,
       modelState: {
-        isCompiled: trainedModel.optimizer !== null,
-        optimizer: trainedModel.optimizer ? 'present' : 'missing'
-      }
+        hasOptimizer: trainedModel.optimizer !== null,
+        layersCount: trainedModel.layers.length
+      },
+      timestamp: new Date().toISOString()
     });
     throw error;
   }
