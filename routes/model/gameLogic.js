@@ -1,6 +1,7 @@
 import * as tf from '@tensorflow/tfjs';
 import { analyzePatterns, enrichDataWithPatterns, getOrCreateModel } from './utils.js';
 import { logger } from '../../src/utils/logging/logger.js';
+import { enrichTrainingData } from '../../src/utils/features/lotteryFeatureEngineering.js';
 
 export async function processGameLogic(
   inputData,
@@ -18,7 +19,6 @@ export async function processGameLogic(
   });
 
   try {
-    // Verificação da rede neural
     logger.info('Verificando estado da rede neural', {
       timestamp: new Date().toISOString(),
       tfBackend: tf.getBackend(),
@@ -36,14 +36,6 @@ export async function processGameLogic(
       throw new Error('Model could not be initialized');
     }
 
-    logger.info('Modelo carregado com sucesso', {
-      layers: model.layers.length,
-      compiled: model.compiled,
-      timestamp: new Date().toISOString(),
-      modelConfig: model.getConfig(),
-      weightsLoaded: model.weights.length > 0
-    });
-
     // Verificação dos dados de entrada
     if (!inputData || !Array.isArray(inputData)) {
       logger.error('Dados de entrada inválidos', {
@@ -52,6 +44,24 @@ export async function processGameLogic(
       });
       throw new Error('Invalid input data');
     }
+
+    // Enriquecimento dos dados antes da análise de padrões
+    const enrichedData = enrichTrainingData([[...inputData]], [new Date()]);
+    
+    if (!enrichedData || !enrichedData[0]) {
+      logger.error('Falha ao enriquecer dados', {
+        timestamp: new Date().toISOString(),
+        inputData: inputData.slice(0, 5),
+        inputLength: inputData.length
+      });
+      throw new Error('Failed to enrich input data');
+    }
+
+    logger.info('Dados enriquecidos com sucesso', {
+      originalLength: inputData.length,
+      enrichedLength: enrichedData[0].length,
+      sampleData: enrichedData[0].slice(0, 5)
+    });
 
     const patterns = analyzePatterns([inputData]);
     
@@ -64,40 +74,13 @@ export async function processGameLogic(
       throw new Error('Failed to analyze input data patterns');
     }
 
-    logger.info('Padrões analisados', {
-      patternsFound: patterns.length,
-      patternTypes: patterns.map(p => p.type),
-      timestamp: new Date().toISOString(),
-      firstPattern: patterns[0],
-      inputDataState: inputData.length
-    });
-
-    const enhancedInput = enrichDataWithPatterns([inputData], patterns)[0];
-    
-    if (!enhancedInput) {
-      logger.error('Falha ao enriquecer dados', {
-        timestamp: new Date().toISOString(),
-        patterns: patterns.length,
-        inputDataLength: inputData.length,
-        lastError: tf.engine().lastError
-      });
-      throw new Error('Failed to enrich input data with patterns');
-    }
-
-    logger.info('Dados enriquecidos com sucesso', {
-      inputLength: enhancedInput.length,
-      timestamp: new Date().toISOString(),
-      sampleData: enhancedInput.slice(0, 5),
-      memoryInfo: tf.memory()
-    });
-
     // Verificação do tensor e predição
     logger.info('Iniciando criação do tensor', {
       timestamp: new Date().toISOString(),
-      shape: [1, enhancedInput.length]
+      shape: [1, enrichedData[0].length]
     });
 
-    const tensor = tf.tensor2d([enhancedInput]);
+    const tensor = tf.tensor2d([enrichedData[0]]);
     
     logger.info('Tensor criado com sucesso', {
       shape: tensor.shape,
@@ -114,8 +97,7 @@ export async function processGameLogic(
         max: Math.max(...result)
       },
       timestamp: new Date().toISOString(),
-      samplePrediction: result.slice(0, 5),
-      memoryInfo: tf.memory()
+      samplePrediction: result.slice(0, 5)
     });
 
     // Cleanup
