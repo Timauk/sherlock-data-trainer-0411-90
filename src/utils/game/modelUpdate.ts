@@ -1,106 +1,56 @@
 import * as tf from '@tensorflow/tfjs';
 import { systemLogger } from '../logging/systemLogger';
 
-export const updateModel = async (
-  trainedModel: tf.LayersModel,
+export async function updateModel(
+  model: tf.LayersModel,
   trainingData: number[][],
-  addLog: (message: string) => void
-) => {
-  if (!trainedModel || trainingData.length === 0) {
-    systemLogger.warn('training', 'Atualização do modelo ignorada', {
-      reason: !trainedModel ? 'Modelo não disponível' : 'Sem dados de treinamento',
-      dataLength: trainingData.length
-    });
-    return trainedModel;
-  }
+  onProgress: (message: string) => void
+): Promise<void> {
+  console.log('Starting model update:', {
+    trainingDataSize: trainingData.length,
+    modelLayers: model.layers.length,
+    inputShape: model.inputs[0].shape,
+    outputShape: model.outputs[0].shape
+  });
 
   try {
-    systemLogger.log('training', 'Iniciando atualização do modelo', {
-      dataLength: trainingData.length,
-      modelConfig: trainedModel.getConfig(),
-      memoryBefore: tf.memory()
-    });
-
-    trainedModel.compile({
-      optimizer: 'adam',
-      loss: 'meanSquaredError',
-      metrics: ['accuracy']
-    });
-
-    const processedData = trainingData.map(row => {
-      return row.slice(0, 17);
-    });
-
-    systemLogger.log('training', 'Dados processados para treinamento', {
-      inputShape: [processedData.length, processedData[0].length],
-      sampleData: processedData.slice(0, 2)
-    });
-
-    const xs = tf.tensor2d(processedData);
+    const xs = tf.tensor2d(trainingData.map(row => row.slice(0, -15)));
     const ys = tf.tensor2d(trainingData.map(row => row.slice(-15)));
 
-    systemLogger.log('training', 'Tensores criados para treinamento', {
-      xsShape: xs.shape,
-      ysShape: ys.shape
+    console.log('Training tensors created:', {
+      xShape: xs.shape,
+      yShape: ys.shape,
+      xSample: Array.from(xs.dataSync()).slice(0, 5),
+      ySample: Array.from(ys.dataSync()).slice(0, 5)
     });
 
-    const result = await trainedModel.fit(xs, ys, {
-      epochs: 1,
+    await model.fit(xs, ys, {
+      epochs: 10,
       batchSize: 32,
-      validationSplit: 0.1,
+      validationSplit: 0.2,
       callbacks: {
-        onEpochBegin: async (epoch) => {
-          systemLogger.log('training', `Iniciando época ${epoch + 1}`);
-        },
-        onEpochEnd: async (epoch, logs) => {
-          systemLogger.log('training', `Época ${epoch + 1} finalizada`, { 
-            loss: logs?.loss,
-            accuracy: logs?.acc,
-            valLoss: logs?.val_loss,
-            valAccuracy: logs?.val_acc
-          });
+        onEpochEnd: (epoch, logs) => {
+          console.log(`Epoch ${epoch + 1} complete:`, logs);
+          onProgress(`Epoch ${epoch + 1}: loss = ${logs?.loss.toFixed(4)}`);
         }
       }
     });
 
-    // Check if model is compiled by checking if optimizer exists
-    const isModelCompiled = trainedModel.optimizer !== undefined;
-
-    systemLogger.log('training', 'Treinamento finalizado', {
-      finalLoss: result.history.loss?.slice(-1)[0],
-      finalAccuracy: result.history.acc?.slice(-1)[0],
-      memoryAfter: tf.memory(),
-      modelState: {
-        layers: trainedModel.layers.length,
-        trainable: trainedModel.trainable,
-        isCompiled: isModelCompiled
-      }
+    console.log('Model update complete:', {
+      updatedWeights: model.getWeights().map(w => ({
+        shape: w.shape,
+        sample: Array.from(w.dataSync()).slice(0, 5)
+      }))
     });
 
     xs.dispose();
     ys.dispose();
-
-    const message = `Modelo atualizado com ${trainingData.length} novos registros.`;
-    addLog(message);
-    
-    return trainedModel;
   } catch (error) {
-    systemLogger.error('training', 'Erro ao atualizar modelo', {
-      error,
-      stack: error instanceof Error ? error.stack : undefined,
-      dataState: {
-        length: trainingData.length,
-        sample: trainingData.slice(0, 1)
-      },
-      modelState: {
-        layers: trainedModel.layers.length,
-        isCompiled: trainedModel.optimizer !== undefined
-      },
-      tfState: {
-        backend: tf.getBackend(),
-        memory: tf.memory()
-      }
+    console.error('Error updating model:', error);
+    systemLogger.error('model', 'Error updating model', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
     });
     throw error;
   }
-};
+}

@@ -16,9 +16,11 @@ async function makePrediction(
   weights: number[],
   config: { lunarPhase: string; patterns: any }
 ): Promise<number[]> {
-  systemLogger.log('prediction', 'Starting prediction with input data', {
-    inputLength: inputData.length,
-    timestamp: new Date().toISOString()
+  console.log('Starting prediction with input:', {
+    inputData,
+    weights: weights.slice(0, 5), // Log first 5 weights for visibility
+    weightsLength: weights.length,
+    lunarPhase: config.lunarPhase
   });
 
   try {
@@ -26,40 +28,83 @@ async function makePrediction(
     const currentDate = new Date();
     const enrichedData = enrichTrainingData([[...inputData]], [currentDate]);
     
+    console.log('Data enrichment complete:', {
+      originalLength: inputData.length,
+      enrichedLength: enrichedData[0].length,
+      sampleEnrichedData: enrichedData[0].slice(0, 5)
+    });
+
     if (!enrichedData || !enrichedData[0]) {
       throw new Error('Failed to enrich input data');
     }
 
-    // Ensure correct shape with padding to match model's expected input
+    // Create padded data array
     const paddedData = new Array(13072).fill(0);
     for (let i = 0; i < enrichedData[0].length && i < 13072; i++) {
       paddedData[i] = enrichedData[0][i];
     }
 
-    // Create tensor with correct shape [1, 13072]
+    console.log('Tensor preparation:', {
+      paddedLength: paddedData.length,
+      nonZeroCount: paddedData.filter(x => x !== 0).length,
+      firstFewValues: paddedData.slice(0, 5)
+    });
+
+    // Create tensor and make prediction
     const inputTensor = tf.tensor2d([paddedData]);
-    
-    // Make prediction
     const predictions = model.predict(inputTensor) as tf.Tensor;
-    const result = Array.from(await predictions.data());
-    
+    const rawResult = Array.from(await predictions.data());
+
+    console.log('Raw model output:', {
+      resultLength: rawResult.length,
+      sampleOutput: rawResult.slice(0, 5),
+      min: Math.min(...rawResult),
+      max: Math.max(...rawResult)
+    });
+
     // Cleanup tensors
     inputTensor.dispose();
     predictions.dispose();
 
-    // Convert raw predictions to valid lottery numbers (1-25)
-    const validNumbers = result.map(value => {
-      // Scale the value to be between 1 and 25
-      return Math.max(1, Math.min(25, Math.round(value * 25)));
+    // Apply weights and convert to valid numbers
+    const weightedResult = rawResult.map((value, index) => {
+      const weight = weights[index % weights.length];
+      const weightedValue = value * weight;
+      // Scale to 1-25 range
+      const scaledValue = Math.max(1, Math.min(25, Math.round(weightedValue * 25)));
+      
+      console.log(`Processing prediction ${index}:`, {
+        originalValue: value,
+        weight,
+        weightedValue,
+        finalValue: scaledValue
+      });
+
+      return scaledValue;
     });
 
-    systemLogger.log('prediction', 'Prediction completed successfully', {
-      resultLength: validNumbers.length,
-      timestamp: new Date().toISOString()
+    // Ensure we have exactly 15 unique numbers
+    const uniqueNumbers = Array.from(new Set(weightedResult))
+      .slice(0, 15)
+      .sort((a, b) => a - b);
+
+    // If we don't have enough unique numbers, add more
+    while (uniqueNumbers.length < 15) {
+      const newNum = Math.floor(Math.random() * 25) + 1;
+      if (!uniqueNumbers.includes(newNum)) {
+        uniqueNumbers.push(newNum);
+      }
+    }
+
+    console.log('Final prediction:', {
+      numbers: uniqueNumbers,
+      originalWeightedLength: weightedResult.length,
+      uniqueCount: uniqueNumbers.length
     });
 
-    return validNumbers;
+    return uniqueNumbers;
   } catch (error) {
+    console.error('Prediction error:', error);
     systemLogger.error('prediction', 'Error in prediction', {
       error: error instanceof Error ? error.message : 'Unknown error',
       inputDataState: inputData.length,
@@ -78,15 +123,23 @@ export const handlePlayerPredictions = async (
   setNeuralNetworkVisualization: (viz: any) => void,
   lunarData: LunarData
 ) => {
-  systemLogger.log('prediction', 'Starting predictions for all players', {
+  console.log('Starting predictions for players:', {
     playerCount: players.length,
-    currentNumbers: currentBoardNumbers,
-    concurso: nextConcurso,
-    timestamp: new Date().toISOString()
+    samplePlayer: {
+      id: players[0]?.id,
+      weights: players[0]?.weights.slice(0, 5)
+    },
+    currentBoardNumbers
   });
 
   return Promise.all(
     players.map(async player => {
+      console.log(`Processing player #${player.id}:`, {
+        weights: player.weights.slice(0, 5),
+        fitness: player.fitness,
+        previousPredictions: player.predictions
+      });
+
       try {
         const prediction = await makePrediction(
           trainedModel, 
@@ -102,24 +155,14 @@ export const handlePlayerPredictions = async (
         // Record prediction for monitoring
         predictionMonitor.recordPrediction(prediction, currentBoardNumbers, arimaPredictor);
 
-        systemLogger.log('prediction', `Prediction completed for Player #${player.id}`, {
-          prediction: prediction.slice(0, 5),
-          weights: player.weights.slice(0, 5),
-          fitness: player.fitness,
-          timestamp: new Date().toISOString()
+        console.log(`Prediction complete for Player #${player.id}:`, {
+          prediction,
+          matches: prediction.filter(num => currentBoardNumbers.includes(num)).length
         });
 
         return prediction;
       } catch (error) {
-        systemLogger.error('prediction', `Error in prediction for Player #${player.id}`, {
-          error: error instanceof Error ? error.message : 'Unknown error',
-          playerState: {
-            id: player.id,
-            weights: player.weights.length,
-            fitness: player.fitness
-          },
-          timestamp: new Date().toISOString()
-        });
+        console.error(`Error predicting for player #${player.id}:`, error);
         throw error;
       }
     })
