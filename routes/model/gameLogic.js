@@ -80,7 +80,13 @@ export async function processGameLogic(
       shape: [1, enrichedData[0].length]
     });
 
-    const tensor = tf.tensor2d([enrichedData[0]]);
+    // Garantir que o tensor tenha a forma correta [1, 13072]
+    const paddedData = new Array(13072).fill(0);
+    for (let i = 0; i < enrichedData[0].length && i < 13072; i++) {
+      paddedData[i] = enrichedData[0][i];
+    }
+    
+    const tensor = tf.tensor2d([paddedData]);
     
     logger.info('Tensor criado com sucesso', {
       shape: tensor.shape,
