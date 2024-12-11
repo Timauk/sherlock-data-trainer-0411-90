@@ -17,31 +17,42 @@ async function makePrediction(
   config: { lunarPhase: string; patterns: any }
 ): Promise<number[]> {
   try {
-    // Enrich input data
-    const enrichedData = enrichTrainingData([[inputData]], [new Date()])[0];
+    // Enrich input data with the current date
+    const currentDate = new Date();
+    const enrichedData = enrichTrainingData([[...inputData]], [currentDate]);
     
+    if (!enrichedData || !enrichedData[0]) {
+      throw new Error('Failed to enrich input data');
+    }
+
     // Ensure correct shape with padding
     const paddedData = new Array(13072).fill(0);
-    for (let i = 0; i < enrichedData.length && i < 13072; i++) {
-      paddedData[i] = enrichedData[i];
+    for (let i = 0; i < enrichedData[0].length && i < 13072; i++) {
+      paddedData[i] = enrichedData[0][i];
     }
 
     systemLogger.log('prediction', 'Creating prediction tensor', {
       originalLength: inputData.length,
-      enrichedLength: enrichedData.length,
-      finalLength: paddedData.length
+      enrichedLength: enrichedData[0].length,
+      finalLength: paddedData.length,
+      timestamp: new Date().toISOString()
     });
 
     const inputTensor = tf.tensor2d([paddedData]);
     const predictions = model.predict(inputTensor) as tf.Tensor;
     const result = Array.from(await predictions.data());
     
+    // Cleanup
     inputTensor.dispose();
     predictions.dispose();
     
     return result.map((n, i) => Math.round(n * weights[i % weights.length]));
   } catch (error) {
-    systemLogger.error('prediction', 'Error making prediction', { error });
+    systemLogger.error('prediction', 'Error making prediction', { 
+      error,
+      inputShape: inputData.length,
+      timestamp: new Date().toISOString()
+    });
     throw error;
   }
 }
