@@ -29,10 +29,19 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
     }
   }, [player.predictions, player.fitness, player.id]);
 
-  const formatPredictions = (predictions: number[]) => {
-    return predictions.length > 0 
-      ? predictions.map(n => n.toString().padStart(2, '0')).join(', ')
-      : 'Aguardando próxima rodada';
+  const formatPredictions = (predictions: number[]): string => {
+    if (!predictions || predictions.length === 0) {
+      return 'Aguardando próxima rodada';
+    }
+
+    // Convert raw predictions to valid lottery numbers (1-25)
+    const validNumbers = predictions.map(pred => {
+      // Ensure the number is between 1 and 25
+      const num = Math.max(1, Math.min(25, Math.round(pred * 25)));
+      return num.toString().padStart(2, '0');
+    });
+
+    return validNumbers.join(', ');
   };
 
   return (

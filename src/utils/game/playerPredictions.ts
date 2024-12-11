@@ -36,13 +36,6 @@ async function makePrediction(
       paddedData[i] = enrichedData[0][i];
     }
 
-    systemLogger.log('prediction', 'Created padded tensor data', {
-      originalLength: inputData.length,
-      enrichedLength: enrichedData[0].length,
-      paddedLength: paddedData.length,
-      timestamp: new Date().toISOString()
-    });
-
     // Create tensor with correct shape [1, 13072]
     const inputTensor = tf.tensor2d([paddedData]);
     
@@ -54,18 +47,18 @@ async function makePrediction(
     inputTensor.dispose();
     predictions.dispose();
 
-    // Apply weights to results
-    const weightedResult = result.map((value, index) => {
-      const weight = weights[index % weights.length];
-      return value * weight;
+    // Convert raw predictions to valid lottery numbers (1-25)
+    const validNumbers = result.map(value => {
+      // Scale the value to be between 1 and 25
+      return Math.max(1, Math.min(25, Math.round(value * 25)));
     });
 
     systemLogger.log('prediction', 'Prediction completed successfully', {
-      resultLength: weightedResult.length,
+      resultLength: validNumbers.length,
       timestamp: new Date().toISOString()
     });
 
-    return weightedResult;
+    return validNumbers;
   } catch (error) {
     systemLogger.error('prediction', 'Error in prediction', {
       error: error instanceof Error ? error.message : 'Unknown error',
