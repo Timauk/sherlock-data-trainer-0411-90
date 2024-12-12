@@ -17,7 +17,7 @@ async function makePrediction(
   config: { lunarPhase: string; patterns: any }
 ): Promise<number[]> {
   try {
-    systemLogger.log('prediction', 'Iniciando predição individual', {
+    systemLogger.log('prediction', 'Iniciando predição da rede neural', {
       inputDataLength: inputData.length,
       weightsLength: weights.length,
       sampleWeights: weights.slice(0, 5)
@@ -30,56 +30,49 @@ async function makePrediction(
       throw new Error('Failed to enrich input data');
     }
 
-    // Garantir forma correta com padding
+    // Preparar dados para a rede neural
     const paddedData = new Array(13072).fill(0);
     for (let i = 0; i < enrichedData[0].length && i < 13072; i++) {
       paddedData[i] = enrichedData[0][i];
     }
 
-    // Aplicar pesos do jogador aos dados de entrada
+    // Aplicar pesos do jogador diretamente nos dados de entrada
     const weightedInput = paddedData.map((value, index) => 
-      value * (1 + weights[index % weights.length] / 100)
+      value * weights[index % weights.length]
     );
 
+    // Fazer predição usando a rede neural
     const inputTensor = tf.tensor2d([weightedInput]);
     const predictions = model.predict(inputTensor) as tf.Tensor;
-    const rawResult = Array.from(await predictions.data());
+    const rawPredictions = Array.from(await predictions.data());
 
-    systemLogger.log('prediction', 'Resultado bruto com pesos individuais:', {
-      rawResultLength: rawResult.length,
-      sampleRawResult: rawResult.slice(0, 5),
+    systemLogger.log('prediction', 'Resultado da rede neural:', {
+      rawLength: rawPredictions.length,
+      samplePredictions: rawPredictions.slice(0, 5),
       weightsApplied: weights.slice(0, 5)
     });
 
+    // Cleanup
     inputTensor.dispose();
     predictions.dispose();
 
-    // Gerar números únicos baseados nos pesos do jogador
-    const numberPool = Array.from({ length: 25 }, (_, i) => ({
+    // Transformar as predições em números de 1 a 25
+    const numberPredictions = Array.from({ length: 25 }, (_, i) => ({
       number: i + 1,
-      weight: rawResult[i % rawResult.length] * (1 + weights[i % weights.length] / 50)
+      probability: rawPredictions[i % rawPredictions.length]
     }));
 
-    // Adicionar aleatoriedade controlada pelos pesos
-    numberPool.forEach(item => {
-      const randomFactor = Math.random() * (weights[item.number % weights.length] / 100);
-      item.weight *= (1 + randomFactor);
-    });
-
-    // Selecionar 15 números únicos baseados nos pesos
-    const selectedNumbers = numberPool
-      .sort((a, b) => b.weight - a.weight)
+    // Selecionar os 15 números com maiores probabilidades
+    const selectedNumbers = numberPredictions
+      .sort((a, b) => b.probability - a.probability)
       .slice(0, 15)
       .map(item => item.number)
       .sort((a, b) => a - b);
 
-    systemLogger.log('prediction', 'Números selecionados para jogador:', {
+    systemLogger.log('prediction', 'Números selecionados pela rede:', {
       selectedNumbers,
       uniqueCount: new Set(selectedNumbers).size,
-      weightRange: {
-        min: Math.min(...weights),
-        max: Math.max(...weights)
-      }
+      weights: weights.slice(0, 5)
     });
 
     return selectedNumbers;
@@ -115,7 +108,6 @@ export const handlePlayerPredictions = async (
         { lunarPhase: lunarData.lunarPhase, patterns: lunarData.lunarPatterns }
       );
 
-      // Verificar acertos com números da banca
       const matches = prediction.filter(num => currentBoardNumbers.includes(num)).length;
 
       systemLogger.log('prediction', `Predição do Jogador #${player.id}:`, {
