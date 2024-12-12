@@ -12,10 +12,11 @@ export async function getOrCreateModel() {
       globalModel.add(tf.layers.dense({ 
         units: 256, 
         activation: 'relu', 
-        inputShape: [13072],  // Ajustado para o número correto de features
+        inputShape: [13072],
         kernelInitializer: 'glorotNormal',
         kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
       }));
+      
       globalModel.add(tf.layers.batchNormalization());
       globalModel.add(tf.layers.dropout({ rate: 0.3 }));
       
@@ -25,6 +26,7 @@ export async function getOrCreateModel() {
         kernelInitializer: 'glorotNormal',
         kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
       }));
+      
       globalModel.add(tf.layers.batchNormalization());
       
       globalModel.add(tf.layers.dense({ 
@@ -33,18 +35,26 @@ export async function getOrCreateModel() {
         kernelInitializer: 'glorotNormal'
       }));
 
+      // Garantir que o optimizer seja compilado corretamente
+      const optimizer = tf.train.adam(0.001);
+      
       globalModel.compile({ 
-        optimizer: tf.train.adam(0.001),
+        optimizer: optimizer,
         loss: 'binaryCrossentropy',
         metrics: ['accuracy']
       });
 
-      console.log('Modelo criado com shape de entrada:', globalModel.inputs[0].shape);
+      console.log('Modelo criado e compilado:', {
+        inputShape: globalModel.inputs[0].shape,
+        optimizer: globalModel.optimizer ? '✅' : '❌',
+        compiled: globalModel.compiled ? '✅' : '❌'
+      });
     }
+    
     return globalModel;
   } catch (error) {
     console.error('Erro ao criar/obter modelo:', error);
-    return null;
+    throw error; // Propagar erro para melhor diagnóstico
   }
 }
 
