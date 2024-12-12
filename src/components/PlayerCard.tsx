@@ -34,12 +34,11 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       return 'Aguardando próxima rodada';
     }
 
-    // Convert raw predictions to valid lottery numbers (1-25)
-    const validNumbers = predictions.map(pred => {
-      // Ensure the number is between 1 and 25
-      const num = Math.max(1, Math.min(25, Math.round(pred)));
-      return num.toString().padStart(2, '0');
-    });
+    // Convert raw predictions to valid lottery numbers (1-25) and sort them
+    const validNumbers = predictions
+      .map(pred => Math.max(1, Math.min(25, Math.round(pred))))
+      .sort((a, b) => a - b)
+      .map(num => num.toString());
 
     console.log(`Formatting predictions for Player #${player.id}:`, {
       rawPredictions: predictions,
