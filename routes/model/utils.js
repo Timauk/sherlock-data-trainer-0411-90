@@ -1,4 +1,5 @@
 import * as tf from '@tensorflow/tfjs';
+import { systemLogger } from '../../src/utils/logging/systemLogger';
 
 let globalModel = null;
 let totalSamples = 0;
@@ -6,6 +7,11 @@ let totalSamples = 0;
 export async function getOrCreateModel() {
   try {
     if (!globalModel) {
+      systemLogger.log('model', 'Iniciando criação do modelo', {
+        backend: tf.getBackend(),
+        memory: tf.memory()
+      });
+
       globalModel = tf.sequential();
       
       // Input layer com shape correto para dados enriquecidos
@@ -46,37 +52,60 @@ export async function getOrCreateModel() {
       });
 
       // Verificar status da compilação
-      if (!globalModel.optimizer) {
-        console.error('Falha na compilação do modelo - Tentando recompilar');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        globalModel.compile({ 
-          optimizer: 'adam',
-          loss: 'binaryCrossentropy',
-          metrics: ['accuracy', 'mse']
-        });
+      const compilationStatus = validateModel(globalModel);
+      
+      if (!compilationStatus.isValid) {
+        throw new Error(`Falha na compilação do modelo: ${compilationStatus.error}`);
       }
 
-      // Verificação final e logging
-      const compilationStatus = {
-        hasOptimizer: !!globalModel.optimizer,
-        optimizerConfig: globalModel.optimizer ? globalModel.optimizer.getConfig() : null,
+      systemLogger.log('model', 'Modelo criado e compilado com sucesso', {
+        layers: globalModel.layers.length,
+        optimizer: globalModel.optimizer ? 'configured' : 'missing',
         metrics: globalModel.metrics,
-        loss: globalModel.loss,
-        compiled: !!globalModel.optimizer
-      };
-
-      console.log('Status da compilação do modelo:', compilationStatus);
-
-      if (!compilationStatus.compiled) {
-        throw new Error('Falha na compilação do modelo após tentativas');
-      }
+        inputShape: globalModel.inputs[0].shape
+      });
     }
     
     return globalModel;
   } catch (error) {
-    console.error('Erro ao criar/obter modelo:', error);
+    systemLogger.error('model', 'Erro ao criar/obter modelo:', { 
+      error,
+      stack: error instanceof Error ? error.stack : undefined
+    });
     throw error;
   }
+}
+
+function validateModel(model) {
+  if (!model) {
+    return { isValid: false, error: 'Modelo não inicializado' };
+  }
+
+  if (!model.layers || model.layers.length === 0) {
+    return { isValid: false, error: 'Modelo sem camadas' };
+  }
+
+  if (!model.optimizer) {
+    return { isValid: false, error: 'Otimizador não configurado' };
+  }
+
+  const inputShape = model.inputs[0].shape;
+  if (!inputShape || inputShape[1] !== 13072) {
+    return { 
+      isValid: false, 
+      error: `Shape de entrada inválido: ${inputShape}. Esperado: [null, 13072]` 
+    };
+  }
+
+  const outputShape = model.outputs[0].shape;
+  if (!outputShape || outputShape[1] !== 15) {
+    return { 
+      isValid: false, 
+      error: `Shape de saída inválido: ${outputShape}. Esperado: [null, 15]` 
+    };
+  }
+
+  return { isValid: true };
 }
 
 export function analyzePatterns(data) {
