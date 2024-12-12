@@ -17,7 +17,7 @@ async function makePrediction(
   config: { lunarPhase: string; patterns: any }
 ): Promise<number[]> {
   try {
-    systemLogger.log('prediction', 'Iniciando predição com dados:', {
+    systemLogger.log('prediction', 'Iniciando predição individual', {
       inputDataLength: inputData.length,
       weightsLength: weights.length,
       sampleWeights: weights.slice(0, 5)
@@ -30,47 +30,56 @@ async function makePrediction(
       throw new Error('Failed to enrich input data');
     }
 
-    systemLogger.log('prediction', 'Dados enriquecidos:', {
-      originalLength: inputData.length,
-      enrichedLength: enrichedData[0].length,
-      sampleEnriched: enrichedData[0].slice(0, 5)
-    });
-
+    // Garantir forma correta com padding
     const paddedData = new Array(13072).fill(0);
     for (let i = 0; i < enrichedData[0].length && i < 13072; i++) {
       paddedData[i] = enrichedData[0][i];
     }
 
-    const inputTensor = tf.tensor2d([paddedData]);
+    // Aplicar pesos do jogador aos dados de entrada
+    const weightedInput = paddedData.map((value, index) => 
+      value * (1 + weights[index % weights.length] / 100)
+    );
+
+    const inputTensor = tf.tensor2d([weightedInput]);
     const predictions = model.predict(inputTensor) as tf.Tensor;
     const rawResult = Array.from(await predictions.data());
 
-    systemLogger.log('prediction', 'Resultado bruto do modelo:', {
+    systemLogger.log('prediction', 'Resultado bruto com pesos individuais:', {
       rawResultLength: rawResult.length,
       sampleRawResult: rawResult.slice(0, 5),
-      min: Math.min(...rawResult),
-      max: Math.max(...rawResult)
+      weightsApplied: weights.slice(0, 5)
     });
 
     inputTensor.dispose();
     predictions.dispose();
 
-    // Transformar os valores para números válidos (1-25)
-    const weightedNumbers = Array.from({ length: 25 }, (_, index) => ({
-      number: index + 1,
-      weight: rawResult[index % rawResult.length] * weights[index % weights.length]
+    // Gerar números únicos baseados nos pesos do jogador
+    const numberPool = Array.from({ length: 25 }, (_, i) => ({
+      number: i + 1,
+      weight: rawResult[i % rawResult.length] * (1 + weights[i % weights.length] / 50)
     }));
 
-    // Ordenar por peso e selecionar os 15 maiores
-    const selectedNumbers = weightedNumbers
+    // Adicionar aleatoriedade controlada pelos pesos
+    numberPool.forEach(item => {
+      const randomFactor = Math.random() * (weights[item.number % weights.length] / 100);
+      item.weight *= (1 + randomFactor);
+    });
+
+    // Selecionar 15 números únicos baseados nos pesos
+    const selectedNumbers = numberPool
       .sort((a, b) => b.weight - a.weight)
       .slice(0, 15)
       .map(item => item.number)
       .sort((a, b) => a - b);
 
-    systemLogger.log('prediction', 'Números selecionados após aplicação de pesos:', {
+    systemLogger.log('prediction', 'Números selecionados para jogador:', {
       selectedNumbers,
-      uniqueCount: new Set(selectedNumbers).size
+      uniqueCount: new Set(selectedNumbers).size,
+      weightRange: {
+        min: Math.min(...weights),
+        max: Math.max(...weights)
+      }
     });
 
     return selectedNumbers;
@@ -91,13 +100,13 @@ export const handlePlayerPredictions = async (
   setNeuralNetworkVisualization: (viz: any) => void,
   lunarData: LunarData
 ) => {
-  systemLogger.log('prediction', 'Iniciando predições para jogadores:', {
+  systemLogger.log('prediction', 'Iniciando predições para todos jogadores:', {
     totalPlayers: players.length,
     currentBoardNumbers,
     nextConcurso
   });
 
-  const predictions = await Promise.all(
+  return Promise.all(
     players.map(async (player) => {
       const prediction = await makePrediction(
         trainedModel, 
@@ -106,7 +115,7 @@ export const handlePlayerPredictions = async (
         { lunarPhase: lunarData.lunarPhase, patterns: lunarData.lunarPatterns }
       );
 
-      // Calcular acertos com números da banca
+      // Verificar acertos com números da banca
       const matches = prediction.filter(num => currentBoardNumbers.includes(num)).length;
 
       systemLogger.log('prediction', `Predição do Jogador #${player.id}:`, {
@@ -115,9 +124,11 @@ export const handlePlayerPredictions = async (
         playerWeights: player.weights.slice(0, 5)
       });
 
+      const timeSeriesAnalyzer = new TimeSeriesAnalysis([[...currentBoardNumbers]]);
+      const arimaPredictor = timeSeriesAnalyzer.analyzeNumbers();
+      predictionMonitor.recordPrediction(prediction, currentBoardNumbers, arimaPredictor);
+
       return prediction;
     })
   );
-
-  return predictions;
 };
