@@ -8,7 +8,7 @@ export async function getOrCreateModel() {
     if (!globalModel) {
       globalModel = tf.sequential();
       
-      // Input layer with correct shape for enriched data
+      // Input layer com shape correto para dados enriquecidos
       globalModel.add(tf.layers.dense({ 
         units: 256, 
         activation: 'relu', 
@@ -35,20 +35,24 @@ export async function getOrCreateModel() {
         kernelInitializer: 'glorotNormal'
       }));
 
-      // Explicitly create and configure optimizer
+      // Configuração explícita do otimizador
       const optimizer = tf.train.adam(0.001);
       
-      // Compile with explicit configuration
+      // Compilação com configuração explícita
       globalModel.compile({ 
         optimizer: optimizer,
         loss: 'binaryCrossentropy',
         metrics: ['accuracy']
       });
 
-      // Verify compilation status
+      // Verificar status da compilação
+      if (!globalModel.optimizer) {
+        throw new Error('Falha na compilação do modelo');
+      }
+
       console.log('Model compilation status:', {
         hasOptimizer: !!globalModel.optimizer,
-        optimizerConfig: globalModel.optimizer?.getConfig(),
+        optimizerConfig: globalModel.optimizer.getConfig(),
         metrics: globalModel.metrics,
         loss: globalModel.loss
       });

@@ -17,16 +17,14 @@ async function makePrediction(
   config: { lunarPhase: string; patterns: any }
 ): Promise<number[]> {
   try {
-    // Check if model is properly initialized and compiled
+    // Verificar se o modelo está pronto
     if (!model || !model.optimizer) {
+      systemLogger.error('model', 'Modelo não inicializado corretamente', {
+        hasModel: !!model,
+        hasOptimizer: model ? !!model.optimizer : false
+      });
       throw new Error('Modelo não compilado ou inválido');
     }
-
-    systemLogger.log('model', '🔍 Estado do modelo:', {
-      hasOptimizer: !!model.optimizer,
-      weights: model.getWeights().length,
-      layers: model.layers.length
-    });
 
     const currentDate = new Date();
     const enrichedData = enrichTrainingData([[...inputData]], [currentDate]);
@@ -57,17 +55,11 @@ async function makePrediction(
     // Fazer previsão
     const predictions = model.predict(inputTensor) as tf.Tensor;
     const rawPredictions = Array.from(await predictions.data());
-
-    systemLogger.log('prediction', '🎯 Previsões brutas:', {
-      predictions: rawPredictions.slice(0, 5),
-      min: Math.min(...rawPredictions),
-      max: Math.max(...rawPredictions)
-    });
-
+    
     // Limpar memória
     inputTensor.dispose();
     predictions.dispose();
-
+    
     // Converter previsões em números válidos (1-25)
     const numberPredictions = rawPredictions
       .map((prob, index) => ({
