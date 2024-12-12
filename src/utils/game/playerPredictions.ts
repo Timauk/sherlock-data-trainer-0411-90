@@ -1,4 +1,4 @@
-import { Player, ModelVisualization } from '@/types/gameTypes';
+import { Player } from '@/types/gameTypes';
 import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
 import { TimeSeriesAnalysis } from '@/utils/analysis/timeSeriesAnalysis';
 import { enrichTrainingData } from '@/utils/features/lotteryFeatureEngineering';
@@ -10,6 +10,34 @@ interface LunarData {
   lunarPatterns: Record<string, number[]>;
 }
 
+async function validateModel(model: tf.LayersModel): Promise<boolean> {
+  if (!model) return false;
+  
+  try {
+    // Verificar se o modelo está compilado
+    if (!model.optimizer) {
+      systemLogger.error('model', 'Modelo não possui otimizador', {
+        hasModel: true,
+        hasOptimizer: false
+      });
+      return false;
+    }
+
+    // Verificar se as camadas estão inicializadas
+    if (!model.layers || model.layers.length === 0) {
+      systemLogger.error('model', 'Modelo não possui camadas', {
+        hasLayers: false
+      });
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    systemLogger.error('model', 'Erro ao validar modelo', { error });
+    return false;
+  }
+}
+
 async function makePrediction(
   model: tf.LayersModel,
   inputData: number[],
@@ -17,12 +45,9 @@ async function makePrediction(
   config: { lunarPhase: string; patterns: any }
 ): Promise<number[]> {
   try {
-    // Verificar se o modelo está pronto
-    if (!model || !model.optimizer) {
-      systemLogger.error('model', 'Modelo não inicializado corretamente', {
-        hasModel: !!model,
-        hasOptimizer: model ? !!model.optimizer : false
-      });
+    // Validação do modelo
+    const isModelValid = await validateModel(model);
+    if (!isModelValid) {
       throw new Error('Modelo não compilado ou inválido');
     }
 
@@ -46,10 +71,9 @@ async function makePrediction(
 
     const inputTensor = tf.tensor2d([weightedData]);
     
-    systemLogger.log('prediction', '📊 Tensor de entrada:', {
+    systemLogger.log('prediction', 'Tensor de entrada criado:', {
       shape: inputTensor.shape,
-      expectedShape: [1, 13072],
-      weightsApplied: weights.slice(0, 5)
+      expectedShape: [1, 13072]
     });
 
     // Fazer previsão
@@ -72,18 +96,14 @@ async function makePrediction(
       .map(p => p.number)
       .sort((a, b) => a - b);
 
-    systemLogger.log('prediction', '✨ Números selecionados:', {
+    systemLogger.log('prediction', 'Números selecionados:', {
       numbers: numberPredictions,
-      total: numberPredictions.length,
-      unique: new Set(numberPredictions).size
+      total: numberPredictions.length
     });
 
     return numberPredictions;
   } catch (error) {
-    systemLogger.error('prediction', 'Erro na previsão:', { 
-      error: error instanceof Error ? error.message : 'Erro desconhecido',
-      stack: error instanceof Error ? error.stack : undefined
-    });
+    systemLogger.error('prediction', 'Erro na previsão:', { error });
     throw error;
   }
 }
@@ -93,7 +113,7 @@ export const handlePlayerPredictions = async (
   trainedModel: tf.LayersModel,
   currentBoardNumbers: number[],
   nextConcurso: number,
-  setNeuralNetworkVisualization: (viz: ModelVisualization) => void,
+  setNeuralNetworkVisualization: (viz: any) => void,
   lunarData: LunarData
 ) => {
   systemLogger.log('game', '🎮 Iniciando predições:', {

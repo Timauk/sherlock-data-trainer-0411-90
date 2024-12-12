@@ -35,32 +35,46 @@ export async function getOrCreateModel() {
         kernelInitializer: 'glorotNormal'
       }));
 
-      // Configuração explícita do otimizador
+      // Configuração explícita do otimizador com learning rate ajustado
       const optimizer = tf.train.adam(0.001);
       
-      // Compilação com configuração explícita
+      // Compilação com configuração explícita e métricas adicionais
       globalModel.compile({ 
         optimizer: optimizer,
         loss: 'binaryCrossentropy',
-        metrics: ['accuracy']
+        metrics: ['accuracy', 'mse']
       });
 
       // Verificar status da compilação
       if (!globalModel.optimizer) {
-        throw new Error('Falha na compilação do modelo');
+        console.error('Falha na compilação do modelo - Tentando recompilar');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        globalModel.compile({ 
+          optimizer: 'adam',
+          loss: 'binaryCrossentropy',
+          metrics: ['accuracy', 'mse']
+        });
       }
 
-      console.log('Model compilation status:', {
+      // Verificação final e logging
+      const compilationStatus = {
         hasOptimizer: !!globalModel.optimizer,
-        optimizerConfig: globalModel.optimizer.getConfig(),
+        optimizerConfig: globalModel.optimizer ? globalModel.optimizer.getConfig() : null,
         metrics: globalModel.metrics,
-        loss: globalModel.loss
-      });
+        loss: globalModel.loss,
+        compiled: !!globalModel.optimizer
+      };
+
+      console.log('Status da compilação do modelo:', compilationStatus);
+
+      if (!compilationStatus.compiled) {
+        throw new Error('Falha na compilação do modelo após tentativas');
+      }
     }
     
     return globalModel;
   } catch (error) {
-    console.error('Error creating/getting model:', error);
+    console.error('Erro ao criar/obter modelo:', error);
     throw error;
   }
 }
