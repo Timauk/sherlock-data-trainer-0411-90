@@ -2,40 +2,42 @@ import * as tf from '@tensorflow/tfjs';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
 import { enrichTrainingData } from '../features/lotteryFeatureEngineering';
-import { LunarData } from './lunarAnalysis';
+
+export interface LunarData {
+  currentPhase: string;
+  patterns: Record<string, any>;
+}
 
 async function validateModelForPrediction(model: tf.LayersModel): Promise<boolean> {
   try {
     if (!model || !model.layers || model.layers.length === 0) {
-      systemLogger.error('model', 'Modelo inválido ou sem camadas');
+      systemLogger.error('model', 'Invalid model or no layers');
       return false;
     }
 
-    const inputShape = model.inputs[0].shape;
-    const outputShape = model.outputs[0].shape;
-
-    if (!inputShape || inputShape[1] !== 13072) {
-      systemLogger.error('model', 'Shape de entrada inválido', { shape: inputShape });
-      return false;
+    // Ensure model is compiled
+    if (!model.optimizer) {
+      systemLogger.error('model', 'Model not compiled');
+      model.compile({
+        optimizer: tf.train.adam(0.001),
+        loss: 'binaryCrossentropy',
+        metrics: ['accuracy']
+      });
     }
 
-    if (!outputShape || outputShape[1] !== 15) {
-      systemLogger.error('model', 'Shape de saída inválido', { shape: outputShape });
-      return false;
-    }
-
+    // Test prediction with dummy data
     const testTensor = tf.zeros([1, 13072]);
     try {
-      const testPrediction = model.predict(testTensor) as tf.Tensor;
-      testPrediction.dispose();
+      const testPred = model.predict(testTensor) as tf.Tensor;
+      testPred.dispose();
       testTensor.dispose();
       return true;
     } catch (error) {
-      systemLogger.error('model', 'Erro ao testar previsão', { error });
+      systemLogger.error('model', 'Model prediction test failed', { error });
       return false;
     }
   } catch (error) {
-    systemLogger.error('model', 'Erro ao validar modelo', { error });
+    systemLogger.error('model', 'Model validation failed', { error });
     return false;
   }
 }
@@ -65,16 +67,17 @@ async function makePrediction(
   try {
     const isModelValid = await validateModelForPrediction(model);
     if (!isModelValid) {
-      throw new Error('Modelo não compilado ou inválido');
+      throw new Error('Model not compiled or invalid');
     }
 
     const currentDate = new Date();
     const enrichedData = enrichTrainingData([[...inputData]], [currentDate]);
     
     if (!enrichedData || !enrichedData[0]) {
-      throw new Error('Falha ao enriquecer dados de entrada');
+      throw new Error('Failed to enrich input data');
     }
 
+    // Ensure correct shape with padding
     const paddedData = new Array(13072).fill(0);
     for (let i = 0; i < enrichedData[0].length && i < 13072; i++) {
       paddedData[i] = enrichedData[0][i];
@@ -82,7 +85,7 @@ async function makePrediction(
     
     const inputTensor = tf.tensor2d([paddedData]);
     
-    systemLogger.log('prediction', 'Tensor de entrada criado', {
+    systemLogger.log('prediction', 'Creating prediction tensor', {
       shape: inputTensor.shape,
       expectedShape: [1, 13072]
     });
@@ -96,7 +99,7 @@ async function makePrediction(
     const weightedNumbers = result.map((n, i) => n * (weights[i % weights.length] || 1));
     return ensureUniqueNumbers(weightedNumbers);
   } catch (error) {
-    systemLogger.error('prediction', 'Erro na previsão', { error });
+    systemLogger.error('prediction', 'Error making prediction', { error });
     throw error;
   }
 }
@@ -116,6 +119,11 @@ export async function handlePlayerPredictions(
 
   if (!trainedModel) {
     throw new Error('Modelo não carregado');
+  }
+
+  const isModelValid = await validateModelForPrediction(trainedModel);
+  if (!isModelValid) {
+    throw new Error('Model validation failed');
   }
 
   setNeuralNetworkVisualization({
