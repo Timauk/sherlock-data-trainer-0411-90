@@ -4,6 +4,7 @@ import { TimeSeriesAnalysis } from '@/utils/analysis/timeSeriesAnalysis';
 import { enrichTrainingData } from '@/utils/features/lotteryFeatureEngineering';
 import * as tf from '@tensorflow/tfjs';
 import { systemLogger } from '../logging/systemLogger';
+import { CheckCircle2, XCircle } from 'lucide-react';
 
 interface LunarData {
   lunarPhase: string;
@@ -17,46 +18,83 @@ async function makePrediction(
   config: { lunarPhase: string; patterns: any }
 ): Promise<number[]> {
   try {
-    systemLogger.log('prediction', 'Iniciando predição da rede neural', {
-      inputDataLength: inputData.length,
-      weightsLength: weights.length,
-      sampleWeights: weights.slice(0, 5)
+    // Log inicial com estrutura do modelo
+    systemLogger.log('model', '🔍 Verificando estrutura do modelo:', {
+      layers: model.layers.map(l => ({
+        name: l.name,
+        inputShape: l.inputShape,
+        outputShape: l.outputShape
+      })),
+      hasWeights: model.getWeights().length > 0,
+      optimizer: model.optimizer ? '✅' : '❌'
     });
 
     const currentDate = new Date();
     const enrichedData = enrichTrainingData([[...inputData]], [currentDate]);
     
     if (!enrichedData || !enrichedData[0]) {
+      systemLogger.error('prediction', '❌ Falha ao enriquecer dados', {
+        inputData: inputData.length,
+        enrichedData: enrichedData ? 'null' : 'undefined'
+      });
       throw new Error('Failed to enrich input data');
     }
 
-    // Preparar dados para a rede neural
+    // Log dos dados enriquecidos
+    systemLogger.log('prediction', '📊 Dados enriquecidos gerados:', {
+      originalLength: inputData.length,
+      enrichedLength: enrichedData[0].length,
+      sampleData: enrichedData[0].slice(0, 5)
+    });
+
+    // Preparar dados para a rede neural - mesmo formato do treino
     const paddedData = new Array(13072).fill(0);
     for (let i = 0; i < enrichedData[0].length && i < 13072; i++) {
       paddedData[i] = enrichedData[0][i];
     }
 
-    // Aplicar pesos do jogador diretamente nos dados de entrada
+    // Log dos pesos do jogador
+    systemLogger.log('player', '👤 Pesos do jogador:', {
+      weightsLength: weights.length,
+      sampleWeights: weights.slice(0, 5),
+      weightStats: {
+        min: Math.min(...weights),
+        max: Math.max(...weights),
+        avg: weights.reduce((a, b) => a + b, 0) / weights.length
+      }
+    });
+
+    // Aplicar pesos do jogador nos dados
     const weightedInput = paddedData.map((value, index) => 
       value * weights[index % weights.length]
     );
 
-    // Fazer predição usando a rede neural
+    // Verificar formato do tensor
     const inputTensor = tf.tensor2d([weightedInput]);
+    systemLogger.log('model', '📐 Formato do tensor de entrada:', {
+      shape: inputTensor.shape,
+      expectedShape: [1, 13072],
+      status: inputTensor.shape[1] === 13072 ? '✅' : '❌'
+    });
+
+    // Fazer predição
     const predictions = model.predict(inputTensor) as tf.Tensor;
     const rawPredictions = Array.from(await predictions.data());
 
-    systemLogger.log('prediction', 'Resultado da rede neural:', {
-      rawLength: rawPredictions.length,
-      samplePredictions: rawPredictions.slice(0, 5),
-      weightsApplied: weights.slice(0, 5)
+    systemLogger.log('prediction', '🎯 Predições brutas:', {
+      length: rawPredictions.length,
+      sample: rawPredictions.slice(0, 5),
+      stats: {
+        min: Math.min(...rawPredictions),
+        max: Math.max(...rawPredictions)
+      }
     });
 
     // Cleanup
     inputTensor.dispose();
     predictions.dispose();
 
-    // Transformar as predições em números de 1 a 25
+    // Transformar predições em números de 1-25
     const numberPredictions = Array.from({ length: 25 }, (_, i) => ({
       number: i + 1,
       probability: rawPredictions[i % rawPredictions.length]
@@ -69,15 +107,15 @@ async function makePrediction(
       .map(item => item.number)
       .sort((a, b) => a - b);
 
-    systemLogger.log('prediction', 'Números selecionados pela rede:', {
-      selectedNumbers,
+    systemLogger.log('prediction', '✨ Números finais selecionados:', {
+      numbers: selectedNumbers,
       uniqueCount: new Set(selectedNumbers).size,
-      weights: weights.slice(0, 5)
+      status: selectedNumbers.length === 15 ? '✅' : '❌'
     });
 
     return selectedNumbers;
   } catch (error) {
-    systemLogger.error('prediction', 'Erro na predição:', { 
+    systemLogger.error('prediction', '❌ Erro na predição:', { 
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined
     });
@@ -93,10 +131,10 @@ export const handlePlayerPredictions = async (
   setNeuralNetworkVisualization: (viz: any) => void,
   lunarData: LunarData
 ) => {
-  systemLogger.log('prediction', 'Iniciando predições para todos jogadores:', {
+  systemLogger.log('game', '🎮 Iniciando rodada de predições:', {
     totalPlayers: players.length,
-    currentBoardNumbers,
-    nextConcurso
+    concurso: nextConcurso,
+    modelLoaded: !!trainedModel
   });
 
   return Promise.all(
@@ -110,10 +148,11 @@ export const handlePlayerPredictions = async (
 
       const matches = prediction.filter(num => currentBoardNumbers.includes(num)).length;
 
-      systemLogger.log('prediction', `Predição do Jogador #${player.id}:`, {
+      systemLogger.log('player', `🎲 Resultado Jogador #${player.id}:`, {
         prediction,
         matches,
-        playerWeights: player.weights.slice(0, 5)
+        accuracy: `${((matches / 15) * 100).toFixed(1)}%`,
+        status: matches > 0 ? '✅' : '❌'
       });
 
       const timeSeriesAnalyzer = new TimeSeriesAnalysis([[...currentBoardNumbers]]);
