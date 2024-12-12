@@ -12,9 +12,10 @@ export async function getOrCreateModel() {
         memory: tf.memory()
       });
 
+      // Create model with explicit architecture
       globalModel = tf.sequential();
       
-      // Input layer com shape correto para dados enriquecidos
+      // Input layer with correct shape for enriched data
       globalModel.add(tf.layers.dense({ 
         units: 256, 
         activation: 'relu', 
@@ -41,24 +42,33 @@ export async function getOrCreateModel() {
         kernelInitializer: 'glorotNormal'
       }));
 
-      // Configuração explícita do otimizador com learning rate ajustado
+      // Explicit optimizer configuration
       const optimizer = tf.train.adam(0.001);
       
-      // Compilação com configuração explícita e métricas adicionais
+      // Compile with explicit configuration and metrics
       globalModel.compile({ 
         optimizer: optimizer,
         loss: 'binaryCrossentropy',
         metrics: ['accuracy', 'mse']
       });
 
-      // Verificar status da compilação
+      // Verify model compilation
       const compilationStatus = validateModel(globalModel);
-      
       if (!compilationStatus.isValid) {
-        throw new Error(`Falha na compilação do modelo: ${compilationStatus.error}`);
+        throw new Error(`Model compilation failed: ${compilationStatus.error}`);
       }
 
-      systemLogger.log('model', 'Modelo criado e compilado com sucesso', {
+      // Test prediction with dummy data
+      const testTensor = tf.zeros([1, 13072]);
+      try {
+        const testPred = globalModel.predict(testTensor);
+        testPred.dispose();
+        testTensor.dispose();
+      } catch (error) {
+        throw new Error(`Model prediction test failed: ${error.message}`);
+      }
+
+      systemLogger.log('model', 'Model created and compiled successfully', {
         layers: globalModel.layers.length,
         optimizer: globalModel.optimizer ? 'configured' : 'missing',
         metrics: globalModel.metrics,
@@ -68,7 +78,7 @@ export async function getOrCreateModel() {
     
     return globalModel;
   } catch (error) {
-    systemLogger.error('model', 'Erro ao criar/obter modelo:', { 
+    systemLogger.error('model', 'Error creating/getting model:', { 
       error,
       stack: error instanceof Error ? error.stack : undefined
     });
@@ -78,22 +88,22 @@ export async function getOrCreateModel() {
 
 function validateModel(model) {
   if (!model) {
-    return { isValid: false, error: 'Modelo não inicializado' };
+    return { isValid: false, error: 'Model not initialized' };
   }
 
   if (!model.layers || model.layers.length === 0) {
-    return { isValid: false, error: 'Modelo sem camadas' };
+    return { isValid: false, error: 'Model has no layers' };
   }
 
   if (!model.optimizer) {
-    return { isValid: false, error: 'Otimizador não configurado' };
+    return { isValid: false, error: 'Optimizer not configured' };
   }
 
   const inputShape = model.inputs[0].shape;
   if (!inputShape || inputShape[1] !== 13072) {
     return { 
       isValid: false, 
-      error: `Shape de entrada inválido: ${inputShape}. Esperado: [null, 13072]` 
+      error: `Invalid input shape: ${inputShape}. Expected: [null, 13072]` 
     };
   }
 
@@ -101,7 +111,7 @@ function validateModel(model) {
   if (!outputShape || outputShape[1] !== 15) {
     return { 
       isValid: false, 
-      error: `Shape de saída inválido: ${outputShape}. Esperado: [null, 15]` 
+      error: `Invalid output shape: ${outputShape}. Expected: [null, 15]` 
     };
   }
 
