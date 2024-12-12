@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Player } from '@/types/gameTypes';
 import * as tf from '@tensorflow/tfjs';
-import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import NumberSelector from './NumberSelector';
 import PredictionsList from './PredictionsList';
 import { systemLogger } from '../utils/logging/systemLogger';
@@ -45,7 +45,11 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
     const items = getMissingItems();
     systemLogger.log('system', 'Estado dos componentes de previsão', {
       champion: { exists: !!champion, type: typeof champion, hasId: champion?.id !== undefined },
-      model: { loaded: !!trainedModel, type: typeof trainedModel },
+      model: { 
+        loaded: !!trainedModel, 
+        hasOptimizer: trainedModel?.optimizer !== undefined,
+        compiled: trainedModel?.optimizer !== undefined 
+      },
       lastNumbers: { exists: !!lastConcursoNumbers, length: lastConcursoNumbers?.length },
       missingItems: items,
       timestamp: new Date().toISOString()
@@ -62,12 +66,35 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
     );
   }, []);
 
-  const handlePredictionsGenerated = useCallback((newPredictions: PredictionResult[]) => {
-    setPredictions(newPredictions);
-  }, []);
+  const handlePredictionsGenerated = useCallback(async (newPredictions: PredictionResult[]) => {
+    try {
+      setIsGenerating(true);
+      
+      // Validate predictions
+      if (!newPredictions?.length) {
+        throw new Error("Nenhuma previsão foi gerada");
+      }
+
+      // Update state with new predictions
+      setPredictions(newPredictions);
+      
+      toast({
+        title: "Previsões Geradas",
+        description: `${newPredictions.length} jogos foram gerados com sucesso!`,
+      });
+    } catch (error) {
+      toast({
+        title: "Erro na Geração",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
-    const allDataLoaded = Boolean(champion && trainedModel && lastConcursoNumbers?.length > 0);
+    const allDataLoaded = Boolean(champion && trainedModel?.optimizer && lastConcursoNumbers?.length > 0);
     setSystemReady(allDataLoaded);
 
     if (allDataLoaded) {
@@ -96,29 +123,40 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
               ready: systemReady
             }}
             isGenerating={isGenerating}
-            onGenerate={() => {
-              if (champion && trainedModel) {
+            onGenerate={async () => {
+              if (champion && trainedModel?.optimizer) {
                 setIsGenerating(true);
-                const generator = (
-                  <PredictionGenerator
-                    champion={champion}
-                    trainedModel={trainedModel}
-                    lastConcursoNumbers={lastConcursoNumbers}
-                    selectedNumbers={selectedNumbers}
-                    onPredictionsGenerated={(newPreds) => {
-                      handlePredictionsGenerated(newPreds);
-                      setIsGenerating(false);
-                    }}
-                  />
-                );
-                return generator;
+                try {
+                  const generator = (
+                    <PredictionGenerator
+                      champion={champion}
+                      trainedModel={trainedModel}
+                      lastConcursoNumbers={lastConcursoNumbers}
+                      selectedNumbers={selectedNumbers}
+                      onPredictionsGenerated={handlePredictionsGenerated}
+                    />
+                  );
+                  return generator;
+                } catch (error) {
+                  toast({
+                    title: "Erro",
+                    description: "Falha ao iniciar geração de previsões",
+                    variant: "destructive"
+                  });
+                  setIsGenerating(false);
+                }
               }
             }}
             isServerProcessing={isServerProcessing}
           />
         </CardHeader>
         <CardContent>
-          {predictions.length > 0 ? (
+          {isGenerating ? (
+            <div className="flex flex-col items-center justify-center p-8 space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Gerando previsões...</p>
+            </div>
+          ) : predictions.length > 0 ? (
             <PredictionsList 
               predictions={predictions} 
               selectedNumbers={selectedNumbers}

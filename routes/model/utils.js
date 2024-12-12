@@ -8,7 +8,7 @@ export async function getOrCreateModel() {
     if (!globalModel) {
       globalModel = tf.sequential();
       
-      // Primeira camada com input shape correto para dados enriquecidos
+      // Input layer with correct shape for enriched data
       globalModel.add(tf.layers.dense({ 
         units: 256, 
         activation: 'relu', 
@@ -35,26 +35,29 @@ export async function getOrCreateModel() {
         kernelInitializer: 'glorotNormal'
       }));
 
-      // Garantir que o optimizer seja compilado corretamente
+      // Explicitly create and configure optimizer
       const optimizer = tf.train.adam(0.001);
       
+      // Compile with explicit configuration
       globalModel.compile({ 
         optimizer: optimizer,
         loss: 'binaryCrossentropy',
         metrics: ['accuracy']
       });
 
-      console.log('Modelo criado e compilado:', {
-        inputShape: globalModel.inputs[0].shape,
-        optimizer: globalModel.optimizer ? '✅' : '❌',
-        compiled: globalModel.compiled ? '✅' : '❌'
+      // Verify compilation status
+      console.log('Model compilation status:', {
+        hasOptimizer: !!globalModel.optimizer,
+        optimizerConfig: globalModel.optimizer?.getConfig(),
+        metrics: globalModel.metrics,
+        loss: globalModel.loss
       });
     }
     
     return globalModel;
   } catch (error) {
-    console.error('Erro ao criar/obter modelo:', error);
-    throw error; // Propagar erro para melhor diagnóstico
+    console.error('Error creating/getting model:', error);
+    throw error;
   }
 }
 
