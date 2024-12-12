@@ -56,7 +56,7 @@ function ensureUniqueNumbers(numbers: number[]): number[] {
   return result;
 }
 
-export async function makePrediction(
+async function makePrediction(
   model: tf.LayersModel,
   inputData: number[],
   weights: number[],
@@ -103,14 +103,13 @@ export async function makePrediction(
 
 export async function handlePlayerPredictions(
   players: Player[],
-  trainedModel: tf.LayersModel | null,
-  nextConcurso: number,
+  trainedModel: tf.LayersModel,
+  currentBoardNumbers: number[],
   setNeuralNetworkVisualization: (viz: any) => void,
   lunarData: LunarData
 ) {
   systemLogger.log('game', '🎮 Iniciando predições', {
     totalPlayers: players.length,
-    concurso: nextConcurso,
     modelLoaded: !!trainedModel,
     lunarPhase: lunarData.currentPhase
   });
@@ -119,7 +118,6 @@ export async function handlePlayerPredictions(
     throw new Error('Modelo não carregado');
   }
 
-  // Update neural network visualization with layer info
   setNeuralNetworkVisualization({
     layers: trainedModel.layers.map(layer => ({
       units: (layer as any).units || 0,
@@ -128,12 +126,12 @@ export async function handlePlayerPredictions(
     weights: players[0]?.weights || []
   });
 
-  return await Promise.all(
+  return Promise.all(
     players.map(async (player) => {
       try {
         const prediction = await makePrediction(
           trainedModel,
-          [],
+          currentBoardNumbers,
           player.weights,
           {
             lunarPhase: lunarData.currentPhase,

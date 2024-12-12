@@ -79,11 +79,10 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
         players,
         trainedModel,
         currentBoardNumbers,
-        nextConcurso,
         gameState.setNeuralNetworkVisualization,
         { 
-          lunarPhase: 'Crescente',
-          lunarPatterns: {}
+          currentPhase: 'Crescente',
+          patterns: {}
         }
       );
 
