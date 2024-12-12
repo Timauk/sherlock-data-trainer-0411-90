@@ -17,14 +17,13 @@ async function makePrediction(
   config: { lunarPhase: string; patterns: any }
 ): Promise<number[]> {
   try {
-    // Verificar estado do modelo
-    if (!model || !model.compiled) {
+    // Check if model is properly initialized and compiled
+    if (!model || !model.optimizer) {
       throw new Error('Modelo não compilado ou inválido');
     }
 
     systemLogger.log('model', '🔍 Estado do modelo:', {
-      compiled: model.compiled,
-      optimizer: model.optimizer ? '✅' : '❌',
+      hasOptimizer: !!model.optimizer,
       weights: model.getWeights().length,
       layers: model.layers.length
     });
@@ -105,10 +104,17 @@ export const handlePlayerPredictions = async (
   setNeuralNetworkVisualization: (viz: ModelVisualization) => void,
   lunarData: LunarData
 ) => {
-  systemLogger.log('game', '🎮 Iniciando previsões:', {
+  systemLogger.log('game', '🎮 Iniciando predições:', {
     totalPlayers: players.length,
     concurso: nextConcurso,
-    modelStatus: trainedModel ? 'loaded' : 'not loaded'
+    modelLoaded: !!trainedModel,
+    modelConfig: {
+      layers: trainedModel.layers.length,
+      hasWeights: trainedModel.getWeights().length > 0,
+      optimizer: trainedModel.optimizer ? '✅' : '❌',
+      inputDataShape: currentBoardNumbers.length,
+      weightsLength: players[0]?.weights.length
+    }
   });
 
   return Promise.all(
