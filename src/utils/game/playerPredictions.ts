@@ -17,7 +17,7 @@ async function makePrediction(
   config: { lunarPhase: string; patterns: any }
 ): Promise<number[]> {
   try {
-    systemLogger.log('prediction', 'Iniciando predição', {
+    systemLogger.log('prediction', 'Iniciando predição com dados:', {
       inputDataLength: inputData.length,
       weightsLength: weights.length,
       sampleWeights: weights.slice(0, 5)
@@ -30,7 +30,7 @@ async function makePrediction(
       throw new Error('Failed to enrich input data');
     }
 
-    systemLogger.log('prediction', 'Dados enriquecidos', {
+    systemLogger.log('prediction', 'Dados enriquecidos:', {
       originalLength: inputData.length,
       enrichedLength: enrichedData[0].length,
       sampleEnriched: enrichedData[0].slice(0, 5)
@@ -45,7 +45,7 @@ async function makePrediction(
     const predictions = model.predict(inputTensor) as tf.Tensor;
     const rawResult = Array.from(await predictions.data());
 
-    systemLogger.log('prediction', 'Resultado bruto do modelo', {
+    systemLogger.log('prediction', 'Resultado bruto do modelo:', {
       rawResultLength: rawResult.length,
       sampleRawResult: rawResult.slice(0, 5),
       min: Math.min(...rawResult),
@@ -55,15 +55,11 @@ async function makePrediction(
     inputTensor.dispose();
     predictions.dispose();
 
-    // Aplicar pesos e normalizar para números válidos (1-25)
-    const weightedNumbers = rawResult.map((value, index) => {
-      const weight = weights[index % weights.length];
-      const weightedValue = value * (1 + weight);
-      return {
-        number: index % 25 + 1,
-        weight: weightedValue
-      };
-    });
+    // Transformar os valores para números válidos (1-25)
+    const weightedNumbers = Array.from({ length: 25 }, (_, index) => ({
+      number: index + 1,
+      weight: rawResult[index % rawResult.length] * weights[index % weights.length]
+    }));
 
     // Ordenar por peso e selecionar os 15 maiores
     const selectedNumbers = weightedNumbers
@@ -72,14 +68,14 @@ async function makePrediction(
       .map(item => item.number)
       .sort((a, b) => a - b);
 
-    systemLogger.log('prediction', 'Números selecionados após aplicação de pesos', {
+    systemLogger.log('prediction', 'Números selecionados após aplicação de pesos:', {
       selectedNumbers,
       uniqueCount: new Set(selectedNumbers).size
     });
 
     return selectedNumbers;
   } catch (error) {
-    systemLogger.error('prediction', 'Erro na predição', { 
+    systemLogger.error('prediction', 'Erro na predição:', { 
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined
     });
@@ -95,7 +91,7 @@ export const handlePlayerPredictions = async (
   setNeuralNetworkVisualization: (viz: any) => void,
   lunarData: LunarData
 ) => {
-  systemLogger.log('prediction', 'Iniciando predições para jogadores', {
+  systemLogger.log('prediction', 'Iniciando predições para jogadores:', {
     totalPlayers: players.length,
     currentBoardNumbers,
     nextConcurso
@@ -113,7 +109,7 @@ export const handlePlayerPredictions = async (
       // Calcular acertos com números da banca
       const matches = prediction.filter(num => currentBoardNumbers.includes(num)).length;
 
-      systemLogger.log('prediction', `Predição do Jogador #${player.id}`, {
+      systemLogger.log('prediction', `Predição do Jogador #${player.id}:`, {
         prediction,
         matches,
         playerWeights: player.weights.slice(0, 5)
