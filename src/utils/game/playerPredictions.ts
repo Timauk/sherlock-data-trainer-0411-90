@@ -2,7 +2,7 @@ import * as tf from '@tensorflow/tfjs';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
 import { enrichTrainingData } from '../features/lotteryFeatureEngineering';
-import { LunarData } from '../game/lunarAnalysis';
+import { LunarData } from './lunarAnalysis';
 
 async function validateModelForPrediction(model: tf.LayersModel): Promise<boolean> {
   try {
@@ -11,7 +11,6 @@ async function validateModelForPrediction(model: tf.LayersModel): Promise<boolea
       return false;
     }
 
-    // Verify model has expected architecture
     const inputShape = model.inputs[0].shape;
     const outputShape = model.outputs[0].shape;
 
@@ -25,7 +24,6 @@ async function validateModelForPrediction(model: tf.LayersModel): Promise<boolea
       return false;
     }
 
-    // Test prediction capability
     const testTensor = tf.zeros([1, 13072]);
     try {
       const testPrediction = model.predict(testTensor) as tf.Tensor;
@@ -47,14 +45,10 @@ function ensureUniqueNumbers(numbers: number[]): number[] {
   const result: number[] = [];
   
   for (let num of numbers) {
-    // Ensure number is within valid range (1-25)
     num = Math.max(1, Math.min(25, Math.round(num)));
-    
-    // If number already exists, find next available number
     while (uniqueNumbers.has(num)) {
       num = num % 25 + 1;
     }
-    
     uniqueNumbers.add(num);
     result.push(num);
   }
@@ -99,7 +93,6 @@ export async function makePrediction(
     inputTensor.dispose();
     prediction.dispose();
 
-    // Apply weights and ensure unique numbers
     const weightedNumbers = result.map((n, i) => n * (weights[i % weights.length] || 1));
     return ensureUniqueNumbers(weightedNumbers);
   } catch (error) {
@@ -108,13 +101,13 @@ export async function makePrediction(
   }
 }
 
-export const generatePredictions = async (
+export async function handlePlayerPredictions(
   players: Player[],
   trainedModel: tf.LayersModel | null,
   nextConcurso: number,
   setNeuralNetworkVisualization: (viz: any) => void,
   lunarData: LunarData
-) => {
+) {
   systemLogger.log('game', '🎮 Iniciando predições', {
     totalPlayers: players.length,
     concurso: nextConcurso,
@@ -126,11 +119,11 @@ export const generatePredictions = async (
     throw new Error('Modelo não carregado');
   }
 
-  // Update neural network visualization
+  // Update neural network visualization with layer info
   setNeuralNetworkVisualization({
     layers: trainedModel.layers.map(layer => ({
-      units: layer.units || 0,
-      activation: layer.activation?.toString() || 'unknown'
+      units: (layer as any).units || 0,
+      activation: (layer as any).activation?.toString() || 'unknown'
     })),
     weights: players[0]?.weights || []
   });
@@ -155,4 +148,4 @@ export const generatePredictions = async (
       }
     })
   );
-};
+}

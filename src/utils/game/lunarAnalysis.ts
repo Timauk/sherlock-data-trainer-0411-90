@@ -1,3 +1,8 @@
+export interface LunarData {
+  currentPhase: string;
+  patterns: Record<string, number[]>;
+}
+
 export const getLunarPhase = (date: Date): string => {
   // Simplified lunar phase calculation
   const day = date.getDate();
