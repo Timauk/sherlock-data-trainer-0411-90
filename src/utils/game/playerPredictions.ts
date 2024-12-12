@@ -13,25 +13,25 @@ interface LunarData {
 async function validateModelForPrediction(model: tf.LayersModel): Promise<boolean> {
   try {
     if (!model || !model.layers || model.layers.length === 0) {
-      systemLogger.error('model', 'Modelo inválido ou sem camadas');
+      systemLogger.error('model', 'Invalid model or no layers');
       return false;
     }
 
-    // Verificar se o modelo tem a arquitetura esperada
+    // Verify model has expected architecture
     const inputShape = model.inputs[0].shape;
     const outputShape = model.outputs[0].shape;
 
     if (!inputShape || inputShape[1] !== 13072) {
-      systemLogger.error('model', 'Shape de entrada inválido', { shape: inputShape });
+      systemLogger.error('model', 'Invalid input shape', { shape: inputShape });
       return false;
     }
 
     if (!outputShape || outputShape[1] !== 15) {
-      systemLogger.error('model', 'Shape de saída inválido', { shape: outputShape });
+      systemLogger.error('model', 'Invalid output shape', { shape: outputShape });
       return false;
     }
 
-    // Verificar se o modelo pode fazer previsões
+    // Test prediction capability
     const testTensor = tf.zeros([1, 13072]);
     try {
       const testPrediction = model.predict(testTensor) as tf.Tensor;
@@ -39,11 +39,11 @@ async function validateModelForPrediction(model: tf.LayersModel): Promise<boolea
       testTensor.dispose();
       return true;
     } catch (error) {
-      systemLogger.error('model', 'Erro ao testar previsão', { error });
+      systemLogger.error('model', 'Error testing prediction', { error });
       return false;
     }
   } catch (error) {
-    systemLogger.error('model', 'Erro ao validar modelo', { error });
+    systemLogger.error('model', 'Error validating model', { error });
     return false;
   }
 }
@@ -55,20 +55,20 @@ async function makePrediction(
   config: { lunarPhase: string; patterns: any }
 ): Promise<number[]> {
   try {
-    // Validar modelo antes da previsão
+    // Validate model before prediction
     const isModelValid = await validateModelForPrediction(model);
     if (!isModelValid) {
-      throw new Error('Modelo não compilado ou inválido');
+      throw new Error('Model not compiled or invalid');
     }
 
     const currentDate = new Date();
     const enrichedData = enrichTrainingData([[...inputData]], [currentDate]);
     
     if (!enrichedData || !enrichedData[0]) {
-      throw new Error('Falha ao enriquecer dados de entrada');
+      throw new Error('Failed to enrich input data');
     }
 
-    // Garantir formato correto com padding
+    // Ensure correct format with padding
     const paddedData = new Array(13072).fill(0);
     for (let i = 0; i < enrichedData[0].length && i < 13072; i++) {
       paddedData[i] = enrichedData[0][i];
@@ -76,7 +76,7 @@ async function makePrediction(
 
     const inputTensor = tf.tensor2d([paddedData]);
     
-    systemLogger.log('prediction', 'Tensor de entrada criado', {
+    systemLogger.log('prediction', 'Input tensor created', {
       shape: inputTensor.shape,
       expectedShape: [1, 13072]
     });
@@ -90,7 +90,7 @@ async function makePrediction(
     
     return result.map((n, i) => Math.round(n * weights[i % weights.length]));
   } catch (error) {
-    systemLogger.error('prediction', 'Erro na previsão', { error });
+    systemLogger.error('prediction', 'Error in prediction', { error });
     throw error;
   }
 }
@@ -103,7 +103,7 @@ export const handlePlayerPredictions = async (
   setNeuralNetworkVisualization: (viz: any) => void,
   lunarData: LunarData
 ) => {
-  systemLogger.log('game', '🎮 Iniciando predições', {
+  systemLogger.log('game', '🎮 Starting predictions', {
     totalPlayers: players.length,
     concurso: nextConcurso,
     modelLoaded: !!trainedModel,
@@ -131,7 +131,7 @@ export const handlePlayerPredictions = async (
 
         return prediction;
       } catch (error) {
-        systemLogger.error('player', `Erro na previsão do Jogador #${player.id}:`, { error });
+        systemLogger.error('player', `Error in Player #${player.id} prediction:`, { error });
         throw error;
       }
     })

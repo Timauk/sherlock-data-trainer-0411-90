@@ -7,7 +7,7 @@ let totalSamples = 0;
 export async function getOrCreateModel() {
   try {
     if (!globalModel) {
-      systemLogger.log('model', 'Iniciando criação do modelo', {
+      systemLogger.log('model', 'Starting model creation', {
         backend: tf.getBackend(),
         memory: tf.memory()
       });
