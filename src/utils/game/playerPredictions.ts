@@ -22,8 +22,9 @@ async function makePrediction(
     systemLogger.log('model', '🔍 Verificando estrutura do modelo:', {
       layers: model.layers.map(l => ({
         name: l.name,
-        inputShape: l.inputShape,
-        outputShape: l.outputShape
+        config: l.getConfig(),
+        outputShape: l.outputShape,
+        specs: l.inputSpec
       })),
       hasWeights: model.getWeights().length > 0,
       optimizer: model.optimizer ? '✅' : '❌'
@@ -134,7 +135,12 @@ export const handlePlayerPredictions = async (
   systemLogger.log('game', '🎮 Iniciando rodada de predições:', {
     totalPlayers: players.length,
     concurso: nextConcurso,
-    modelLoaded: !!trainedModel
+    modelLoaded: !!trainedModel,
+    modelConfig: trainedModel ? {
+      layers: trainedModel.layers.length,
+      inputSpecs: trainedModel.layers[0].inputSpec,
+      outputShape: trainedModel.outputs[0].shape
+    } : null
   });
 
   return Promise.all(
