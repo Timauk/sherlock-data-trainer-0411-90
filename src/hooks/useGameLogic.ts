@@ -8,6 +8,7 @@ import { handlePlayerPredictions } from '@/utils/game/playerPredictions';
 import { updateModel } from '@/utils/game/modelUpdate';
 import { validateGameState } from '@/utils/game/validation';
 import { systemLogger } from '@/utils/logging/systemLogger';
+import { getLunarPhase, analyzeLunarPatterns } from '@/utils/game/lunarAnalysis';
 
 export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel | null) => {
   const {
@@ -75,14 +76,18 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     validateGameState(players, csvData, nextConcurso);
 
     try {
+      const currentDate = new Date();
+      const lunarPhase = getLunarPhase(currentDate);
+      const lunarPatterns = analyzeLunarPatterns([currentDate], [currentBoardNumbers]);
+      
       const playerPredictions = await handlePlayerPredictions(
         players,
         trainedModel,
         currentBoardNumbers,
         gameState.setNeuralNetworkVisualization,
         { 
-          currentPhase: 'Crescente',
-          patterns: {}
+          phase: lunarPhase,
+          patterns: lunarPatterns
         }
       );
 

@@ -1,5 +1,5 @@
 export interface LunarData {
-  currentPhase: string;
+  phase: string;  // Changed from currentPhase to match the interface
   patterns: Record<string, number[]>;
 }
 
@@ -16,10 +16,23 @@ export const analyzeLunarPatterns = (
   dates: Date[],
   numbers: number[][]
 ): Record<string, number[]> => {
-  return {
-    'Nova': numbers[0] || [],
-    'Crescente': numbers[0] || [],
-    'Cheia': numbers[0] || [],
-    'Minguante': numbers[0] || []
+  const patterns: Record<string, number[]> = {
+    'Nova': Array(25).fill(0),
+    'Crescente': Array(25).fill(0),
+    'Cheia': Array(25).fill(0),
+    'Minguante': Array(25).fill(0)
   };
+
+  dates.forEach((date, index) => {
+    const phase = getLunarPhase(date);
+    if (numbers[index]) {
+      numbers[index].forEach(num => {
+        if (patterns[phase]) {
+          patterns[phase][num - 1] = (patterns[phase][num - 1] || 0) + 1;
+        }
+      });
+    }
+  });
+
+  return patterns;
 };

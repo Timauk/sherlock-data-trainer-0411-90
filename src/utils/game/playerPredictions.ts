@@ -2,11 +2,7 @@ import * as tf from '@tensorflow/tfjs';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '../logging/systemLogger';
 import { enrichTrainingData } from '../features/lotteryFeatureEngineering';
-
-interface LunarData {
-  lunarPhase: string;
-  lunarPatterns: Record<string, number[]>;
-}
+import { LunarData } from './lunarAnalysis';
 
 async function validateModelForPrediction(model: tf.LayersModel): Promise<boolean> {
   try {
@@ -15,7 +11,6 @@ async function validateModelForPrediction(model: tf.LayersModel): Promise<boolea
       return false;
     }
 
-    // Ensure model is compiled
     if (!model.optimizer) {
       systemLogger.error('model', 'Model not compiled');
       model.compile({
@@ -25,8 +20,7 @@ async function validateModelForPrediction(model: tf.LayersModel): Promise<boolea
       });
     }
 
-    // Test prediction with dummy data
-    const testTensor = tf.zeros([1, 13057]); // Match the expected input shape
+    const testTensor = tf.zeros([1, 13057]);
     try {
       const testPred = model.predict(testTensor) as tf.Tensor;
       testPred.dispose();
@@ -39,6 +33,46 @@ async function validateModelForPrediction(model: tf.LayersModel): Promise<boolea
   } catch (error) {
     systemLogger.error('model', 'Model validation failed', { error });
     return false;
+  }
+}
+
+async function makePrediction(
+  model: tf.LayersModel,
+  inputData: number[],
+  weights: number[],
+  config: { phase: string; patterns: Record<string, number[]> }
+): Promise<number[]> {
+  try {
+    const isModelValid = await validateModelForPrediction(model);
+    if (!isModelValid) {
+      throw new Error('Model not compiled or invalid');
+    }
+
+    const currentDate = new Date();
+    const enrichedData = enrichTrainingData([[...inputData]], [currentDate]);
+    
+    if (!enrichedData || !enrichedData[0]) {
+      throw new Error('Failed to enrich input data');
+    }
+
+    const paddedData = new Array(13057).fill(0);
+    for (let i = 0; i < enrichedData[0].length && i < 13057; i++) {
+      paddedData[i] = enrichedData[0][i];
+    }
+    
+    const inputTensor = tf.tensor2d([paddedData]);
+    
+    const prediction = model.predict(inputTensor) as tf.Tensor;
+    const result = Array.from(await prediction.data());
+    
+    inputTensor.dispose();
+    prediction.dispose();
+
+    const weightedNumbers = result.map((n, i) => n * (weights[i % weights.length] || 1));
+    return ensureUniqueNumbers(weightedNumbers);
+  } catch (error) {
+    systemLogger.error('prediction', 'Error making prediction', { error });
+    throw error;
   }
 }
 
@@ -55,53 +89,16 @@ function ensureUniqueNumbers(numbers: number[]): number[] {
     result.push(num);
   }
   
-  return result;
-}
-
-async function makePrediction(
-  model: tf.LayersModel,
-  inputData: number[],
-  weights: number[],
-  config: { lunarPhase: string; patterns: any }
-): Promise<number[]> {
-  try {
-    const isModelValid = await validateModelForPrediction(model);
-    if (!isModelValid) {
-      throw new Error('Model not compiled or invalid');
+  while (result.length < 15) {
+    let num = Math.floor(Math.random() * 25) + 1;
+    while (uniqueNumbers.has(num)) {
+      num = num % 25 + 1;
     }
-
-    const currentDate = new Date();
-    const enrichedData = enrichTrainingData([[...inputData]], [currentDate]);
-    
-    if (!enrichedData || !enrichedData[0]) {
-      throw new Error('Failed to enrich input data');
-    }
-
-    // Ensure correct shape with padding
-    const paddedData = new Array(13057).fill(0); // Match the expected input shape
-    for (let i = 0; i < enrichedData[0].length && i < 13057; i++) {
-      paddedData[i] = enrichedData[0][i];
-    }
-    
-    const inputTensor = tf.tensor2d([paddedData]);
-    
-    systemLogger.log('prediction', 'Creating prediction tensor', {
-      shape: inputTensor.shape,
-      expectedShape: [1, 13057]
-    });
-
-    const prediction = model.predict(inputTensor) as tf.Tensor;
-    const result = Array.from(await prediction.data());
-    
-    inputTensor.dispose();
-    prediction.dispose();
-
-    const weightedNumbers = result.map((n, i) => n * (weights[i % weights.length] || 1));
-    return ensureUniqueNumbers(weightedNumbers);
-  } catch (error) {
-    systemLogger.error('prediction', 'Error making prediction', { error });
-    throw error;
+    uniqueNumbers.add(num);
+    result.push(num);
   }
+  
+  return result.slice(0, 15).sort((a, b) => a - b);
 }
 
 export async function handlePlayerPredictions(
@@ -114,7 +111,7 @@ export async function handlePlayerPredictions(
   systemLogger.log('game', 'Starting predictions', {
     totalPlayers: players.length,
     modelLoaded: !!trainedModel,
-    lunarPhase: lunarData.currentPhase
+    lunarPhase: lunarData.phase
   });
 
   if (!trainedModel) {
@@ -142,8 +139,8 @@ export async function handlePlayerPredictions(
           currentBoardNumbers,
           player.weights,
           {
-            lunarPhase: lunarData.currentPhase,
-            patterns: lunarData.lunarPatterns
+            phase: lunarData.phase,
+            patterns: lunarData.patterns
           }
         );
         
