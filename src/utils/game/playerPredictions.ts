@@ -20,7 +20,8 @@ async function validateModelForPrediction(model: tf.LayersModel): Promise<boolea
       });
     }
 
-    const testTensor = tf.zeros([1, 13057]);
+    // Test with correct input shape
+    const testTensor = tf.zeros([1, 13072]);
     try {
       const testPred = model.predict(testTensor) as tf.Tensor;
       testPred.dispose();
@@ -43,11 +44,6 @@ async function makePrediction(
   config: { phase: string; patterns: Record<string, number[]> }
 ): Promise<number[]> {
   try {
-    const isModelValid = await validateModelForPrediction(model);
-    if (!isModelValid) {
-      throw new Error('Model not compiled or invalid');
-    }
-
     const currentDate = new Date();
     const enrichedData = enrichTrainingData([[...inputData]], [currentDate]);
     
@@ -55,8 +51,9 @@ async function makePrediction(
       throw new Error('Failed to enrich input data');
     }
 
-    const paddedData = new Array(13057).fill(0);
-    for (let i = 0; i < enrichedData[0].length && i < 13057; i++) {
+    // Ensure correct padding to 13072 features
+    const paddedData = new Array(13072).fill(0);
+    for (let i = 0; i < enrichedData[0].length && i < 13072; i++) {
       paddedData[i] = enrichedData[0][i];
     }
     
