@@ -19,7 +19,7 @@ export async function getOrCreateModel() {
       globalModel.add(tf.layers.dense({ 
         units: 256, 
         activation: 'relu', 
-        inputShape: [13072], // Updated to match expected shape
+        inputShape: [13057], // Updated to match expected shape
         kernelInitializer: 'glorotNormal',
         kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
       }));
@@ -59,7 +59,7 @@ export async function getOrCreateModel() {
       }
 
       // Test prediction with dummy data
-      const testTensor = tf.zeros([1, 13072]); // Updated to match expected shape
+      const testTensor = tf.zeros([1, 13057]); // Updated to match expected shape
       try {
         const testPred = globalModel.predict(testTensor);
         testPred.dispose();
@@ -100,10 +100,10 @@ function validateModel(model) {
   }
 
   const inputShape = model.inputs[0].shape;
-  if (!inputShape || inputShape[1] !== 13072) { // Updated to match expected shape
+  if (!inputShape || inputShape[1] !== 13057) { // Updated to match expected shape
     return { 
       isValid: false, 
-      error: `Invalid input shape: ${inputShape}. Expected: [null, 13072]` 
+      error: `Invalid input shape: ${inputShape}. Expected: [null, 13057]` 
     };
   }
 

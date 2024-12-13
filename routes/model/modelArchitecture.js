@@ -7,11 +7,11 @@ export const createModelArchitecture = () => {
     
     const model = tf.sequential();
     
-    // Camada de entrada
+    // Camada de entrada ajustada para 13057 features
     model.add(tf.layers.dense({
       units: 256,
       activation: 'relu',
-      inputShape: [13072],
+      inputShape: [13057],
       kernelInitializer: 'heNormal',
       kernelRegularizer: tf.regularizers.l2({ l2: 0.001 })
     }));

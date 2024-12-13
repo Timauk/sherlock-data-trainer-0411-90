@@ -80,9 +80,9 @@ export async function processGameLogic(
       shape: [1, enrichedData[0].length]
     });
 
-    // Garantir que o tensor tenha a forma correta [1, 13072]
-    const paddedData = new Array(13072).fill(0);
-    for (let i = 0; i < enrichedData[0].length && i < 13072; i++) {
+    // Garantir que o tensor tenha a forma correta [1, 13057]
+    const paddedData = new Array(13057).fill(0);
+    for (let i = 0; i < enrichedData[0].length && i < 13057; i++) {
       paddedData[i] = enrichedData[0][i];
     }
     
