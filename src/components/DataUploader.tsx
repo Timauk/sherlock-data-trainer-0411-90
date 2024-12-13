@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import CheckpointControls from './CheckpointControls';
+import { systemLogger } from '@/utils/logging/systemLogger';
 
 interface DataUploaderProps {
   onCsvUpload: (file: File) => void;
@@ -37,7 +38,6 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
       return;
     }
 
-    // Verifica se o nome do arquivo está correto
     if (file.name !== 'modelo-aprendiz.json') {
       toast({
         title: "Nome do Arquivo Incorreto",
@@ -66,7 +66,6 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
       return;
     }
 
-    // Verifica se o nome do arquivo está correto
     if (file.name !== 'modelo-aprendiz.weights.bin') {
       toast({
         title: "Nome do Arquivo Incorreto",
@@ -78,7 +77,7 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
     }
   };
 
-  const handleModelUpload = () => {
+  const handleModelUpload = async () => {
     const jsonFile = jsonFileRef.current?.files?.[0];
     const weightsFile = weightsFileRef.current?.files?.[0];
     
@@ -91,11 +90,26 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
       return;
     }
 
-    onModelUpload(jsonFile, weightsFile);
-    toast({
-      title: "Arquivos Enviados",
-      description: "Modelo e pesos estão sendo carregados..."
-    });
+    try {
+      systemLogger.log('model', 'Iniciando carregamento do modelo');
+      
+      // Chama o callback de upload e aguarda o carregamento
+      await onModelUpload(jsonFile, weightsFile);
+      
+      toast({
+        title: "Modelo Carregado",
+        description: "O modelo neural foi carregado e compilado com sucesso.",
+      });
+      
+      systemLogger.log('model', 'Modelo carregado e compilado com sucesso');
+    } catch (error) {
+      systemLogger.error('model', 'Erro ao carregar modelo', { error });
+      toast({
+        title: "Erro ao Carregar Modelo",
+        description: "Ocorreu um erro ao carregar o modelo neural.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -151,8 +165,9 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
           <Button 
             onClick={handleModelUpload}
             disabled={!hasJsonFile || !hasWeightsFile}
+            className="w-full"
           >
-            <Upload className="mr-2 h-4 w-4" /> Carregar Modelo
+            <Upload className="mr-2 h-4 w-4" /> Carregar e Compilar Modelo
           </Button>
         </TabsContent>
 

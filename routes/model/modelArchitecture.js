@@ -36,15 +36,8 @@ export const createModelArchitecture = () => {
       activation: 'sigmoid',
       kernelInitializer: 'glorotNormal'
     }));
-    
-    // Compilação imediata do modelo
-    model.compile({
-      optimizer: tf.train.adam(0.001),
-      loss: 'binaryCrossentropy',
-      metrics: ['accuracy']
-    });
 
-    systemLogger.log('model', 'Modelo criado e compilado com sucesso', {
+    systemLogger.log('model', 'Arquitetura do modelo criada com sucesso', {
       layers: model.layers.length,
       inputShape: model.inputs[0].shape,
       outputShape: model.outputs[0].shape
