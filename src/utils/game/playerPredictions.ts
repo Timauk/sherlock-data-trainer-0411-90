@@ -10,8 +10,9 @@ async function validateModelForPrediction(model: tf.LayersModel): Promise<boolea
       return false;
     }
 
+    // Verifica se o modelo está compilado
     if (!model.optimizer) {
-      systemLogger.error('model', 'Modelo não compilado');
+      systemLogger.warn('model', 'Modelo não compilado, compilando agora...');
       model.compile({
         optimizer: tf.train.adam(0.001),
         loss: 'binaryCrossentropy',
@@ -19,12 +20,18 @@ async function validateModelForPrediction(model: tf.LayersModel): Promise<boolea
       });
     }
 
-    // Teste com shape correto
+    // Teste com shape correto (13072 features)
     const testTensor = tf.zeros([1, 13072]);
     try {
       const testPred = model.predict(testTensor) as tf.Tensor;
       testPred.dispose();
       testTensor.dispose();
+      
+      systemLogger.log('model', 'Validação do modelo bem sucedida', {
+        inputShape: model.inputs[0].shape,
+        outputShape: model.outputs[0].shape
+      });
+      
       return true;
     } catch (error) {
       systemLogger.error('model', 'Teste de predição falhou', { error });
@@ -61,6 +68,11 @@ export async function handlePlayerPredictions(
   return Promise.all(
     players.map(async player => {
       try {
+        // Validação dos pesos do jogador
+        if (!player.weights || player.weights.length !== 13072) {
+          throw new Error(`Jogador ${player.id} com número incorreto de pesos`);
+        }
+
         const currentDate = new Date();
         const enrichedData = enrichTrainingData([[...currentBoardNumbers]], [currentDate]);
         

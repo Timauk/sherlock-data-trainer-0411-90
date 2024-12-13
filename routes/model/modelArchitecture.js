@@ -7,7 +7,7 @@ export const createModelArchitecture = () => {
   model.add(tf.layers.dense({
     units: 256,
     activation: 'relu',
-    inputShape: [13072], // Ajustado para corresponder ao tamanho real das features
+    inputShape: [13072],
     kernelInitializer: 'heNormal',
     kernelRegularizer: tf.regularizers.l2({ l2: 0.001 })
   }));

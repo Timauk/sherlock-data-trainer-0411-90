@@ -13,23 +13,10 @@ export const useGamePlayers = () => {
     });
     
     const initialPlayers: Player[] = Array.from({ length: numPlayers }, (_, index) => {
-      // Inicializa pesos com valores significativos entre 0.1 e 1
-      const weights = Array.from({ length: 17 }, (_, weightIndex) => {
+      // Inicializa pesos com o tamanho correto (13072)
+      const weights = Array.from({ length: 13072 }, () => {
         const baseWeight = 0.1 + Math.random() * 0.9;
-        
-        // Ajusta pesos baseado em sua função
-        switch(weightIndex) {
-          case 0: // Aprendizado
-            return baseWeight * 1.2;
-          case 1: // Adaptabilidade
-            return baseWeight * 1.1;
-          case 2: // Memória
-            return baseWeight * 1.15;
-          case 3: // Intuição
-            return baseWeight * 1.25;
-          default:
-            return baseWeight;
-        }
+        return baseWeight;
       });
       
       const player = {
@@ -42,7 +29,7 @@ export const useGamePlayers = () => {
       };
 
       systemLogger.log('player', `Jogador #${player.id} criado`, {
-        weights: weights.slice(0, 5),
+        weightsLength: weights.length,
         timestamp: new Date().toISOString()
       });
 
@@ -55,7 +42,7 @@ export const useGamePlayers = () => {
     systemLogger.log('initialization', 'Jogadores criados com sucesso', {
       totalPlayers: initialPlayers.length,
       championId: initialPlayers[0].id,
-      sampleWeights: initialPlayers[0].weights.slice(0, 5),
+      weightsLength: initialPlayers[0].weights.length,
       timestamp: new Date().toISOString()
     });
 
@@ -68,9 +55,18 @@ export const useGamePlayers = () => {
       timestamp: new Date().toISOString()
     });
 
+    // Validação dos pesos antes da atualização
+    const validPlayers = updatedPlayers.every(player => 
+      player.weights && player.weights.length === 13072
+    );
+
+    if (!validPlayers) {
+      systemLogger.error('players', 'Erro: Jogadores com número incorreto de pesos');
+      return;
+    }
+
     setPlayers(updatedPlayers);
     
-    // Atualiza o campeão (jogador com maior pontuação)
     const newChampion = updatedPlayers.reduce((prev, current) => 
       current.score > prev.score ? current : prev
     );
@@ -80,7 +76,7 @@ export const useGamePlayers = () => {
       systemLogger.log('player', `Novo campeão: Jogador #${newChampion.id}`, {
         score: newChampion.score,
         fitness: newChampion.fitness,
-        weights: newChampion.weights.slice(0, 5),
+        weightsLength: newChampion.weights.length,
         timestamp: new Date().toISOString()
       });
     }
