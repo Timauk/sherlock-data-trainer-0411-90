@@ -1,11 +1,11 @@
 import * as tf from '@tensorflow/tfjs';
 import { Player } from '@/types/gameTypes';
-import { systemLogger } from '@/utils/logging/systemLogger';
+import { systemLogger } from '../logging/systemLogger';
 import { enrichTrainingData } from '../features/lotteryFeatureEngineering';
 
-export interface LunarData {
-  currentPhase: string;
-  patterns: Record<string, any>;
+interface LunarData {
+  lunarPhase: string;
+  lunarPatterns: Record<string, number[]>;
 }
 
 async function validateModelForPrediction(model: tf.LayersModel): Promise<boolean> {
@@ -26,7 +26,7 @@ async function validateModelForPrediction(model: tf.LayersModel): Promise<boolea
     }
 
     // Test prediction with dummy data
-    const testTensor = tf.zeros([1, 13057]); // Updated to match expected shape
+    const testTensor = tf.zeros([1, 13057]); // Match the expected input shape
     try {
       const testPred = model.predict(testTensor) as tf.Tensor;
       testPred.dispose();
@@ -78,7 +78,7 @@ async function makePrediction(
     }
 
     // Ensure correct shape with padding
-    const paddedData = new Array(13057).fill(0); // Updated to match expected shape
+    const paddedData = new Array(13057).fill(0); // Match the expected input shape
     for (let i = 0; i < enrichedData[0].length && i < 13057; i++) {
       paddedData[i] = enrichedData[0][i];
     }
@@ -111,7 +111,7 @@ export async function handlePlayerPredictions(
   setNeuralNetworkVisualization: (viz: any) => void,
   lunarData: LunarData
 ) {
-  systemLogger.log('game', '🎮 Starting predictions', {
+  systemLogger.log('game', 'Starting predictions', {
     totalPlayers: players.length,
     modelLoaded: !!trainedModel,
     lunarPhase: lunarData.currentPhase
@@ -143,7 +143,7 @@ export async function handlePlayerPredictions(
           player.weights,
           {
             lunarPhase: lunarData.currentPhase,
-            patterns: lunarData.patterns
+            patterns: lunarData.lunarPatterns
           }
         );
         
