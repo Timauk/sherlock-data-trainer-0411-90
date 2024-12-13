@@ -1,84 +1,62 @@
 import { Player, ModelVisualization } from '@/types/gameTypes';
-import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
-import { TimeSeriesAnalysis } from '@/utils/analysis/timeSeriesAnalysis';
-import { enrichTrainingData } from '@/utils/features/lotteryFeatureEngineering';
-import * as tf from '@tensorflow/tfjs';
 import { systemLogger } from '../logging/systemLogger';
+import * as tf from '@tensorflow/tfjs';
 
-interface LunarData {
-  lunarPhase: string;
-  lunarPatterns: Record<string, number[]>;
-}
-
-async function makePrediction(
+export async function makePrediction(
   model: tf.LayersModel,
   inputData: number[],
   weights: number[],
   config: { lunarPhase: string; patterns: any }
 ): Promise<number[]> {
   try {
-    // Enrich input data with the current date
-    const currentDate = new Date();
-    const enrichedData = enrichTrainingData([[...inputData]], [currentDate]);
+    const inputTensor = tf.tensor2d([inputData]);
+    const rawPredictions = await model.predict(inputTensor) as tf.Tensor;
+    const probabilities = Array.from(await rawPredictions.data());
     
-    if (!enrichedData || !enrichedData[0]) {
-      throw new Error('Failed to enrich input data');
+    // Aplicar pesos do jogador
+    const weightedProbs = probabilities.map((prob, i) => ({
+      number: i + 1,
+      probability: prob * weights[i % weights.length]
+    }));
+
+    // Ordenar por probabilidade
+    weightedProbs.sort((a, b) => b.probability - a.probability);
+
+    // Selecionar 15 números únicos
+    const selectedNumbers = new Set<number>();
+    let index = 0;
+    
+    while (selectedNumbers.size < 15 && index < weightedProbs.length) {
+      const num = weightedProbs[index].number;
+      if (num >= 1 && num <= 25) {
+        selectedNumbers.add(num);
+      }
+      index++;
     }
 
-    // Ensure correct shape with padding
-    const paddedData = new Array(13072).fill(0);
-    for (let i = 0; i < enrichedData[0].length && i < 13072; i++) {
-      paddedData[i] = enrichedData[0][i];
-    }
+    // Converter para array e ordenar
+    const result = Array.from(selectedNumbers).sort((a, b) => a - b);
 
-    systemLogger.log('prediction', 'Creating prediction tensor', {
-      originalLength: inputData.length,
-      enrichedLength: enrichedData[0].length,
-      finalLength: paddedData.length,
-      timestamp: new Date().toISOString()
-    });
-
-    const inputTensor = tf.tensor2d([paddedData]);
-    const predictions = model.predict(inputTensor) as tf.Tensor;
-    const result = Array.from(await predictions.data());
-    
     // Cleanup
     inputTensor.dispose();
-    predictions.dispose();
-    
-    return result.map((n, i) => Math.round(n * weights[i % weights.length]));
-  } catch (error) {
-    systemLogger.error('prediction', 'Error making prediction', { 
-      error,
-      inputShape: inputData.length,
+    rawPredictions.dispose();
+
+    // Feedback para aprendizagem
+    const feedback = {
+      selectedNumbers: result,
+      weights: weights,
+      probability: weightedProbs.filter(wp => result.includes(wp.number))
+                              .reduce((sum, wp) => sum + wp.probability, 0) / 15
+    };
+
+    systemLogger.log('prediction', 'Prediction feedback', {
+      feedback,
       timestamp: new Date().toISOString()
     });
+
+    return result;
+  } catch (error) {
+    systemLogger.error('prediction', 'Error making prediction', { error });
     throw error;
   }
 }
-
-export const handlePlayerPredictions = async (
-  players: Player[],
-  trainedModel: tf.LayersModel,
-  currentBoardNumbers: number[],
-  nextConcurso: number,
-  setNeuralNetworkVisualization: (viz: ModelVisualization) => void,
-  lunarData: LunarData
-) => {
-  return Promise.all(
-    players.map(async player => {
-      const prediction = await makePrediction(
-        trainedModel, 
-        currentBoardNumbers, 
-        player.weights,
-        { lunarPhase: lunarData.lunarPhase, patterns: lunarData.lunarPatterns }
-      );
-
-      const timeSeriesAnalyzer = new TimeSeriesAnalysis([[...currentBoardNumbers]]);
-      const arimaPredictor = timeSeriesAnalyzer.analyzeNumbers();
-      predictionMonitor.recordPrediction(prediction, currentBoardNumbers, arimaPredictor);
-
-      return prediction;
-    })
-  );
-};
