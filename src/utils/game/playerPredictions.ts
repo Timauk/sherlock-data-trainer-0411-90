@@ -20,8 +20,11 @@ async function validateModelForPrediction(model: tf.LayersModel): Promise<boolea
       });
     }
 
-    // Teste com shape correto (13072 features)
-    const testTensor = tf.zeros([1, 13072]);
+    // Obtém o shape correto do input do modelo
+    const inputShape = model.inputs[0].shape[1];
+    
+    // Teste com shape correto do modelo
+    const testTensor = tf.zeros([1, inputShape]);
     try {
       const testPred = model.predict(testTensor) as tf.Tensor;
       testPred.dispose();
@@ -65,12 +68,14 @@ export async function handlePlayerPredictions(
     throw new Error('Validação do modelo falhou');
   }
 
+  const inputShape = trainedModel.inputs[0].shape[1];
+
   return Promise.all(
     players.map(async player => {
       try {
         // Validação dos pesos do jogador
-        if (!player.weights || player.weights.length !== 13072) {
-          throw new Error(`Jogador ${player.id} com número incorreto de pesos`);
+        if (!player.weights || player.weights.length === 0) {
+          throw new Error(`Jogador ${player.id} com pesos inválidos`);
         }
 
         const currentDate = new Date();
@@ -80,9 +85,9 @@ export async function handlePlayerPredictions(
           throw new Error('Falha ao enriquecer dados de entrada');
         }
 
-        // Garantir padding correto para 13072 features
-        const paddedData = new Array(13072).fill(0);
-        for (let i = 0; i < enrichedData[0].length && i < 13072; i++) {
+        // Ajustar o tamanho dos dados para corresponder ao shape do modelo
+        const paddedData = new Array(inputShape).fill(0);
+        for (let i = 0; i < enrichedData[0].length && i < inputShape; i++) {
           paddedData[i] = enrichedData[0][i];
         }
         
@@ -93,7 +98,23 @@ export async function handlePlayerPredictions(
         inputTensor.dispose();
         prediction.dispose();
 
-        return result.map(n => Math.round(n * 24) + 1);
+        // Garantir que retornamos 15 números únicos entre 1 e 25
+        const uniqueNumbers = new Set<number>();
+        const probabilities = result.map((prob, index) => ({
+          number: (index % 25) + 1,
+          probability: prob * player.weights[index % player.weights.length]
+        }));
+
+        // Ordenar por probabilidade e selecionar os 15 números mais prováveis
+        probabilities.sort((a, b) => b.probability - a.probability);
+        
+        for (const prob of probabilities) {
+          if (uniqueNumbers.size < 15) {
+            uniqueNumbers.add(prob.number);
+          }
+        }
+
+        return Array.from(uniqueNumbers).sort((a, b) => a - b);
       } catch (error) {
         systemLogger.error('prediction', `Erro na predição para Jogador #${player.id}:`, { error });
         throw error;
