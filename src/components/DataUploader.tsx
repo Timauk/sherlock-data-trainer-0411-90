@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import CheckpointControls from './CheckpointControls';
 import { systemLogger } from '@/utils/logging/systemLogger';
+import * as tf from '@tensorflow/tfjs';
 
 interface DataUploaderProps {
   onCsvUpload: (file: File) => void;
@@ -91,10 +92,18 @@ const DataUploader: React.FC<DataUploaderProps> = ({ onCsvUpload, onModelUpload,
     }
 
     try {
-      systemLogger.log('model', 'Iniciando carregamento do modelo');
+      systemLogger.log('model', 'Iniciando carregamento e compilação do modelo');
       
-      // Chama o callback de upload e aguarda o carregamento
+      // Carrega o modelo
       await onModelUpload(jsonFile, weightsFile);
+      
+      // Compila o modelo após o carregamento
+      const model = await tf.loadLayersModel(tf.io.browserFiles([jsonFile, weightsFile]));
+      model.compile({
+        optimizer: tf.train.adam(0.001),
+        loss: 'binaryCrossentropy',
+        metrics: ['accuracy']
+      });
       
       toast({
         title: "Modelo Carregado",
