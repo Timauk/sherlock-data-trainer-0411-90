@@ -26,7 +26,7 @@ async function validateModelForPrediction(model: tf.LayersModel): Promise<boolea
     }
 
     // Test prediction with dummy data
-    const testTensor = tf.zeros([1, 13072]);
+    const testTensor = tf.zeros([1, 13057]); // Updated to match expected shape
     try {
       const testPred = model.predict(testTensor) as tf.Tensor;
       testPred.dispose();
@@ -78,8 +78,8 @@ async function makePrediction(
     }
 
     // Ensure correct shape with padding
-    const paddedData = new Array(13072).fill(0);
-    for (let i = 0; i < enrichedData[0].length && i < 13072; i++) {
+    const paddedData = new Array(13057).fill(0); // Updated to match expected shape
+    for (let i = 0; i < enrichedData[0].length && i < 13057; i++) {
       paddedData[i] = enrichedData[0][i];
     }
     
@@ -87,7 +87,7 @@ async function makePrediction(
     
     systemLogger.log('prediction', 'Creating prediction tensor', {
       shape: inputTensor.shape,
-      expectedShape: [1, 13072]
+      expectedShape: [1, 13057]
     });
 
     const prediction = model.predict(inputTensor) as tf.Tensor;
@@ -111,14 +111,14 @@ export async function handlePlayerPredictions(
   setNeuralNetworkVisualization: (viz: any) => void,
   lunarData: LunarData
 ) {
-  systemLogger.log('game', '🎮 Iniciando predições', {
+  systemLogger.log('game', '🎮 Starting predictions', {
     totalPlayers: players.length,
     modelLoaded: !!trainedModel,
     lunarPhase: lunarData.currentPhase
   });
 
   if (!trainedModel) {
-    throw new Error('Modelo não carregado');
+    throw new Error('Model not loaded');
   }
 
   const isModelValid = await validateModelForPrediction(trainedModel);
@@ -128,8 +128,8 @@ export async function handlePlayerPredictions(
 
   setNeuralNetworkVisualization({
     layers: trainedModel.layers.map(layer => ({
-      units: (layer as any).units || 0,
-      activation: (layer as any).activation?.toString() || 'unknown'
+      units: (layer.getConfig() as any).units || 0,
+      activation: (layer.getConfig() as any).activation?.toString() || 'unknown'
     })),
     weights: players[0]?.weights || []
   });
@@ -149,7 +149,7 @@ export async function handlePlayerPredictions(
         
         return prediction;
       } catch (error) {
-        systemLogger.error('player', `Erro na previsão do Jogador #${player.id}:`, { error });
+        systemLogger.error('player', `Error in prediction for Player #${player.id}:`, { error });
         throw error;
       }
     })
