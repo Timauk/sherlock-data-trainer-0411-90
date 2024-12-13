@@ -71,7 +71,7 @@ const calculateTemporalFeatures = (numbers: number[][], dates: Date[]): number[]
 };
 
 const calculateStatisticalFeatures = (numbers: number[][]): number[] => {
-  const features = new Array(2557).fill(0); // Adjusted to make total 13057
+  const features = new Array(2572).fill(0); // Adjusted to make total 13072
   
   numbers.forEach(game => {
     const mean = game.reduce((a, b) => a + b, 0) / game.length;
@@ -96,11 +96,11 @@ export const enrichTrainingData = (
         ...features.frequencyFeatures,    // 5000
         ...features.sequenceFeatures,     // 3000
         ...features.temporalFeatures,     // 2500
-        ...features.statisticalFeatures   // 2557
-      ];                                  // Total: 13057
+        ...features.statisticalFeatures   // 2572
+      ];                                  // Total: 13072
 
-      if (combined.length !== 13057) {
-        throw new Error(`Feature length mismatch: expected 13057, got ${combined.length}`);
+      if (combined.length !== 13072) {
+        throw new Error(`Feature length mismatch: expected 13072, got ${combined.length}`);
       }
 
       return combined;
