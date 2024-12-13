@@ -2,17 +2,16 @@ import * as tf from '@tensorflow/tfjs';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '../logging/systemLogger';
 import { enrichTrainingData } from '../features/lotteryFeatureEngineering';
-import { LunarData } from './lunarAnalysis';
 
 async function validateModelForPrediction(model: tf.LayersModel): Promise<boolean> {
   try {
     if (!model || !model.layers || model.layers.length === 0) {
-      systemLogger.error('model', 'Invalid model or no layers');
+      systemLogger.error('model', 'Modelo inválido ou sem camadas');
       return false;
     }
 
     if (!model.optimizer) {
-      systemLogger.error('model', 'Model not compiled');
+      systemLogger.error('model', 'Modelo não compilado');
       model.compile({
         optimizer: tf.train.adam(0.001),
         loss: 'binaryCrossentropy',
@@ -20,7 +19,7 @@ async function validateModelForPrediction(model: tf.LayersModel): Promise<boolea
       });
     }
 
-    // Test with correct input shape
+    // Teste com shape correto
     const testTensor = tf.zeros([1, 13072]);
     try {
       const testPred = model.predict(testTensor) as tf.Tensor;
@@ -28,74 +27,13 @@ async function validateModelForPrediction(model: tf.LayersModel): Promise<boolea
       testTensor.dispose();
       return true;
     } catch (error) {
-      systemLogger.error('model', 'Model prediction test failed', { error });
+      systemLogger.error('model', 'Teste de predição falhou', { error });
       return false;
     }
   } catch (error) {
-    systemLogger.error('model', 'Model validation failed', { error });
+    systemLogger.error('model', 'Validação do modelo falhou', { error });
     return false;
   }
-}
-
-async function makePrediction(
-  model: tf.LayersModel,
-  inputData: number[],
-  weights: number[],
-  config: { phase: string; patterns: Record<string, number[]> }
-): Promise<number[]> {
-  try {
-    const currentDate = new Date();
-    const enrichedData = enrichTrainingData([[...inputData]], [currentDate]);
-    
-    if (!enrichedData || !enrichedData[0]) {
-      throw new Error('Failed to enrich input data');
-    }
-
-    // Ensure correct padding to 13072 features
-    const paddedData = new Array(13072).fill(0);
-    for (let i = 0; i < enrichedData[0].length && i < 13072; i++) {
-      paddedData[i] = enrichedData[0][i];
-    }
-    
-    const inputTensor = tf.tensor2d([paddedData]);
-    
-    const prediction = model.predict(inputTensor) as tf.Tensor;
-    const result = Array.from(await prediction.data());
-    
-    inputTensor.dispose();
-    prediction.dispose();
-
-    const weightedNumbers = result.map((n, i) => n * (weights[i % weights.length] || 1));
-    return ensureUniqueNumbers(weightedNumbers);
-  } catch (error) {
-    systemLogger.error('prediction', 'Error making prediction', { error });
-    throw error;
-  }
-}
-
-function ensureUniqueNumbers(numbers: number[]): number[] {
-  const uniqueNumbers = new Set<number>();
-  const result: number[] = [];
-  
-  for (let num of numbers) {
-    num = Math.max(1, Math.min(25, Math.round(num)));
-    while (uniqueNumbers.has(num)) {
-      num = num % 25 + 1;
-    }
-    uniqueNumbers.add(num);
-    result.push(num);
-  }
-  
-  while (result.length < 15) {
-    let num = Math.floor(Math.random() * 25) + 1;
-    while (uniqueNumbers.has(num)) {
-      num = num % 25 + 1;
-    }
-    uniqueNumbers.add(num);
-    result.push(num);
-  }
-  
-  return result.slice(0, 15).sort((a, b) => a - b);
 }
 
 export async function handlePlayerPredictions(
@@ -103,47 +41,49 @@ export async function handlePlayerPredictions(
   trainedModel: tf.LayersModel,
   currentBoardNumbers: number[],
   setNeuralNetworkVisualization: (viz: any) => void,
-  lunarData: LunarData
+  lunarData: { phase: string; patterns: Record<string, number[]> }
 ) {
-  systemLogger.log('game', 'Starting predictions', {
+  systemLogger.log('game', 'Iniciando predições', {
     totalPlayers: players.length,
     modelLoaded: !!trainedModel,
     lunarPhase: lunarData.phase
   });
 
   if (!trainedModel) {
-    throw new Error('Model not loaded');
+    throw new Error('Modelo não carregado');
   }
 
   const isModelValid = await validateModelForPrediction(trainedModel);
   if (!isModelValid) {
-    throw new Error('Model validation failed');
+    throw new Error('Validação do modelo falhou');
   }
 
-  setNeuralNetworkVisualization({
-    layers: trainedModel.layers.map(layer => ({
-      units: (layer.getConfig() as any).units || 0,
-      activation: (layer.getConfig() as any).activation?.toString() || 'unknown'
-    })),
-    weights: players[0]?.weights || []
-  });
-
   return Promise.all(
-    players.map(async (player) => {
+    players.map(async player => {
       try {
-        const prediction = await makePrediction(
-          trainedModel,
-          currentBoardNumbers,
-          player.weights,
-          {
-            phase: lunarData.phase,
-            patterns: lunarData.patterns
-          }
-        );
+        const currentDate = new Date();
+        const enrichedData = enrichTrainingData([[...currentBoardNumbers]], [currentDate]);
         
-        return prediction;
+        if (!enrichedData || !enrichedData[0]) {
+          throw new Error('Falha ao enriquecer dados de entrada');
+        }
+
+        // Garantir padding correto para 13072 features
+        const paddedData = new Array(13072).fill(0);
+        for (let i = 0; i < enrichedData[0].length && i < 13072; i++) {
+          paddedData[i] = enrichedData[0][i];
+        }
+        
+        const inputTensor = tf.tensor2d([paddedData]);
+        const prediction = trainedModel.predict(inputTensor) as tf.Tensor;
+        const result = Array.from(await prediction.data());
+        
+        inputTensor.dispose();
+        prediction.dispose();
+
+        return result.map(n => Math.round(n * 24) + 1);
       } catch (error) {
-        systemLogger.error('player', `Error in prediction for Player #${player.id}:`, { error });
+        systemLogger.error('prediction', `Erro na predição para Jogador #${player.id}:`, { error });
         throw error;
       }
     })

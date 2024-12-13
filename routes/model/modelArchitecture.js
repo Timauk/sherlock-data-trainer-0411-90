@@ -3,11 +3,11 @@ import * as tf from '@tensorflow/tfjs';
 export const createModelArchitecture = () => {
   const model = tf.sequential();
   
-  // Input layer adjusted for enriched data (13072 features)
+  // Camada de entrada ajustada para dados enriquecidos (13072 features)
   model.add(tf.layers.dense({
     units: 256,
     activation: 'relu',
-    inputShape: [13072], // Adjusted to match the actual feature size
+    inputShape: [13072], // Ajustado para corresponder ao tamanho real das features
     kernelInitializer: 'heNormal',
     kernelRegularizer: tf.regularizers.l2({ l2: 0.001 })
   }));
@@ -15,7 +15,7 @@ export const createModelArchitecture = () => {
   model.add(tf.layers.batchNormalization());
   model.add(tf.layers.dropout({ rate: 0.3 }));
   
-  // Hidden layers
+  // Camadas intermediárias
   model.add(tf.layers.dense({
     units: 128,
     activation: 'relu',
@@ -26,7 +26,7 @@ export const createModelArchitecture = () => {
   model.add(tf.layers.batchNormalization());
   model.add(tf.layers.dropout({ rate: 0.2 }));
   
-  // Output layer
+  // Camada de saída
   model.add(tf.layers.dense({
     units: 15,
     activation: 'sigmoid',
