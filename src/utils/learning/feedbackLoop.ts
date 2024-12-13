@@ -6,7 +6,7 @@ export async function updateModelWithFeedback(
   prediction: number[],
   actual: number[],
   weights: number[]
-): Promise<void> {
+): Promise<number[]> { // Alterado o tipo de retorno para Promise<number[]>
   try {
     const matches = prediction.filter(n => actual.includes(n)).length;
     const reward = calculateReward(matches);
