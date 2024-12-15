@@ -70,9 +70,17 @@ export async function handlePlayerPredictions(
   return Promise.all(
     players.map(async player => {
       try {
+        // Validação rigorosa dos pesos do jogador
         if (!player.weights || player.weights.length === 0) {
           throw new Error(`Jogador ${player.id} com pesos inválidos`);
         }
+
+        // Log dos pesos do jogador para debug
+        systemLogger.log('weights', `Pesos do Jogador #${player.id}`, {
+          weightsLength: player.weights.length,
+          weightsSample: player.weights.slice(0, 5),
+          weightsSum: player.weights.reduce((a, b) => a + b, 0)
+        });
 
         const currentDate = new Date();
         const enrichedData = enrichTrainingData([[...currentBoardNumbers]], [currentDate]);
@@ -84,29 +92,44 @@ export async function handlePlayerPredictions(
         // Ajustar o tamanho dos dados para corresponder ao shape do modelo
         const paddedData = new Array(inputShape).fill(0);
         for (let i = 0; i < enrichedData[0].length && i < inputShape; i++) {
-          paddedData[i] = enrichedData[0][i];
+          paddedData[i] = enrichedData[0][i] * (player.weights[i] / 1000); // Aplicando pesos normalizados
         }
         
         const inputTensor = tf.tensor2d([paddedData]);
-        const prediction = trainedModel.predict(inputTensor) as tf.Tensor;
+        
+        // Aplicar os pesos do jogador na camada de entrada
+        const weightedInput = tf.mul(inputTensor, tf.tensor2d([player.weights.slice(0, inputShape)]));
+        
+        const prediction = trainedModel.predict(weightedInput) as tf.Tensor;
         const probabilities = Array.from(await prediction.data());
         
+        // Cleanup
         inputTensor.dispose();
+        weightedInput.dispose();
         prediction.dispose();
 
-        // Gerar números baseados nas probabilidades e pesos do jogador
-        const weightedProbs = new Array(25).fill(0).map((_, index) => ({
-          number: index + 1,
-          probability: probabilities[index % probabilities.length] * player.weights[index % player.weights.length]
-        }));
+        // Sistema de pontuação ponderada para cada número
+        const weightedScores = new Array(25).fill(0).map((_, index) => {
+          const baseProb = probabilities[index % probabilities.length];
+          const weight = player.weights[index % player.weights.length];
+          const historicalFreq = currentBoardNumbers.filter(n => n === index + 1).length;
+          
+          return {
+            number: index + 1,
+            score: (baseProb * weight * (1 + historicalFreq)) / 1000
+          };
+        });
 
-        // Ordenar por probabilidade e selecionar os 15 números mais prováveis
-        weightedProbs.sort((a, b) => b.probability - a.probability);
-        const selectedNumbers = weightedProbs.slice(0, 15).map(wp => wp.number);
+        // Ordenar por pontuação e selecionar os 15 números mais promissores
+        weightedScores.sort((a, b) => b.score - a.score);
+        const selectedNumbers = weightedScores.slice(0, 15).map(ws => ws.number);
 
+        // Log detalhado das previsões
         systemLogger.log('prediction', `Previsões geradas para Jogador #${player.id}`, {
           predictions: selectedNumbers,
-          probabilities: weightedProbs.slice(0, 15).map(wp => wp.probability)
+          scores: weightedScores.slice(0, 15).map(ws => ws.score),
+          weightsUsed: true,
+          timestamp: new Date().toISOString()
         });
 
         return selectedNumbers.sort((a, b) => a - b);
