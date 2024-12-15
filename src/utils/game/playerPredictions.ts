@@ -10,7 +10,6 @@ async function validateModelForPrediction(model: tf.LayersModel): Promise<boolea
       return false;
     }
 
-    // Verifica se o modelo está compilado
     if (!model.optimizer) {
       systemLogger.warn('model', 'Modelo não compilado, compilando agora...');
       model.compile({
@@ -20,11 +19,9 @@ async function validateModelForPrediction(model: tf.LayersModel): Promise<boolea
       });
     }
 
-    // Obtém o shape correto do input do modelo
     const inputShape = model.inputs[0].shape[1];
-    
-    // Teste com shape correto do modelo
     const testTensor = tf.zeros([1, inputShape]);
+    
     try {
       const testPred = model.predict(testTensor) as tf.Tensor;
       testPred.dispose();
@@ -73,7 +70,6 @@ export async function handlePlayerPredictions(
   return Promise.all(
     players.map(async player => {
       try {
-        // Validação dos pesos do jogador
         if (!player.weights || player.weights.length === 0) {
           throw new Error(`Jogador ${player.id} com pesos inválidos`);
         }
@@ -93,28 +89,27 @@ export async function handlePlayerPredictions(
         
         const inputTensor = tf.tensor2d([paddedData]);
         const prediction = trainedModel.predict(inputTensor) as tf.Tensor;
-        const result = Array.from(await prediction.data());
+        const probabilities = Array.from(await prediction.data());
         
         inputTensor.dispose();
         prediction.dispose();
 
-        // Garantir que retornamos 15 números únicos entre 1 e 25
-        const uniqueNumbers = new Set<number>();
-        const probabilities = result.map((prob, index) => ({
-          number: (index % 25) + 1,
-          probability: prob * player.weights[index % player.weights.length]
+        // Gerar números baseados nas probabilidades e pesos do jogador
+        const weightedProbs = new Array(25).fill(0).map((_, index) => ({
+          number: index + 1,
+          probability: probabilities[index % probabilities.length] * player.weights[index % player.weights.length]
         }));
 
         // Ordenar por probabilidade e selecionar os 15 números mais prováveis
-        probabilities.sort((a, b) => b.probability - a.probability);
-        
-        for (const prob of probabilities) {
-          if (uniqueNumbers.size < 15) {
-            uniqueNumbers.add(prob.number);
-          }
-        }
+        weightedProbs.sort((a, b) => b.probability - a.probability);
+        const selectedNumbers = weightedProbs.slice(0, 15).map(wp => wp.number);
 
-        return Array.from(uniqueNumbers).sort((a, b) => a - b);
+        systemLogger.log('prediction', `Previsões geradas para Jogador #${player.id}`, {
+          predictions: selectedNumbers,
+          probabilities: weightedProbs.slice(0, 15).map(wp => wp.probability)
+        });
+
+        return selectedNumbers.sort((a, b) => a - b);
       } catch (error) {
         systemLogger.error('prediction', `Erro na predição para Jogador #${player.id}:`, { error });
         throw error;
