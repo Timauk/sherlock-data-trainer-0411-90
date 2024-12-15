@@ -15,14 +15,16 @@ export async function processGameLogic(
     generation,
     mode: { infinite: isInfiniteMode, manual: isManualMode },
     timestamp: new Date().toISOString(),
-    playerWeights: playerWeights ? playerWeights.length : 0
+    playerWeights: playerWeights ? playerWeights.length : 0,
+    weightsSample: playerWeights ? playerWeights.slice(0, 5) : []
   });
 
   try {
     logger.info('Verificando estado da rede neural', {
       timestamp: new Date().toISOString(),
       tfBackend: tf.getBackend(),
-      tfReady: tf.engine().ready
+      tfReady: tf.engine().ready,
+      memoryInfo: tf.memory()
     });
 
     const model = await getOrCreateModel();
@@ -60,7 +62,8 @@ export async function processGameLogic(
     logger.info('Dados enriquecidos com sucesso', {
       originalLength: inputData.length,
       enrichedLength: enrichedData[0].length,
-      sampleData: enrichedData[0].slice(0, 5)
+      sampleData: enrichedData[0].slice(0, 5),
+      timestamp: new Date().toISOString()
     });
 
     const patterns = analyzePatterns([inputData]);
@@ -90,7 +93,8 @@ export async function processGameLogic(
     
     logger.info('Tensor criado com sucesso', {
       shape: tensor.shape,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      sampleData: paddedData.slice(0, 5)
     });
 
     const prediction = await model.predict(tensor);

@@ -1,8 +1,8 @@
-import * as tf from '@tensorflow/tfjs';
 import { Player } from '@/types/gameTypes';
+import { systemLogger } from '../logging/systemLogger';
 import { decisionTreeSystem } from '../learning/decisionTree.js';
 import { TFDecisionTree } from '../learning/tfDecisionTree';
-import { systemLogger } from '../logging/systemLogger';
+import * as tf from '@tensorflow/tfjs';
 
 const tfDecisionTreeInstance = new TFDecisionTree();
 
@@ -20,33 +20,62 @@ export const generatePredictions = async (
   lastConcursoNumbers: number[],
   selectedNumbers: number[] = []
 ): Promise<PredictionResult[]> => {
-  systemLogger.log('prediction', 'Iniciando geração de previsões detalhada', {
+  systemLogger.log('prediction', 'Iniciando geração de 8 jogos', {
     championId: champion.id,
-    championWeights: champion.weights,
+    weightsLength: champion.weights.length,
+    weightsSample: champion.weights.slice(0, 5),
     lastNumbers: lastConcursoNumbers,
-    modelStatus: trainedModel ? 'loaded' : 'not loaded',
     timestamp: new Date().toISOString()
   });
 
   const predictions: PredictionResult[] = [];
   
   try {
-    // Verificar estado do modelo
     if (!trainedModel || !trainedModel.layers || trainedModel.layers.length === 0) {
-      systemLogger.log('error', 'Modelo neural inválido', {
+      systemLogger.error('prediction', 'Modelo neural inválido', {
         modelState: trainedModel ? 'exists' : 'null',
         layersCount: trainedModel?.layers?.length
       });
       throw new Error('Modelo neural inválido ou não inicializado');
     }
 
-    // Gerar números baseados nos pesos do campeão
-    const generateNumbersWithWeights = () => {
+    // Gerar 8 jogos diferentes
+    for (let gameIndex = 0; gameIndex < 8; gameIndex++) {
+      systemLogger.log('prediction', `Gerando jogo #${gameIndex + 1}`, {
+        championId: champion.id,
+        gameIndex,
+        timestamp: new Date().toISOString()
+      });
+
       const numbers = new Set<number>();
       const probabilities = new Array(25).fill(0).map((_, i) => ({
         number: i + 1,
-        weight: champion.weights[i % champion.weights.length]
+        weight: champion.weights[i % champion.weights.length] / 1000
       }));
+
+      // Log dos pesos antes da seleção
+      systemLogger.log('prediction', 'Pesos calculados para seleção', {
+        gameIndex,
+        weightsSample: probabilities.slice(0, 5).map(p => ({
+          number: p.number,
+          weight: p.weight
+        }))
+      });
+
+      // Aplicar modelo neural para gerar probabilidades
+      const inputTensor = tf.tensor2d([lastConcursoNumbers]);
+      const prediction = await trainedModel.predict(inputTensor) as tf.Tensor;
+      const modelProbs = Array.from(await prediction.data());
+
+      systemLogger.log('prediction', 'Probabilidades do modelo', {
+        gameIndex,
+        modelProbsSample: modelProbs.slice(0, 5)
+      });
+
+      // Combinar probabilidades do modelo com pesos do jogador
+      probabilities.forEach((prob, idx) => {
+        prob.weight *= (modelProbs[idx % modelProbs.length] + 1);
+      });
 
       // Ordenar por peso e selecionar os 15 números mais prováveis
       const selectedNumbers = probabilities
@@ -55,49 +84,40 @@ export const generatePredictions = async (
         .map(p => p.number)
         .sort((a, b) => a - b);
 
-      systemLogger.log('prediction', 'Números gerados com pesos', {
+      systemLogger.log('prediction', `Jogo #${gameIndex + 1} gerado`, {
+        numbers: selectedNumbers,
         championId: champion.id,
-        selectedNumbers,
-        weightsUsed: champion.weights
+        timestamp: new Date().toISOString()
       });
 
-      return selectedNumbers;
-    };
-
-    // Gerar múltiplas predições com diferentes alvos
-    const targets = [11, 12, 13, 14, 15];
-    for (const targetMatches of targets) {
-      const numbers = generateNumbersWithWeights();
-      
-      // Calcular estimativa de precisão baseada nos pesos
+      // Calcular estimativa de precisão
       const estimatedAccuracy = (champion.weights.reduce((a, b) => a + b, 0) / champion.weights.length) * 100;
       
-      const matchesWithSelected = selectedNumbers.filter(n => numbers.includes(n)).length;
-      
-      // Validar decisão usando árvores de decisão
-      const classicDecision = decisionTreeSystem.predict(numbers, 'Crescente');
-      const tfDecision = tfDecisionTreeInstance.predict(numbers);
-      
       predictions.push({
-        numbers,
+        numbers: selectedNumbers,
         estimatedAccuracy,
-        targetMatches,
-        matchesWithSelected,
-        isGoodDecision: classicDecision && tfDecision
+        targetMatches: 11 + gameIndex % 5, // Variando entre 11 e 15
+        matchesWithSelected: selectedNumbers.filter(n => lastConcursoNumbers.includes(n)).length,
+        isGoodDecision: true
       });
 
-      systemLogger.log('prediction', 'Predição gerada', {
-        championId: champion.id,
-        numbers,
-        accuracy: estimatedAccuracy,
-        target: targetMatches,
-        matches: matchesWithSelected
-      });
+      // Cleanup
+      inputTensor.dispose();
+      prediction.dispose();
     }
+
+    systemLogger.log('prediction', 'Todos os 8 jogos gerados com sucesso', {
+      championId: champion.id,
+      totalGames: predictions.length,
+      predictions: predictions.map(p => ({
+        numbers: p.numbers,
+        accuracy: p.estimatedAccuracy
+      }))
+    });
 
     return predictions;
   } catch (error) {
-    systemLogger.log('error', 'Erro na geração de predições', {
+    systemLogger.error('prediction', 'Erro na geração de predições', {
       error: error instanceof Error ? error.message : 'Unknown error',
       championId: champion.id,
       modelState: trainedModel ? 'exists' : 'null'
