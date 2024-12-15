@@ -1,6 +1,9 @@
 export interface LogEntry {
   timestamp: Date;
-  type: 'action' | 'prediction' | 'performance' | 'system' | 'lunar' | 'player' | 'checkpoint' | 'learning' | 'model';
+  type: 'action' | 'prediction' | 'performance' | 'system' | 'lunar' | 'player' | 
+        'checkpoint' | 'learning' | 'model' | 'initialization' | 'training' | 
+        'csv' | 'bank' | 'evolution' | 'players' | 'game' | 'error' | 
+        'features' | 'weights' | 'tensor' | 'metrics' | 'validation' | 'reward';
   message: string;
   details?: any;
 }

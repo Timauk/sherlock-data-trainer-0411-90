@@ -1,6 +1,9 @@
 export interface LogEntry {
   timestamp: Date;
-  type: 'action' | 'prediction' | 'performance' | 'system' | 'lunar' | 'player' | 'checkpoint' | 'learning' | 'model';
+  type: 'action' | 'prediction' | 'performance' | 'system' | 'lunar' | 'player' | 
+        'checkpoint' | 'learning' | 'model' | 'initialization' | 'training' | 
+        'csv' | 'bank' | 'evolution' | 'players' | 'game' | 'error' | 
+        'features' | 'weights' | 'tensor' | 'metrics' | 'validation' | 'reward';
   message: string;
   details?: any;
 }
@@ -9,22 +12,19 @@ class SystemLogger {
   private static instance: SystemLogger;
   private logs: LogEntry[] = [];
   private maxLogs = 1000;
-  private logInterval: NodeJS.Timer | null = null;
+  private logInterval: NodeJS.Timeout | null = null;
 
   private constructor() {
-    // Inicializa o intervalo de log apenas se estivermos no navegador
     if (typeof window !== 'undefined') {
       this.startLoggingInterval();
     }
   }
 
   private startLoggingInterval() {
-    // Limpa qualquer intervalo existente
     if (this.logInterval) {
       clearInterval(this.logInterval);
     }
 
-    // Configura novo intervalo com tratamento de erro
     this.logInterval = setInterval(() => {
       try {
         const usage = this.getMemoryUsage();
@@ -32,10 +32,9 @@ class SystemLogger {
           this.warn('performance', 'Uso de Memória do Sistema', usage);
         }
       } catch (error) {
-        // Silenciosamente falha se não puder obter uso de memória
         console.debug('Não foi possível obter uso de memória:', error);
       }
-    }, 300000); // 5 minutos
+    }, 300000);
   }
 
   private getMemoryUsage() {
