@@ -39,9 +39,17 @@ export const generatePredictions = async (
       throw new Error('Modelo neural inválido ou não inicializado');
     }
 
+    // Debug do modelo
+    systemLogger.log('model', 'Estado do modelo antes das previsões', {
+      layers: trainedModel.layers.length,
+      inputShape: trainedModel.inputs[0].shape,
+      outputShape: trainedModel.outputs[0].shape,
+      compiled: !!trainedModel.optimizer
+    });
+
     // Gerar 8 jogos diferentes
     for (let gameIndex = 0; gameIndex < 8; gameIndex++) {
-      systemLogger.log('prediction', `Gerando jogo #${gameIndex + 1}`, {
+      systemLogger.log('prediction', `Iniciando geração do jogo #${gameIndex + 1}`, {
         championId: champion.id,
         gameIndex,
         timestamp: new Date().toISOString()
@@ -53,13 +61,15 @@ export const generatePredictions = async (
         weight: champion.weights[i % champion.weights.length] / 1000
       }));
 
-      // Log dos pesos antes da seleção
-      systemLogger.log('prediction', 'Pesos calculados para seleção', {
+      // Log detalhado dos pesos antes da seleção
+      systemLogger.log('weights', `Pesos do jogador para jogo #${gameIndex + 1}`, {
         gameIndex,
-        weightsSample: probabilities.slice(0, 5).map(p => ({
-          number: p.number,
-          weight: p.weight
-        }))
+        weightsSample: probabilities.slice(0, 5),
+        weightsStats: {
+          min: Math.min(...champion.weights),
+          max: Math.max(...champion.weights),
+          avg: champion.weights.reduce((a, b) => a + b, 0) / champion.weights.length
+        }
       });
 
       // Aplicar modelo neural para gerar probabilidades
@@ -67,14 +77,27 @@ export const generatePredictions = async (
       const prediction = await trainedModel.predict(inputTensor) as tf.Tensor;
       const modelProbs = Array.from(await prediction.data());
 
-      systemLogger.log('prediction', 'Probabilidades do modelo', {
+      systemLogger.log('model', `Probabilidades do modelo para jogo #${gameIndex + 1}`, {
         gameIndex,
-        modelProbsSample: modelProbs.slice(0, 5)
+        modelProbsSample: modelProbs.slice(0, 5),
+        modelProbsStats: {
+          min: Math.min(...modelProbs),
+          max: Math.max(...modelProbs),
+          avg: modelProbs.reduce((a, b) => a + b, 0) / modelProbs.length
+        }
       });
 
       // Combinar probabilidades do modelo com pesos do jogador
       probabilities.forEach((prob, idx) => {
+        const originalWeight = prob.weight;
         prob.weight *= (modelProbs[idx % modelProbs.length] + 1);
+        
+        systemLogger.log('weights', `Peso combinado para número ${prob.number}`, {
+          number: prob.number,
+          originalWeight,
+          modelProb: modelProbs[idx % modelProbs.length],
+          finalWeight: prob.weight
+        });
       });
 
       // Ordenar por peso e selecionar os 15 números mais prováveis
@@ -87,7 +110,12 @@ export const generatePredictions = async (
       systemLogger.log('prediction', `Jogo #${gameIndex + 1} gerado`, {
         numbers: selectedNumbers,
         championId: champion.id,
-        timestamp: new Date().toISOString()
+        weightsUsed: true,
+        timestamp: new Date().toISOString(),
+        probabilitiesUsed: probabilities.slice(0, 15).map(p => ({
+          number: p.number,
+          finalWeight: p.weight
+        }))
       });
 
       // Calcular estimativa de precisão
@@ -106,21 +134,25 @@ export const generatePredictions = async (
       prediction.dispose();
     }
 
-    systemLogger.log('prediction', 'Todos os 8 jogos gerados com sucesso', {
+    systemLogger.log('prediction', 'Resumo da geração de jogos', {
       championId: champion.id,
       totalGames: predictions.length,
       predictions: predictions.map(p => ({
         numbers: p.numbers,
-        accuracy: p.estimatedAccuracy
-      }))
+        accuracy: p.estimatedAccuracy,
+        matches: p.matchesWithSelected
+      })),
+      memoryInfo: tf.memory()
     });
 
     return predictions;
   } catch (error) {
     systemLogger.error('prediction', 'Erro na geração de predições', {
       error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
       championId: champion.id,
-      modelState: trainedModel ? 'exists' : 'null'
+      modelState: trainedModel ? 'exists' : 'null',
+      memoryInfo: tf.memory()
     });
     throw error;
   }

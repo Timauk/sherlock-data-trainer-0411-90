@@ -38,6 +38,15 @@ export async function processGameLogic(
       throw new Error('Model could not be initialized');
     }
 
+    // Log do estado do modelo
+    logger.info('Modelo carregado com sucesso', {
+      layers: model.layers.length,
+      inputShape: model.inputs[0].shape,
+      outputShape: model.outputs[0].shape,
+      compiled: !!model.optimizer,
+      timestamp: new Date().toISOString()
+    });
+
     // Verificação dos dados de entrada
     if (!inputData || !Array.isArray(inputData)) {
       logger.error('Dados de entrada inválidos', {
@@ -77,6 +86,13 @@ export async function processGameLogic(
       throw new Error('Failed to analyze input data patterns');
     }
 
+    // Log dos padrões encontrados
+    logger.info('Padrões identificados', {
+      patternsCount: patterns.length,
+      patternsSample: patterns.slice(0, 3),
+      timestamp: new Date().toISOString()
+    });
+
     // Verificação do tensor e predição
     logger.info('Iniciando criação do tensor', {
       timestamp: new Date().toISOString(),
@@ -95,6 +111,13 @@ export async function processGameLogic(
       shape: tensor.shape,
       timestamp: new Date().toISOString(),
       sampleData: paddedData.slice(0, 5)
+    });
+
+    // Log antes da predição
+    logger.info('Iniciando predição', {
+      tensorShape: tensor.shape,
+      modelInputShape: model.inputs[0].shape,
+      timestamp: new Date().toISOString()
     });
 
     const prediction = await model.predict(tensor);
