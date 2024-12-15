@@ -6,109 +6,161 @@ export interface LogEntry {
 }
 
 class SystemLogger {
-  static instance;
-  logs = [];
-  maxLogs = 1000;
+  private static instance: SystemLogger;
+  private logs: LogEntry[] = [];
+  private maxLogs = 1000;
+  private logInterval: NodeJS.Timer | null = null;
 
-  constructor() {
-    if (SystemLogger.instance) {
-      return SystemLogger.instance;
+  private constructor() {
+    // Inicializa o intervalo de log apenas se estivermos no navegador
+    if (typeof window !== 'undefined') {
+      this.startLoggingInterval();
     }
-    SystemLogger.instance = this;
   }
 
-  static getInstance() {
+  private startLoggingInterval() {
+    // Limpa qualquer intervalo existente
+    if (this.logInterval) {
+      clearInterval(this.logInterval);
+    }
+
+    // Configura novo intervalo com tratamento de erro
+    this.logInterval = setInterval(() => {
+      try {
+        const usage = this.getMemoryUsage();
+        if (usage) {
+          this.warn('performance', 'Uso de Memória do Sistema', usage);
+        }
+      } catch (error) {
+        // Silenciosamente falha se não puder obter uso de memória
+        console.debug('Não foi possível obter uso de memória:', error);
+      }
+    }, 300000); // 5 minutos
+  }
+
+  private getMemoryUsage() {
+    try {
+      if (typeof performance !== 'undefined' && performance.memory) {
+        return {
+          // @ts-ignore - propriedade memory existe no Chrome
+          jsHeapSizeLimit: Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024) + 'MB',
+          // @ts-ignore
+          totalJSHeapSize: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024) + 'MB',
+          // @ts-ignore
+          usedJSHeapSize: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + 'MB'
+        };
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  public static getInstance(): SystemLogger {
     if (!SystemLogger.instance) {
       SystemLogger.instance = new SystemLogger();
     }
     return SystemLogger.instance;
   }
 
-  log(type: LogEntry['type'], message: string, details?: any) {
-    const entry = {
+  public log(type: LogEntry['type'], message: string, details?: any) {
+    this.addLog({
       timestamp: new Date(),
       type,
       message,
       details,
-    };
-
-    this.addLog(entry);
-    this.printLog(entry, 'info');
+    });
   }
 
-  error(type: LogEntry['type'], message: string, details?: any) {
-    const entry = {
+  public error(type: LogEntry['type'], message: string, details?: any) {
+    this.addLog({
       timestamp: new Date(),
       type,
       message: `ERROR: ${message}`,
       details,
-    };
-
-    this.addLog(entry);
-    this.printLog(entry, 'error');
+    });
   }
 
-  warn(type: LogEntry['type'], message: string, details?: any) {
-    const entry = {
+  public warn(type: LogEntry['type'], message: string, details?: any) {
+    this.addLog({
       timestamp: new Date(),
       type,
       message: `WARNING: ${message}`,
       details,
-    };
-
-    this.addLog(entry);
-    this.printLog(entry, 'warn');
+    });
   }
 
-  debug(type: LogEntry['type'], message: string, details?: any) {
-    const entry = {
+  public debug(type: LogEntry['type'], message: string, details?: any) {
+    this.addLog({
       timestamp: new Date(),
       type,
       message: `DEBUG: ${message}`,
       details,
-    };
-
-    this.addLog(entry);
-    this.printLog(entry, 'debug');
+    });
   }
 
-  getLogs() {
+  private addLog(entry: LogEntry) {
+    try {
+      this.logs.push(entry);
+
+      if (this.logs.length > this.maxLogs) {
+        this.logs = this.logs.slice(-this.maxLogs);
+      }
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('systemLog', { detail: entry }));
+      }
+
+      // Log para console com tratamento de erro
+      this.printLog(entry);
+    } catch (error) {
+      console.error('Erro ao adicionar log:', error);
+    }
+  }
+
+  private printLog(entry: LogEntry) {
+    try {
+      const logLevel = entry.message.startsWith('ERROR:') ? 'error' : 
+                      entry.message.startsWith('WARNING:') ? 'warn' : 
+                      entry.message.startsWith('DEBUG:') ? 'debug' : 'info';
+
+      const colorMap = {
+        info: '\x1b[32m',  // Verde
+        warn: '\x1b[33m',  // Amarelo
+        error: '\x1b[31m', // Vermelho
+        debug: '\x1b[36m', // Ciano
+      };
+
+      const color = colorMap[logLevel] || '\x1b[0m';
+      const logMessage = `${color}[${entry.type.toUpperCase()}] ${entry.message}\x1b[0m`;
+      
+      console[logLevel](logMessage, entry.details || '');
+    } catch (error) {
+      // Fallback para log simples em caso de erro
+      console.log(entry.message, entry.details);
+    }
+  }
+
+  public getLogs(): LogEntry[] {
     return [...this.logs];
   }
 
-  getLogsByType(type: LogEntry['type']) {
+  public getLogsByType(type: LogEntry['type']): LogEntry[] {
     return this.logs.filter((log) => log.type === type);
   }
 
-  clearLogs() {
+  public clearLogs() {
     this.logs = [];
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('systemLogsClear'));
     }
   }
 
-  private addLog(entry: LogEntry) {
-    this.logs.push(entry);
-
-    if (this.logs.length > this.maxLogs) {
-      this.logs = this.logs.slice(-this.maxLogs);
+  public dispose() {
+    if (this.logInterval) {
+      clearInterval(this.logInterval);
+      this.logInterval = null;
     }
-
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('systemLog', { detail: entry }));
-    }
-  }
-
-  private printLog(entry: LogEntry, level: 'info' | 'warn' | 'error' | 'debug') {
-    const colorMap = {
-      info: '\x1b[32m',
-      warn: '\x1b[33m',
-      error: '\x1b[31m',
-      debug: '\x1b[36m',
-    };
-
-    const color = colorMap[level] || '\x1b[0m';
-    console[level](`${color}[${entry.type.toUpperCase()}] ${entry.message}\x1b[0m`, entry.details || '');
   }
 }
 
