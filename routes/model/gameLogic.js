@@ -2,7 +2,6 @@ import * as tf from '@tensorflow/tfjs';
 import { analyzePatterns, enrichDataWithPatterns, getOrCreateModel } from './utils.js';
 import { logger } from '../../src/utils/logging/logger.js';
 import { validateInputData, validatePlayerWeights } from './validation.js';
-import { processGameLogic } from './gameLogic.js';
 import { enrichTrainingData } from '../../src/utils/features/lotteryFeatureEngineering.js';
 
 export async function processGameLogic(
@@ -43,22 +42,10 @@ export async function processGameLogic(
       throw new Error('Invalid input data');
     }
 
-    const enrichedData = enrichTrainingData([[...inputData]], [new Date()]);
-    
-    if (!enrichedData || !enrichedData[0]) {
-      throw new Error('Failed to enrich input data');
-    }
-
-    const patterns = analyzePatterns([inputData]);
-    
-    if (!patterns || patterns.length === 0) {
-      throw new Error('Failed to analyze input data patterns');
-    }
-
     // Garantir que o tensor tenha a forma correta [1, 13057]
     const paddedData = new Array(13057).fill(0);
-    for (let i = 0; i < enrichedData[0].length && i < 13057; i++) {
-      paddedData[i] = enrichedData[0][i];
+    for (let i = 0; i < inputData.length && i < 13057; i++) {
+      paddedData[i] = inputData[i];
     }
     
     const tensor = tf.tensor2d([paddedData]);
@@ -75,19 +62,20 @@ export async function processGameLogic(
     const playerResults = playerWeights.map((weights, index) => {
       const playerPredictions = result.slice(0, 15);
       const matches = playerPredictions.filter(num => 
-        inputData.includes(Math.round(num))
+        inputData.slice(0, 15).includes(Math.round(num))
       ).length;
 
       logger.info(`Jogador #${index + 1} acertos:`, {
         predictions: playerPredictions,
         matches,
-        inputNumbers: inputData
+        inputNumbers: inputData.slice(0, 15)
       });
 
       return {
         playerId: index + 1,
         matches,
-        predictions: playerPredictions
+        predictions: playerPredictions,
+        score: matches * 10 // Pontuação baseada nos acertos
       };
     });
 
@@ -97,7 +85,7 @@ export async function processGameLogic(
 
     return {
       prediction: result,
-      patterns,
+      patterns: analyzePatterns([inputData]),
       generation: generation + 1,
       playerResults,
       modelMetrics: {

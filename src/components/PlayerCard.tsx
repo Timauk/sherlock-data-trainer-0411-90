@@ -25,7 +25,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       score: player.score,
       fitness: player.fitness,
       predictions: player.predictions,
-      weights: player.weights ? player.weights.length : 0,
+      matchHistory: player.matchHistory,
       generation: player.generation,
       timestamp: new Date().toISOString()
     });
@@ -36,12 +36,10 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       return 'Aguardando próxima rodada';
     }
 
-    const validNumbers = predictions
+    return predictions
       .map(pred => Math.max(1, Math.min(25, Math.round(pred))))
       .sort((a, b) => a - b)
-      .map(num => num.toString());
-
-    return validNumbers.join(', ');
+      .join(', ');
   };
 
   const getRewardClass = (fitness: number): string => {
@@ -65,6 +63,15 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
     };
     return `${fitness} acertos (${scoreMap[fitness] || 0} pontos)`;
   };
+
+  const getLastMatchHistory = () => {
+    if (!player.matchHistory || player.matchHistory.length === 0) {
+      return { matches: 0, score: 0 };
+    }
+    return player.matchHistory[player.matchHistory.length - 1];
+  };
+
+  const lastMatch = getLastMatchHistory();
 
   return (
     <Card 
@@ -98,11 +105,11 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         <div className="grid grid-cols-2 gap-2 mt-2">
           <div className="bg-muted p-2 rounded">
             <p className="text-xs font-medium">Acertos Atual</p>
-            <p className="text-lg font-bold">{player.fitness}</p>
+            <p className="text-lg font-bold">{lastMatch.matches}</p>
           </div>
           <div className="bg-muted p-2 rounded">
-            <p className="text-xs font-medium">Geração</p>
-            <p className="text-lg font-bold">{player.generation}</p>
+            <p className="text-xs font-medium">Pontos Último Jogo</p>
+            <p className="text-lg font-bold">{lastMatch.score}</p>
           </div>
         </div>
 
