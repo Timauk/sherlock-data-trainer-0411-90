@@ -21,10 +21,10 @@ export async function processGameLogic(
 
   try {
     try {
-      await tf.setBackend('webgl');
-    } catch (e) {
-      logger.warn('WebGL falhou, usando CPU', { error: e.message });
       await tf.setBackend('cpu');
+    } catch (e) {
+      logger.warn('CPU backend setup failed', { error: e.message });
+      throw e;
     }
 
     logger.info('Backend TensorFlow:', {
@@ -42,46 +42,39 @@ export async function processGameLogic(
       throw new Error('Invalid input data');
     }
 
-    const paddedData = new Array(13057).fill(0);
-    for (let i = 0; i < inputData.length && i < 13057; i++) {
-      paddedData[i] = inputData[i];
+    // Ensure input data is properly padded to 13057
+    const enrichedData = enrichTrainingData([inputData], [new Date()]);
+    if (!enrichedData || !enrichedData[0]) {
+      throw new Error('Failed to enrich input data');
     }
     
-    const tensor = tf.tensor2d([paddedData]);
+    const tensor = tf.tensor2d([enrichedData[0]]);
     
     logger.info('Tensor criado:', {
       shape: tensor.shape,
-      sampleData: paddedData.slice(0, 5)
+      sampleData: enrichedData[0].slice(0, 5)
     });
 
     const prediction = await model.predict(tensor);
     const result = Array.from(await prediction.data());
 
-    // Calcular acertos para cada jogador
+    // Calculate hits for each player
     const playerResults = playerWeights.map((weights, index) => {
-      // Garantir que as previsões sejam números inteiros entre 1 e 25
       const playerPredictions = result.slice(0, 15).map(num => 
         Math.max(1, Math.min(25, Math.round(num)))
       );
       
-      // Pegar os números sorteados (primeiros 15 números)
       const drawnNumbers = inputData.slice(0, 15);
-      
-      // Calcular acertos
       const matches = playerPredictions.filter(num => drawnNumbers.includes(num)).length;
-      
-      // Usar o sistema de recompensas para calcular a pontuação
       const score = calculateReward(matches);
 
       logger.info(`Jogador #${index + 1} acertos:`, {
         predictions: playerPredictions,
         matches,
         inputNumbers: drawnNumbers,
-        score,
-        rewardSystem: 'Usando sistema de recompensas complexo'
+        score
       });
 
-      // Criar entrada no histórico
       const matchHistory = {
         concurso: generation,
         matches,

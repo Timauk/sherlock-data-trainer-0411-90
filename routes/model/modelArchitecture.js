@@ -18,7 +18,7 @@ export const createModelArchitecture = () => {
     const inputLayer = tf.layers.dense({
       units: 256,
       activation: 'relu',
-      inputShape: [15], // Changed to match input data shape
+      inputShape: [13057], // Match the expected input shape
       kernelInitializer: 'heNormal',
       kernelRegularizer: tf.regularizers.l2({ l2: 0.001 })
     });
