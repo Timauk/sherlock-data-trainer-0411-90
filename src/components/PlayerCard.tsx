@@ -65,7 +65,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   };
 
   const getLastMatchHistory = () => {
-    if (!player.matchHistory || player.matchHistory.length === 0) {
+    if (!player.matchHistory || !Array.isArray(player.matchHistory) || player.matchHistory.length === 0) {
       return { matches: 0, score: 0 };
     }
     return player.matchHistory[player.matchHistory.length - 1];

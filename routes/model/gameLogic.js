@@ -19,7 +19,6 @@ export async function processGameLogic(
   });
 
   try {
-    // Tenta usar CPU se WebGL falhar
     try {
       await tf.setBackend('webgl');
     } catch (e) {
@@ -60,22 +59,33 @@ export async function processGameLogic(
 
     // Calcular acertos para cada jogador
     const playerResults = playerWeights.map((weights, index) => {
-      const playerPredictions = result.slice(0, 15);
-      const matches = playerPredictions.filter(num => 
-        inputData.slice(0, 15).includes(Math.round(num))
-      ).length;
+      const playerPredictions = result.slice(0, 15).map(num => Math.round(num));
+      const drawnNumbers = inputData.slice(0, 15);
+      const matches = playerPredictions.filter(num => drawnNumbers.includes(num)).length;
+      const score = matches * 10; // Pontuação baseada nos acertos
 
       logger.info(`Jogador #${index + 1} acertos:`, {
         predictions: playerPredictions,
         matches,
-        inputNumbers: inputData.slice(0, 15)
+        inputNumbers: drawnNumbers,
+        score
       });
+
+      // Criar entrada no histórico
+      const matchHistory = {
+        concurso: generation,
+        matches,
+        score,
+        predictions: playerPredictions,
+        drawnNumbers
+      };
 
       return {
         playerId: index + 1,
         matches,
         predictions: playerPredictions,
-        score: matches * 10 // Pontuação baseada nos acertos
+        score,
+        matchHistory
       };
     });
 
