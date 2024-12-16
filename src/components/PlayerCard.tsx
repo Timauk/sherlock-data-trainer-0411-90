@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Copy } from 'lucide-react';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
@@ -34,22 +35,16 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       return 'Aguardando próxima rodada';
     }
 
-    // Convert raw predictions to valid lottery numbers (1-25) and sort them
     const validNumbers = predictions
       .map(pred => Math.max(1, Math.min(25, Math.round(pred))))
       .sort((a, b) => a - b)
       .map(num => num.toString());
 
-    console.log(`Formatting predictions for Player #${player.id}:`, {
-      rawPredictions: predictions,
-      formattedNumbers: validNumbers
-    });
-
     return validNumbers.join(', ');
   };
 
   return (
-    <div 
+    <Card 
       onClick={() => onPlayerClick(player)}
       className={`p-4 rounded-lg shadow cursor-pointer transition-all hover:shadow-lg
         ${isTopPlayer ? 'bg-yellow-100 dark:bg-yellow-900 border-2 border-yellow-500' : 'bg-card'}`}
@@ -59,31 +54,45 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
           Jogador #{player.id}
           {isTopPlayer && <span className="ml-2 text-yellow-600">👑</span>}
         </h4>
-        <Badge variant={isTopPlayer ? "default" : "secondary"}>
-          Score: {player.score.toFixed(0)}
-        </Badge>
+        <div className="flex flex-col items-end gap-1">
+          <Badge variant={isTopPlayer ? "default" : "secondary"}>
+            Score: {player.score.toFixed(0)}
+          </Badge>
+          <Badge variant="outline">
+            Fitness: {player.fitness.toFixed(2)}
+          </Badge>
+        </div>
       </div>
       
       <div className="space-y-2">
-        <p className="text-sm">
-          <span className="font-medium">Previsões:</span> {formatPredictions(player.predictions)}
-        </p>
-        <p className="text-sm">
-          <span className="font-medium">Acertos:</span> {player.fitness}
-        </p>
-        <p className="text-sm">
-          <span className="font-medium">Fitness:</span> {player.fitness.toFixed(2)}
-        </p>
+        <div>
+          <p className="text-sm font-medium mb-1">Previsões Atuais:</p>
+          <p className="text-sm bg-muted p-2 rounded">
+            {formatPredictions(player.predictions)}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          <div className="bg-muted p-2 rounded">
+            <p className="text-xs font-medium">Acertos</p>
+            <p className="text-lg font-bold">{player.fitness}</p>
+          </div>
+          <div className="bg-muted p-2 rounded">
+            <p className="text-xs font-medium">Geração</p>
+            <p className="text-lg font-bold">{player.generation}</p>
+          </div>
+        </div>
+
         <Button 
           onClick={(e) => onClonePlayer(player, e)}
-          className="w-full mt-2 bg-blue-600 hover:bg-blue-700"
+          className="w-full mt-2"
           variant="default"
         >
           <Copy className="mr-2 h-4 w-4" />
           Clonar Jogador
         </Button>
       </div>
-    </div>
+    </Card>
   );
 };
 
