@@ -12,20 +12,22 @@ export const calculateReward = (matches: number): number => {
     systemLogger.log('reward', `Recompensa calculada: ${reward}`, {
       matches,
       reward,
+      formula: '2^(matches-10)',
       timestamp: new Date().toISOString()
     });
     return reward;
   }
   // Sistema neutro (6-10 acertos)
   else if (matches >= 6) {
-    systemLogger.log('reward', 'Sem pontuação', {
+    systemLogger.log('reward', 'Sem pontuação - acertos intermediários', {
       matches,
+      reward: 0,
       timestamp: new Date().toISOString()
     });
     return 0;
   }
   // Punição leve para menos de 6 acertos
-  systemLogger.log('reward', 'Penalidade aplicada', {
+  systemLogger.log('reward', 'Penalidade aplicada - poucos acertos', {
     matches,
     penalty: -1,
     timestamp: new Date().toISOString()

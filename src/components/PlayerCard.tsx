@@ -20,17 +20,23 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   onClonePlayer,
 }) => {
   useEffect(() => {
-    if (player.predictions.length > 0) {
-      systemLogger.log('player', `Atualizando estado do Jogador #${player.id}`, {
-        predictions: player.predictions,
-        fitness: player.fitness,
-        score: player.score
-      });
-    }
-  }, [player.predictions, player.fitness, player.score, player.id]);
+    // Log detailed player metrics for debugging
+    systemLogger.log('player', `Estado detalhado do Jogador #${player.id}`, {
+      id: player.id,
+      score: player.score,
+      fitness: player.fitness,
+      predictions: player.predictions,
+      weights: player.weights ? player.weights.length : 0,
+      generation: player.generation,
+      timestamp: new Date().toISOString()
+    });
+  }, [player.score, player.fitness, player.predictions, player.id, player.generation]);
 
   const formatPredictions = (predictions: number[]): string => {
     if (!predictions || predictions.length === 0) {
+      systemLogger.log('player', `Jogador #${player.id} sem previsões`, {
+        timestamp: new Date().toISOString()
+      });
       return 'Aguardando próxima rodada';
     }
 
@@ -38,6 +44,11 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       .map(pred => Math.max(1, Math.min(25, Math.round(pred))))
       .sort((a, b) => a - b)
       .map(num => num.toString());
+
+    systemLogger.log('player', `Previsões do Jogador #${player.id}`, {
+      predictions: validNumbers,
+      timestamp: new Date().toISOString()
+    });
 
     return validNumbers.join(', ');
   };

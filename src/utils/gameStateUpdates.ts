@@ -17,22 +17,24 @@ export const updatePlayerStates = (
   let currentGameRandomMatches = 0;
   const totalPredictions = players.length * (nextConcurso + 1);
 
-  systemLogger.log('game', 'Atualizando estados dos jogadores', {
+  systemLogger.log('game', 'Iniciando atualização de estados dos jogadores', {
     totalPlayers: players.length,
     currentBoardNumbers,
-    nextConcurso
+    nextConcurso,
+    timestamp: new Date().toISOString()
   });
 
   const updatedPlayers = players.map((player, index) => {
     const playerPredictions = predictions[index];
     const matches = playerPredictions.filter(num => currentBoardNumbers.includes(num)).length;
     
-    systemLogger.log('game', `Calculando acertos do Jogador #${player.id}`, {
+    systemLogger.log('game', `Calculando métricas do Jogador #${player.id}`, {
       predictions: playerPredictions,
       currentBoardNumbers,
       matches,
       previousScore: player.score,
-      previousFitness: player.fitness
+      previousFitness: player.fitness,
+      timestamp: new Date().toISOString()
     });
 
     totalMatches += matches;
@@ -67,10 +69,21 @@ export const updatePlayerStates = (
     systemLogger.log('game', `Estado atualizado do Jogador #${player.id}`, {
       newScore: updatedPlayer.score,
       newFitness: updatedPlayer.fitness,
-      reward
+      reward,
+      timestamp: new Date().toISOString()
     });
 
     return updatedPlayer;
+  });
+
+  systemLogger.log('game', 'Métricas globais da rodada', {
+    totalMatches,
+    randomMatches,
+    currentGameMatches,
+    currentGameRandomMatches,
+    totalPredictions,
+    accuracy: totalMatches / (players.length * 15),
+    timestamp: new Date().toISOString()
   });
 
   return {
