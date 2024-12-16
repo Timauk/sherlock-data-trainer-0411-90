@@ -3,7 +3,7 @@ import { systemLogger } from '../logging/systemLogger';
 
 export class ModelInitializer {
   private static readonly BATCH_SIZE = 32;
-  private static readonly MAX_TEXTURE_SIZE = 16384; // Common WebGL limit
+  private static readonly MAX_TEXTURE_SIZE = 4096; // Reduced from 16384 to be safer
 
   static async initializeModel(): Promise<tf.LayersModel> {
     try {
@@ -11,26 +11,21 @@ export class ModelInitializer {
       
       const model = tf.sequential();
       
-      // Reduced layer sizes to prevent texture issues
-      model.add(tf.layers.dense({
-        units: 128, // Reduced from 256
-        activation: 'relu',
-        inputShape: [15],
-        kernelInitializer: 'glorotNormal',
-        kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
-      }));
-      
-      model.add(tf.layers.batchNormalization());
-      model.add(tf.layers.dropout({ rate: 0.3 }));
-      
+      // Significantly reduced layer sizes and complexity
       model.add(tf.layers.dense({
         units: 64, // Reduced from 128
         activation: 'relu',
-        kernelInitializer: 'glorotNormal',
-        kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
+        inputShape: [15],
+        kernelInitializer: 'glorotNormal'
       }));
       
-      model.add(tf.layers.batchNormalization());
+      model.add(tf.layers.dropout({ rate: 0.2 }));
+      
+      model.add(tf.layers.dense({
+        units: 32, // Reduced from 64
+        activation: 'relu',
+        kernelInitializer: 'glorotNormal'
+      }));
       
       model.add(tf.layers.dense({
         units: 15,
@@ -38,11 +33,8 @@ export class ModelInitializer {
         kernelInitializer: 'glorotNormal'
       }));
 
-      const optimizer = tf.train.adam(0.001);
-      optimizer.setWeights([]); // Clear any existing weights
-
       model.compile({
-        optimizer,
+        optimizer: tf.train.adam(0.001),
         loss: 'binaryCrossentropy',
         metrics: ['accuracy']
       });
@@ -68,42 +60,32 @@ export class ModelInitializer {
   }
 
   private static async setupBackend(): Promise<void> {
-    // Try different backends in order of preference
-    const backends = ['webgl', 'cpu'];
-    
-    for (const backend of backends) {
-      try {
-        await tf.setBackend(backend);
-        await tf.ready();
-        
-        if (backend === 'webgl') {
-          // Configure WebGL for better stability
-          const backend = tf.backend();
-          if (backend && 'gpgpu' in backend) {
-            const gl = (backend as any).gpgpu.gl;
-            gl.getExtension('OES_texture_float');
-            gl.getExtension('WEBGL_color_buffer_float');
-          }
-          
-          // Set reasonable limits
-          tf.env().set('WEBGL_MAX_TEXTURE_SIZE', this.MAX_TEXTURE_SIZE);
-          tf.env().set('WEBGL_FORCE_F16_TEXTURES', true);
-          tf.env().set('WEBGL_PACK', true);
-        }
-        
-        systemLogger.log('system', `Backend inicializado: ${backend}`, {
-          backend: tf.getBackend(),
-          memory: tf.memory()
-        });
-        
-        return;
-      } catch (error) {
-        systemLogger.warn('system', `Falha ao inicializar backend ${backend}`, { error });
-        continue;
-      }
+    // Try CPU first as it's more stable
+    try {
+      await tf.setBackend('cpu');
+      await tf.ready();
+      systemLogger.log('system', 'Using CPU backend');
+      return;
+    } catch (cpuError) {
+      systemLogger.warn('system', 'CPU backend failed, trying WebGL', { error: cpuError });
     }
-    
-    throw new Error('Nenhum backend disponível');
+
+    // Try WebGL with reduced settings
+    try {
+      await tf.setBackend('webgl');
+      await tf.ready();
+      
+      // Configure WebGL for better stability
+      tf.env().set('WEBGL_MAX_TEXTURE_SIZE', this.MAX_TEXTURE_SIZE);
+      tf.env().set('WEBGL_FORCE_F16_TEXTURES', true);
+      tf.env().set('WEBGL_VERSION', 1); // Force WebGL 1.0 for better compatibility
+      tf.env().set('WEBGL_CPU_FORWARD', true); // Enable CPU fallback
+      
+      systemLogger.log('system', 'Using WebGL backend with reduced settings');
+    } catch (webglError) {
+      systemLogger.error('system', 'All backends failed', { error: webglError });
+      throw new Error('No suitable backend available');
+    }
   }
 
   static async trainOnBatch(
@@ -118,25 +100,24 @@ export class ModelInitializer {
       const end = Math.min((i + 1) * this.BATCH_SIZE, data.length);
       const batchData = data.slice(start, end);
       
-      const trainTensors = tf.tidy(() => {
-        const xs = tf.tensor2d(batchData.map(row => row.slice(0, 15)));
-        const ys = tf.tensor2d(batchData.map(row => row.slice(-15)));
-        return { xs, ys };
-      });
+      const xs = tf.tensor2d(batchData.map(row => row.slice(0, 15)));
+      const ys = tf.tensor2d(batchData.map(row => row.slice(-15)));
       
-      await model.fit(trainTensors.xs, trainTensors.ys, {
-        epochs: 1,
-        batchSize: this.BATCH_SIZE,
-        callbacks: {
-          onEpochEnd: onProgress
-        }
-      });
-      
-      trainTensors.xs.dispose();
-      trainTensors.ys.dispose();
-      
-      // Force garbage collection between batches
-      await tf.nextFrame();
+      try {
+        await model.fit(xs, ys, {
+          epochs: 1,
+          batchSize: this.BATCH_SIZE,
+          callbacks: {
+            onEpochEnd: onProgress
+          }
+        });
+      } finally {
+        // Clean up tensors
+        xs.dispose();
+        ys.dispose();
+        // Force garbage collection
+        await tf.nextFrame();
+      }
     }
   }
 }
