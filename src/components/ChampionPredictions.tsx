@@ -11,6 +11,7 @@ import { PredictionsHeader } from './predictions/PredictionsHeader';
 import { PredictionResult } from './predictions/types';
 import { SystemStatus } from './predictions/SystemStatus';
 import { PredictionGenerator } from './predictions/PredictionGenerator';
+import { generatePredictions } from '../utils/prediction/predictionGenerator';
 
 interface ChampionPredictionsProps {
   champion: Player | undefined;
@@ -66,23 +67,48 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
     );
   }, []);
 
-  const handlePredictionsGenerated = useCallback(async (newPredictions: PredictionResult[]) => {
+  const handlePredictionsGenerated = useCallback(async () => {
     try {
+      if (!champion || !trainedModel || !lastConcursoNumbers) {
+        throw new Error("Dados necessários não disponíveis");
+      }
+
       setIsGenerating(true);
-      
-      // Validate predictions
+      systemLogger.log('prediction', 'Iniciando geração de previsões', {
+        championId: champion.id,
+        hasModel: !!trainedModel,
+        lastNumbersLength: lastConcursoNumbers.length
+      });
+
+      const newPredictions = await generatePredictions(
+        champion,
+        trainedModel,
+        lastConcursoNumbers,
+        selectedNumbers
+      );
+
       if (!newPredictions?.length) {
         throw new Error("Nenhuma previsão foi gerada");
       }
 
-      // Update state with new predictions
       setPredictions(newPredictions);
       
       toast({
         title: "Previsões Geradas",
         description: `${newPredictions.length} jogos foram gerados com sucesso!`,
       });
+
+      systemLogger.log('prediction', 'Previsões geradas com sucesso', {
+        count: newPredictions.length,
+        championId: champion.id,
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
+      systemLogger.error('prediction', 'Erro na geração de previsões', {
+        error: error instanceof Error ? error.message : 'Erro desconhecido',
+        championId: champion?.id
+      });
+
       toast({
         title: "Erro na Geração",
         description: error instanceof Error ? error.message : "Erro desconhecido",
@@ -91,7 +117,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
     } finally {
       setIsGenerating(false);
     }
-  }, [toast]);
+  }, [champion, trainedModel, lastConcursoNumbers, selectedNumbers, toast]);
 
   useEffect(() => {
     const allDataLoaded = Boolean(champion && trainedModel?.optimizer && lastConcursoNumbers?.length > 0);
@@ -123,30 +149,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
               ready: systemReady
             }}
             isGenerating={isGenerating}
-            onGenerate={async () => {
-              if (champion && trainedModel?.optimizer) {
-                setIsGenerating(true);
-                try {
-                  const generator = (
-                    <PredictionGenerator
-                      champion={champion}
-                      trainedModel={trainedModel}
-                      lastConcursoNumbers={lastConcursoNumbers}
-                      selectedNumbers={selectedNumbers}
-                      onPredictionsGenerated={handlePredictionsGenerated}
-                    />
-                  );
-                  return generator;
-                } catch (error) {
-                  toast({
-                    title: "Erro",
-                    description: "Falha ao iniciar geração de previsões",
-                    variant: "destructive"
-                  });
-                  setIsGenerating(false);
-                }
-              }
-            }}
+            onGenerate={handlePredictionsGenerated}
             isServerProcessing={isServerProcessing}
           />
         </CardHeader>

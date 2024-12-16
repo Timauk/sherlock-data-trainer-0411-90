@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { SystemStatus } from './types';
 
 interface PredictionsHeaderProps {
@@ -26,8 +26,8 @@ export const PredictionsHeader: React.FC<PredictionsHeaderProps> = ({
         </div>
         <Button 
           onClick={onGenerate} 
-          className={`${status.color} hover:opacity-90 transition-all duration-200`}
           disabled={isGenerating || !status.ready}
+          className="relative"
         >
           {isGenerating ? (
             <>
