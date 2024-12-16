@@ -4,7 +4,7 @@ import { systemLogger } from '../logging/systemLogger';
 export class TensorFlowSetup {
   private static instance: TensorFlowSetup;
   private isInitialized: boolean = false;
-  private preferredBackend: string = 'cpu'; // Default to CPU for stability
+  private preferredBackend: string = 'cpu';
 
   private constructor() {}
 
@@ -19,14 +19,12 @@ export class TensorFlowSetup {
     if (this.isInitialized) return;
 
     try {
-      // Configure memory management
       tf.env().set('WEBGL_DELETE_TEXTURE_THRESHOLD', 0);
       tf.env().set('WEBGL_FORCE_F16_TEXTURES', true);
       tf.env().set('WEBGL_VERSION', 1);
-      tf.env().set('WEBGL_MAX_TEXTURE_SIZE', 2048); // Reduced from default
+      tf.env().set('WEBGL_MAX_TEXTURE_SIZE', 2048);
       tf.env().set('WEBGL_MAX_TEXTURES_IN_SHADER', 16);
 
-      // Try CPU first as it's more stable
       await tf.setBackend('cpu');
       await tf.ready();
       this.preferredBackend = 'cpu';
@@ -36,11 +34,9 @@ export class TensorFlowSetup {
         memory: tf.memory()
       });
 
-      // Schedule regular garbage collection
       setInterval(() => {
         try {
-          tf.engine().endScope();
-          tf.engine().startScope();
+          tf.tidy(() => {});
           const memoryInfo = tf.memory();
           systemLogger.log('system', 'Memory cleanup performed', {
             numTensors: memoryInfo.numTensors,
@@ -67,16 +63,15 @@ export class TensorFlowSetup {
     try {
       const model = tf.sequential();
       
-      // Simplified model architecture optimized for CPU
       model.add(tf.layers.dense({ 
-        units: 64, // Reduced from 128
+        units: 64,
         activation: 'relu', 
-        inputShape: [17],
+        inputShape: [13057],
         kernelInitializer: 'glorotNormal'
       }));
       
       model.add(tf.layers.dense({ 
-        units: 32, // Reduced from 64
+        units: 32,
         activation: 'relu',
         kernelInitializer: 'glorotNormal'
       }));
@@ -115,26 +110,16 @@ export class TensorFlowSetup {
     return this.preferredBackend;
   }
 
-  // Utility method to safely execute tensor operations with proper typing
-  async safeTensorOperation<T>(operation: () => Promise<T | tf.Tensor>): Promise<T> {
-    return tf.engine().scopedRun(
-      async () => {
-        try {
-          const result = await operation();
-          if (result instanceof tf.Tensor) {
-            const value = await result.array();
-            result.dispose();
-            return value as T;
-          }
-          return result;
-        } catch (error) {
-          systemLogger.error('system', 'Error in tensor operation', { error });
-          throw error;
-        }
-      },
-      () => {}, // beforeFunc
-      () => {}  // afterFunc
-    );
+  async safeTensorOperation<T>(operation: () => Promise<T>): Promise<T> {
+    return tf.tidy(async () => {
+      try {
+        const result = await operation();
+        return result;
+      } catch (error) {
+        systemLogger.error('system', 'Error in tensor operation', { error });
+        throw error;
+      }
+    });
   }
 }
 

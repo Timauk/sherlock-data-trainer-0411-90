@@ -24,12 +24,19 @@ async function validateModelForPrediction(model: tf.LayersModel): Promise<boolea
     
     try {
       const testPred = model.predict(testTensor) as tf.Tensor;
+      const testResult = await testPred.data();
+      
+      if (!testResult || testResult.length === 0) {
+        throw new Error('Predição de teste falhou');
+      }
+      
       testPred.dispose();
       testTensor.dispose();
       
       systemLogger.log('model', 'Validação do modelo bem sucedida', {
         inputShape: model.inputs[0].shape,
-        outputShape: model.outputs[0].shape
+        outputShape: model.outputs[0].shape,
+        testResult: Array.from(testResult).slice(0, 5)
       });
       
       return true;
