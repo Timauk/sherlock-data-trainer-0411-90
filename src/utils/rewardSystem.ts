@@ -6,33 +6,33 @@ export const calculateReward = (matches: number): number => {
     timestamp: new Date().toISOString()
   });
 
-  // Sistema de recompensa (11-15 acertos)
-  if (matches >= 11) {
-    const reward = Math.pow(2, matches - 10);
-    systemLogger.log('reward', `Recompensa calculada para ${matches} acertos`, {
-      matches,
-      reward,
-      formula: '2^(matches-10)',
-      timestamp: new Date().toISOString()
-    });
-    return reward;
-  }
-  // Sistema neutro (6-10 acertos)
-  else if (matches >= 6) {
-    systemLogger.log('reward', 'Sem pontuação - acertos intermediários', {
-      matches,
-      reward: 0,
-      timestamp: new Date().toISOString()
-    });
-    return 0;
-  }
-  // Punição leve para menos de 6 acertos
-  systemLogger.log('reward', 'Penalidade aplicada - poucos acertos', {
+  // Sistema de recompensa baseado no número de acertos
+  let reward = 0;
+  
+  if (matches === 15) {
+    reward = 32;
+  } else if (matches === 14) {
+    reward = 16;
+  } else if (matches === 13) {
+    reward = 8;
+  } else if (matches === 12) {
+    reward = 4;
+  } else if (matches === 11) {
+    reward = 2;
+  } else if (matches === 10) {
+    reward = -1; // Penalização específica para 10 acertos
+  } else if (matches < 6) {
+    reward = -1; // Penalização para menos de 6 acertos
+  } // Entre 6-9 acertos mantém 0 pontos
+
+  systemLogger.log('reward', `Recompensa calculada para ${matches} acertos`, {
     matches,
-    penalty: -1,
+    reward,
+    formula: 'Tabela fixa de pontuação',
     timestamp: new Date().toISOString()
   });
-  return -1;
+
+  return reward;
 };
 
 export const logReward = (matches: number, playerId: number): string => {
@@ -42,7 +42,7 @@ export const logReward = (matches: number, playerId: number): string => {
   if (reward > 0) {
     message = `[Jogador #${playerId}] Premiação: +${reward} pontos por acertar ${matches} números!`;
   } else if (reward < 0) {
-    message = `[Jogador #${playerId}] Penalidade: ${reward} pontos por acertar apenas ${matches} números.`;
+    message = `[Jogador #${playerId}] Penalidade: ${reward} pontos por acertar ${matches} números.`;
   } else {
     message = `[Jogador #${playerId}] Sem pontuação: ${matches} acertos.`;
   }
