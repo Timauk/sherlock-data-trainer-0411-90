@@ -39,7 +39,8 @@ export class TensorFlowSetup {
       // Schedule regular garbage collection
       setInterval(() => {
         try {
-          tf.tidy(() => {});
+          tf.engine().endScope();
+          tf.engine().startScope();
           const memoryInfo = tf.memory();
           systemLogger.log('system', 'Memory cleanup performed', {
             numTensors: memoryInfo.numTensors,
@@ -114,16 +115,26 @@ export class TensorFlowSetup {
     return this.preferredBackend;
   }
 
-  // Utility method to safely execute tensor operations
-  async safeTensorOperation<T>(operation: () => Promise<T>): Promise<T> {
-    return tf.tidy(async () => {
-      try {
-        return await operation();
-      } catch (error) {
-        systemLogger.error('system', 'Error in tensor operation', { error });
-        throw error;
-      }
-    });
+  // Utility method to safely execute tensor operations with proper typing
+  async safeTensorOperation<T>(operation: () => Promise<T | tf.Tensor>): Promise<T> {
+    return tf.engine().scopedRun(
+      async () => {
+        try {
+          const result = await operation();
+          if (result instanceof tf.Tensor) {
+            const value = await result.array();
+            result.dispose();
+            return value as T;
+          }
+          return result;
+        } catch (error) {
+          systemLogger.error('system', 'Error in tensor operation', { error });
+          throw error;
+        }
+      },
+      () => {}, // beforeFunc
+      () => {}  // afterFunc
+    );
   }
 }
 
