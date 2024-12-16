@@ -9,6 +9,8 @@ export interface Player {
     concurso: number;
     matches: number;
     score: number;
+    predictions: number[];
+    drawnNumbers: number[];
   }>;
 }
 
