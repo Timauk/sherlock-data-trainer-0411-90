@@ -59,6 +59,21 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
     return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100";
   };
 
+  const getScoreText = (fitness: number): string => {
+    const scoreMap: { [key: number]: number } = {
+      7: -16,
+      8: -8,
+      9: -4,
+      10: -2,
+      11: 2,
+      12: 4,
+      13: 8,
+      14: 16,
+      15: 32
+    };
+    return `${fitness} acertos (${scoreMap[fitness] || 0} pontos)`;
+  };
+
   return (
     <Card 
       onClick={() => onPlayerClick(player)}
@@ -75,7 +90,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
             Score: {player.score.toFixed(0)}
           </Badge>
           <Badge variant="outline" className={getRewardClass(player.fitness)}>
-            Acertos: {player.fitness}
+            {getScoreText(player.fitness)}
           </Badge>
         </div>
       </div>
