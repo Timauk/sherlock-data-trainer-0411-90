@@ -78,7 +78,8 @@ export class ModelInitializer {
         
         if (backend === 'webgl') {
           // Configure WebGL for better stability
-          const gl = await tf.backend().getGPGPUContext().gl;
+          const webglBackend = tf.backend() as tf.webgl.MathBackendWebGL;
+          const gl = webglBackend.gpgpu.gl;
           gl.getExtension('OES_texture_float');
           gl.getExtension('WEBGL_color_buffer_float');
           
@@ -115,18 +116,22 @@ export class ModelInitializer {
       const end = Math.min((i + 1) * this.BATCH_SIZE, data.length);
       const batchData = data.slice(start, end);
       
-      tf.tidy(() => {
+      const trainTensors = tf.tidy(() => {
         const xs = tf.tensor2d(batchData.map(row => row.slice(0, 15)));
         const ys = tf.tensor2d(batchData.map(row => row.slice(-15)));
-        
-        return model.fit(xs, ys, {
-          epochs: 1,
-          batchSize: this.BATCH_SIZE,
-          callbacks: {
-            onEpochEnd: onProgress
-          }
-        });
+        return { xs, ys };
       });
+      
+      await model.fit(trainTensors.xs, trainTensors.ys, {
+        epochs: 1,
+        batchSize: this.BATCH_SIZE,
+        callbacks: {
+          onEpochEnd: onProgress
+        }
+      });
+      
+      trainTensors.xs.dispose();
+      trainTensors.ys.dispose();
       
       // Force garbage collection between batches
       await tf.nextFrame();
