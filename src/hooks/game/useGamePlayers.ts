@@ -13,9 +13,9 @@ export const useGamePlayers = () => {
     });
     
     const initialPlayers: Player[] = Array.from({ length: numPlayers }, (_, index) => {
-      // Inicializa pesos com o tamanho correto (13072)
+      // Inicializa pesos com valores entre 0 e 1000
       const weights = Array.from({ length: 13072 }, () => {
-        const baseWeight = 0.1 + Math.random() * 0.9;
+        const baseWeight = Math.floor(Math.random() * 1001); // 0 to 1000
         return baseWeight;
       });
       
