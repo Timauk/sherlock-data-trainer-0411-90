@@ -111,15 +111,17 @@ export class TensorFlowSetup {
   }
 
   async safeTensorOperation<T>(operation: () => Promise<T>): Promise<T> {
-    return tf.tidy(async () => {
-      try {
-        const result = await operation();
-        return result;
-      } catch (error) {
-        systemLogger.error('system', 'Error in tensor operation', { error });
-        throw error;
-      }
-    });
+    let result: T;
+    await tf.engine().startScope();
+    try {
+      result = await operation();
+    } catch (error) {
+      systemLogger.error('system', 'Error in tensor operation', { error });
+      throw error;
+    } finally {
+      tf.engine().endScope();
+    }
+    return result;
   }
 }
 
