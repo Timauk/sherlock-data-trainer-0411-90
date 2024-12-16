@@ -41,7 +41,6 @@ export async function processGameLogic(
       throw new Error('Invalid input data');
     }
 
-    // Garantir que o tensor tenha a forma correta [1, 13057]
     const paddedData = new Array(13057).fill(0);
     for (let i = 0; i < inputData.length && i < 13057; i++) {
       paddedData[i] = inputData[i];
@@ -59,8 +58,15 @@ export async function processGameLogic(
 
     // Calcular acertos para cada jogador
     const playerResults = playerWeights.map((weights, index) => {
-      const playerPredictions = result.slice(0, 15).map(num => Math.round(num));
+      // Garantir que as previsões sejam números inteiros entre 1 e 25
+      const playerPredictions = result.slice(0, 15).map(num => 
+        Math.max(1, Math.min(25, Math.round(num)))
+      );
+      
+      // Pegar os números sorteados (primeiros 15 números)
       const drawnNumbers = inputData.slice(0, 15);
+      
+      // Calcular acertos
       const matches = playerPredictions.filter(num => drawnNumbers.includes(num)).length;
       const score = matches * 10; // Pontuação baseada nos acertos
 

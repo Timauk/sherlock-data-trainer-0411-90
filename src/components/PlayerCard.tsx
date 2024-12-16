@@ -35,7 +35,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
     if (!predictions || predictions.length === 0) {
       return 'Aguardando próxima rodada';
     }
-
     return predictions
       .map(pred => Math.max(1, Math.min(25, Math.round(pred))))
       .sort((a, b) => a - b)
