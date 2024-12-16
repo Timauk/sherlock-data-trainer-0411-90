@@ -20,7 +20,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   onClonePlayer,
 }) => {
   useEffect(() => {
-    systemLogger.log('player', `Estado detalhado do Jogador #${player.id}`, {
+    systemLogger.log('player', `Atualizando estado do Jogador #${player.id}`, {
       id: player.id,
       score: player.score,
       fitness: player.fitness,
@@ -29,13 +29,10 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       generation: player.generation,
       timestamp: new Date().toISOString()
     });
-  }, [player.score, player.fitness, player.predictions, player.id, player.generation]);
+  }, [player]);
 
   const formatPredictions = (predictions: number[]): string => {
     if (!predictions || predictions.length === 0) {
-      systemLogger.log('player', `Jogador #${player.id} sem previsões`, {
-        timestamp: new Date().toISOString()
-      });
       return 'Aguardando próxima rodada';
     }
 
@@ -43,11 +40,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       .map(pred => Math.max(1, Math.min(25, Math.round(pred))))
       .sort((a, b) => a - b)
       .map(num => num.toString());
-
-    systemLogger.log('player', `Previsões do Jogador #${player.id}`, {
-      predictions: validNumbers,
-      timestamp: new Date().toISOString()
-    });
 
     return validNumbers.join(', ');
   };
@@ -87,7 +79,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         </h4>
         <div className="flex flex-col items-end gap-1">
           <Badge variant={isTopPlayer ? "default" : "secondary"}>
-            Score: {player.score.toFixed(0)}
+            Score Total: {player.score.toFixed(0)}
           </Badge>
           <Badge variant="outline" className={getRewardClass(player.fitness)}>
             {getScoreText(player.fitness)}
@@ -105,8 +97,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 
         <div className="grid grid-cols-2 gap-2 mt-2">
           <div className="bg-muted p-2 rounded">
-            <p className="text-xs font-medium">Fitness</p>
-            <p className="text-lg font-bold">{player.fitness.toFixed(2)}</p>
+            <p className="text-xs font-medium">Acertos Atual</p>
+            <p className="text-lg font-bold">{player.fitness}</p>
           </div>
           <div className="bg-muted p-2 rounded">
             <p className="text-xs font-medium">Geração</p>

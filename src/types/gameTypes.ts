@@ -5,6 +5,11 @@ export interface Player {
   weights: number[];
   fitness: number;
   generation: number;
+  matchHistory?: Array<{
+    concurso: number;
+    matches: number;
+    score: number;
+  }>;
 }
 
 export interface ModelVisualization {

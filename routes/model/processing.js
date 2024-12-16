@@ -24,7 +24,6 @@ router.post('/process-game', async (req, res) => {
       isManualMode 
     } = req.body;
 
-    // Log received data
     logger.info('Dados recebidos:', {
       hasInputData: !!inputData,
       inputDataLength: inputData?.length,
@@ -35,7 +34,6 @@ router.post('/process-game', async (req, res) => {
       isManualMode
     });
 
-    // Enhanced input validation
     const validationError = validateInputData(inputData) || validatePlayerWeights(playerWeights);
     if (validationError) {
       logger.error('Erro de validação', {
@@ -49,7 +47,6 @@ router.post('/process-game', async (req, res) => {
       });
     }
 
-    // Enriquecer os dados antes do processamento
     const enrichedData = enrichTrainingData([inputData], [new Date()]);
     logger.info('Dados enriquecidos:', {
       originalLength: inputData.length,
@@ -57,18 +54,25 @@ router.post('/process-game', async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
+    // Calcular acertos para cada jogador
     const result = await processGameLogic(
-      enrichedData[0], // Usar dados enriquecidos
+      enrichedData[0],
       generation,
       playerWeights,
       isInfiniteMode,
       isManualMode
     );
 
+    // Log detalhado dos acertos
     logger.info('Processamento concluído com sucesso', { 
       resultSize: result.prediction.length,
       patternsFound: result.patterns.length,
       newGeneration: result.generation,
+      playerResults: result.players?.map(p => ({
+        id: p.id,
+        fitness: p.fitness,
+        score: p.score
+      })),
       timestamp: new Date().toISOString()
     });
 
