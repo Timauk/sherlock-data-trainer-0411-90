@@ -3,6 +3,7 @@ import { analyzePatterns, enrichDataWithPatterns, getOrCreateModel } from './uti
 import { logger } from '../../src/utils/logging/logger.js';
 import { validateInputData, validatePlayerWeights } from './validation.js';
 import { enrichTrainingData } from '../../src/utils/features/lotteryFeatureEngineering.js';
+import { calculateReward } from '../../src/utils/rewardSystem.js';
 
 export async function processGameLogic(
   inputData,
@@ -68,13 +69,16 @@ export async function processGameLogic(
       
       // Calcular acertos
       const matches = playerPredictions.filter(num => drawnNumbers.includes(num)).length;
-      const score = matches * 10; // Pontuação baseada nos acertos
+      
+      // Usar o sistema de recompensas para calcular a pontuação
+      const score = calculateReward(matches);
 
       logger.info(`Jogador #${index + 1} acertos:`, {
         predictions: playerPredictions,
         matches,
         inputNumbers: drawnNumbers,
-        score
+        score,
+        rewardSystem: 'Usando sistema de recompensas complexo'
       });
 
       // Criar entrada no histórico
