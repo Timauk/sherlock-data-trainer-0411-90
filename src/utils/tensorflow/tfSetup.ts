@@ -4,6 +4,7 @@ import { systemLogger } from '../logging/systemLogger';
 export class TensorFlowSetup {
   private static instance: TensorFlowSetup;
   private isInitialized: boolean = false;
+  private preferredBackend: string = 'cpu'; // Default to CPU for stability
 
   private constructor() {}
 
@@ -18,33 +19,43 @@ export class TensorFlowSetup {
     if (this.isInitialized) return;
 
     try {
-      // Try to initialize with WebGL first
-      await tf.setBackend('webgl');
+      // Configure memory management
+      tf.env().set('WEBGL_DELETE_TEXTURE_THRESHOLD', 0);
+      tf.env().set('WEBGL_FORCE_F16_TEXTURES', true);
+      tf.env().set('WEBGL_VERSION', 1);
+      tf.env().set('WEBGL_MAX_TEXTURE_SIZE', 2048); // Reduced from default
+      tf.env().set('WEBGL_MAX_TEXTURES_IN_SHADER', 16);
+
+      // Try CPU first as it's more stable
+      await tf.setBackend('cpu');
       await tf.ready();
+      this.preferredBackend = 'cpu';
       
-      systemLogger.log('system', 'TensorFlow.js initialized with WebGL backend');
+      systemLogger.log('system', 'TensorFlow.js initialized with CPU backend', {
+        backend: tf.getBackend(),
+        memory: tf.memory()
+      });
+
+      // Schedule regular garbage collection
+      setInterval(() => {
+        try {
+          tf.tidy(() => {});
+          const memoryInfo = tf.memory();
+          systemLogger.log('system', 'Memory cleanup performed', {
+            numTensors: memoryInfo.numTensors,
+            numBytes: memoryInfo.numBytes
+          });
+        } catch (error) {
+          systemLogger.error('system', 'Error during memory cleanup', { error });
+        }
+      }, 10000);
+
     } catch (error) {
-      systemLogger.log('system', 'WebGL initialization failed, falling back to CPU', { error });
-      
-      try {
-        // Fall back to CPU backend
-        await tf.setBackend('cpu');
-        await tf.ready();
-        systemLogger.log('system', 'TensorFlow.js initialized with CPU backend');
-      } catch (cpuError) {
-        systemLogger.error('system', 'Failed to initialize TensorFlow.js backends', { error: cpuError });
-        throw new Error('Could not initialize TensorFlow backend');
-      }
+      systemLogger.error('system', 'Failed to initialize TensorFlow.js', { error });
+      throw new Error('Could not initialize TensorFlow backend');
     }
 
     this.isInitialized = true;
-    
-    const memoryInfo = tf.memory();
-    systemLogger.log('system', 'TensorFlow.js Memory Info', {
-      numTensors: memoryInfo.numTensors,
-      numDataBuffers: memoryInfo.numDataBuffers,
-      numBytes: memoryInfo.numBytes,
-    });
   }
 
   async getModel(): Promise<tf.LayersModel | null> {
@@ -55,19 +66,24 @@ export class TensorFlowSetup {
     try {
       const model = tf.sequential();
       
-      // Simplified model architecture for better CPU performance
+      // Simplified model architecture optimized for CPU
       model.add(tf.layers.dense({ 
-        units: 128, 
+        units: 64, // Reduced from 128
         activation: 'relu', 
-        inputShape: [17] 
+        inputShape: [17],
+        kernelInitializer: 'glorotNormal'
       }));
+      
       model.add(tf.layers.dense({ 
-        units: 64, 
-        activation: 'relu' 
+        units: 32, // Reduced from 64
+        activation: 'relu',
+        kernelInitializer: 'glorotNormal'
       }));
+      
       model.add(tf.layers.dense({ 
-        units: 15, 
-        activation: 'sigmoid' 
+        units: 15,
+        activation: 'sigmoid',
+        kernelInitializer: 'glorotNormal'
       }));
 
       model.compile({
@@ -95,7 +111,19 @@ export class TensorFlowSetup {
   }
 
   getBackend(): string {
-    return tf.getBackend() || 'unknown';
+    return this.preferredBackend;
+  }
+
+  // Utility method to safely execute tensor operations
+  async safeTensorOperation<T>(operation: () => Promise<T>): Promise<T> {
+    return tf.tidy(async () => {
+      try {
+        return await operation();
+      } catch (error) {
+        systemLogger.error('system', 'Error in tensor operation', { error });
+        throw error;
+      }
+    });
   }
 }
 
