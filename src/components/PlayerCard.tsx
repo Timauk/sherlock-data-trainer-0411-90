@@ -21,14 +21,13 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 }) => {
   useEffect(() => {
     if (player.predictions.length > 0) {
-      const matches = player.fitness;
-      if (matches >= 11) {
-        systemLogger.log('prediction', `[Jogador #${player.id}] Premiação: +${matches - 10} pontos por acertar ${matches} números!`, {
-          matches
-        });
-      }
+      systemLogger.log('player', `Atualizando estado do Jogador #${player.id}`, {
+        predictions: player.predictions,
+        fitness: player.fitness,
+        score: player.score
+      });
     }
-  }, [player.predictions, player.fitness, player.id]);
+  }, [player.predictions, player.fitness, player.score, player.id]);
 
   const formatPredictions = (predictions: number[]): string => {
     if (!predictions || predictions.length === 0) {

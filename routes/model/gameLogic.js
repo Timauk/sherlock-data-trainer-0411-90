@@ -1,6 +1,8 @@
 import * as tf from '@tensorflow/tfjs';
 import { analyzePatterns, enrichDataWithPatterns, getOrCreateModel } from './utils.js';
 import { logger } from '../../src/utils/logging/logger.js';
+import { validateInputData, validatePlayerWeights } from './validation.js';
+import { processGameLogic } from './gameLogic.js';
 import { enrichTrainingData } from '../../src/utils/features/lotteryFeatureEngineering.js';
 
 export async function processGameLogic(
@@ -14,90 +16,44 @@ export async function processGameLogic(
     dataLength: inputData.length,
     generation,
     mode: { infinite: isInfiniteMode, manual: isManualMode },
-    timestamp: new Date().toISOString(),
-    playerWeights: playerWeights ? playerWeights.length : 0,
-    weightsSample: playerWeights ? playerWeights.slice(0, 5) : []
+    timestamp: new Date().toISOString()
   });
 
   try {
-    logger.info('Verificando estado da rede neural', {
-      timestamp: new Date().toISOString(),
-      tfBackend: tf.getBackend(),
-      tfReady: tf.engine().ready,
-      memoryInfo: tf.memory()
+    // Tenta usar CPU se WebGL falhar
+    try {
+      await tf.setBackend('webgl');
+    } catch (e) {
+      logger.warn('WebGL falhou, usando CPU', { error: e.message });
+      await tf.setBackend('cpu');
+    }
+
+    logger.info('Backend TensorFlow:', {
+      backend: tf.getBackend(),
+      memory: tf.memory()
     });
 
     const model = await getOrCreateModel();
     
     if (!model) {
-      logger.error('Falha ao inicializar modelo', {
-        timestamp: new Date().toISOString(),
-        error: 'Modelo não pôde ser inicializado',
-        backendState: tf.getBackend()
-      });
       throw new Error('Model could not be initialized');
     }
 
-    // Log do estado do modelo
-    logger.info('Modelo carregado com sucesso', {
-      layers: model.layers.length,
-      inputShape: model.inputs[0].shape,
-      outputShape: model.outputs[0].shape,
-      compiled: !!model.optimizer,
-      timestamp: new Date().toISOString()
-    });
-
-    // Verificação dos dados de entrada
     if (!inputData || !Array.isArray(inputData)) {
-      logger.error('Dados de entrada inválidos', {
-        inputType: typeof inputData,
-        timestamp: new Date().toISOString()
-      });
       throw new Error('Invalid input data');
     }
 
-    // Enriquecimento dos dados antes da análise de padrões
     const enrichedData = enrichTrainingData([[...inputData]], [new Date()]);
     
     if (!enrichedData || !enrichedData[0]) {
-      logger.error('Falha ao enriquecer dados', {
-        timestamp: new Date().toISOString(),
-        inputData: inputData.slice(0, 5),
-        inputLength: inputData.length
-      });
       throw new Error('Failed to enrich input data');
     }
-
-    logger.info('Dados enriquecidos com sucesso', {
-      originalLength: inputData.length,
-      enrichedLength: enrichedData[0].length,
-      sampleData: enrichedData[0].slice(0, 5),
-      timestamp: new Date().toISOString()
-    });
 
     const patterns = analyzePatterns([inputData]);
     
     if (!patterns || patterns.length === 0) {
-      logger.warn('Nenhum padrão encontrado nos dados', {
-        timestamp: new Date().toISOString(),
-        inputData: inputData.slice(0, 5),
-        inputLength: inputData.length
-      });
       throw new Error('Failed to analyze input data patterns');
     }
-
-    // Log dos padrões encontrados
-    logger.info('Padrões identificados', {
-      patternsCount: patterns.length,
-      patternsSample: patterns.slice(0, 3),
-      timestamp: new Date().toISOString()
-    });
-
-    // Verificação do tensor e predição
-    logger.info('Iniciando criação do tensor', {
-      timestamp: new Date().toISOString(),
-      shape: [1, enrichedData[0].length]
-    });
 
     // Garantir que o tensor tenha a forma correta [1, 13057]
     const paddedData = new Array(13057).fill(0);
@@ -107,30 +63,32 @@ export async function processGameLogic(
     
     const tensor = tf.tensor2d([paddedData]);
     
-    logger.info('Tensor criado com sucesso', {
+    logger.info('Tensor criado:', {
       shape: tensor.shape,
-      timestamp: new Date().toISOString(),
       sampleData: paddedData.slice(0, 5)
-    });
-
-    // Log antes da predição
-    logger.info('Iniciando predição', {
-      tensorShape: tensor.shape,
-      modelInputShape: model.inputs[0].shape,
-      timestamp: new Date().toISOString()
     });
 
     const prediction = await model.predict(tensor);
     const result = Array.from(await prediction.data());
 
-    logger.info('Previsão gerada com sucesso', {
-      predictionLength: result.length,
-      predictionRange: {
-        min: Math.min(...result),
-        max: Math.max(...result)
-      },
-      timestamp: new Date().toISOString(),
-      samplePrediction: result.slice(0, 5)
+    // Calcular acertos para cada jogador
+    const playerResults = playerWeights.map((weights, index) => {
+      const playerPredictions = result.slice(0, 15);
+      const matches = playerPredictions.filter(num => 
+        inputData.includes(Math.round(num))
+      ).length;
+
+      logger.info(`Jogador #${index + 1} acertos:`, {
+        predictions: playerPredictions,
+        matches,
+        inputNumbers: inputData
+      });
+
+      return {
+        playerId: index + 1,
+        matches,
+        predictions: playerPredictions
+      };
     });
 
     // Cleanup
@@ -141,10 +99,10 @@ export async function processGameLogic(
       prediction: result,
       patterns,
       generation: generation + 1,
+      playerResults,
       modelMetrics: {
         layers: model.layers.length,
         totalParams: model.countParams(),
-        configuration: model.getConfig(),
         backend: tf.getBackend(),
         memoryInfo: tf.memory()
       }
@@ -152,22 +110,7 @@ export async function processGameLogic(
   } catch (error) {
     logger.error('Erro na lógica do jogo', {
       error: error.message,
-      stack: error.stack,
-      timestamp: new Date().toISOString(),
-      inputDataState: {
-        hasData: !!inputData,
-        length: inputData?.length
-      },
-      generationState: generation,
-      playerWeightsState: {
-        hasWeights: !!playerWeights,
-        length: playerWeights?.length
-      },
-      tfState: {
-        backend: tf.getBackend(),
-        memory: tf.memory(),
-        lastError: tf.engine().lastError
-      }
+      stack: error.stack
     });
     throw error;
   }
