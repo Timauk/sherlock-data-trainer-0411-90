@@ -78,10 +78,12 @@ export class ModelInitializer {
         
         if (backend === 'webgl') {
           // Configure WebGL for better stability
-          const webglBackend = tf.backend() as tf.webgl.MathBackendWebGL;
-          const gl = webglBackend.gpgpu.gl;
-          gl.getExtension('OES_texture_float');
-          gl.getExtension('WEBGL_color_buffer_float');
+          const backend = tf.backend();
+          if (backend && 'gpgpu' in backend) {
+            const gl = (backend as any).gpgpu.gl;
+            gl.getExtension('OES_texture_float');
+            gl.getExtension('WEBGL_color_buffer_float');
+          }
           
           // Set reasonable limits
           tf.env().set('WEBGL_MAX_TEXTURE_SIZE', this.MAX_TEXTURE_SIZE);
