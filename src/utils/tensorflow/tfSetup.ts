@@ -4,7 +4,6 @@ import { systemLogger } from '../logging/systemLogger';
 export class TensorFlowSetup {
   private static instance: TensorFlowSetup;
   private isInitialized: boolean = false;
-  private preferredBackend: string = 'cpu';
 
   private constructor() {}
 
@@ -19,15 +18,9 @@ export class TensorFlowSetup {
     if (this.isInitialized) return;
 
     try {
-      tf.env().set('WEBGL_DELETE_TEXTURE_THRESHOLD', 0);
-      tf.env().set('WEBGL_FORCE_F16_TEXTURES', true);
-      tf.env().set('WEBGL_VERSION', 1);
-      tf.env().set('WEBGL_MAX_TEXTURE_SIZE', 2048);
-      tf.env().set('WEBGL_MAX_TEXTURES_IN_SHADER', 16);
-
+      // Force CPU backend
       await tf.setBackend('cpu');
       await tf.ready();
-      this.preferredBackend = 'cpu';
       
       systemLogger.log('system', 'TensorFlow.js initialized with CPU backend', {
         backend: tf.getBackend(),
@@ -66,7 +59,7 @@ export class TensorFlowSetup {
       model.add(tf.layers.dense({ 
         units: 64,
         activation: 'relu', 
-        inputShape: [13057],
+        inputShape: [15],
         kernelInitializer: 'glorotNormal'
       }));
       
@@ -107,7 +100,7 @@ export class TensorFlowSetup {
   }
 
   getBackend(): string {
-    return this.preferredBackend;
+    return tf.getBackend();
   }
 
   async safeTensorOperation<T>(operation: () => Promise<T>): Promise<T> {

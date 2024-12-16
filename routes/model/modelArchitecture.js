@@ -3,6 +3,9 @@ import { systemLogger } from '../../src/utils/logging/systemLogger.js';
 
 export const createModelArchitecture = () => {
   try {
+    // Force CPU backend
+    tf.setBackend('cpu');
+    
     systemLogger.log('model', 'Iniciando criação da arquitetura do modelo', {
       timestamp: new Date().toISOString(),
       backend: tf.getBackend(),
@@ -11,11 +14,11 @@ export const createModelArchitecture = () => {
     
     const model = tf.sequential();
     
-    // Camada de entrada com logging detalhado
+    // Input layer with correct shape
     const inputLayer = tf.layers.dense({
       units: 256,
       activation: 'relu',
-      inputShape: [13057], // Ajustado para match com feature engineering
+      inputShape: [15], // Changed to match input data shape
       kernelInitializer: 'heNormal',
       kernelRegularizer: tf.regularizers.l2({ l2: 0.001 })
     });
@@ -31,7 +34,7 @@ export const createModelArchitecture = () => {
     model.add(tf.layers.batchNormalization());
     model.add(tf.layers.dropout({ rate: 0.3 }));
     
-    // Camadas intermediárias com logging
+    // Hidden layer
     const hiddenLayer = tf.layers.dense({
       units: 128,
       activation: 'relu',
@@ -49,7 +52,7 @@ export const createModelArchitecture = () => {
     model.add(tf.layers.batchNormalization());
     model.add(tf.layers.dropout({ rate: 0.2 }));
     
-    // Camada de saída com logging
+    // Output layer
     const outputLayer = tf.layers.dense({
       units: 15,
       activation: 'sigmoid',
@@ -63,7 +66,6 @@ export const createModelArchitecture = () => {
       activation: outputLayer.activation
     });
 
-    // Compilação do modelo com logging detalhado
     model.compile({
       optimizer: tf.train.adam(0.001),
       loss: 'binaryCrossentropy',
