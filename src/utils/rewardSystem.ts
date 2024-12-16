@@ -9,7 +9,7 @@ export const calculateReward = (matches: number): number => {
   // Sistema de recompensa (11-15 acertos)
   if (matches >= 11) {
     const reward = Math.pow(2, matches - 10);
-    systemLogger.log('reward', `Recompensa calculada: ${reward}`, {
+    systemLogger.log('reward', `Recompensa calculada para ${matches} acertos`, {
       matches,
       reward,
       formula: '2^(matches-10)',

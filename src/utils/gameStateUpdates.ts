@@ -1,6 +1,6 @@
 import { Player } from '@/types/gameTypes';
-import { calculateReward, logReward } from '@/utils/rewardSystem';
-import { temporalAccuracyTracker } from '@/utils/prediction/temporalAccuracy';
+import { calculateReward, logReward } from './rewardSystem';
+import { temporalAccuracyTracker } from './prediction/temporalAccuracy';
 import { systemLogger } from './logging/systemLogger';
 
 export const updatePlayerStates = (
@@ -17,10 +17,9 @@ export const updatePlayerStates = (
   let currentGameRandomMatches = 0;
   const totalPredictions = players.length * (nextConcurso + 1);
 
-  systemLogger.log('game', 'Iniciando atualização de estados dos jogadores', {
-    totalPlayers: players.length,
+  systemLogger.log('game', 'Iniciando comparação de números', {
     currentBoardNumbers,
-    nextConcurso,
+    totalPlayers: players.length,
     timestamp: new Date().toISOString()
   });
 
@@ -28,12 +27,10 @@ export const updatePlayerStates = (
     const playerPredictions = predictions[index];
     const matches = playerPredictions.filter(num => currentBoardNumbers.includes(num)).length;
     
-    systemLogger.log('game', `Calculando métricas do Jogador #${player.id}`, {
-      predictions: playerPredictions,
+    systemLogger.log('game', `Comparação do Jogador #${player.id}`, {
+      playerPredictions,
       currentBoardNumbers,
       matches,
-      previousScore: player.score,
-      previousFitness: player.fitness,
       timestamp: new Date().toISOString()
     });
 
@@ -66,24 +63,15 @@ export const updatePlayerStates = (
       fitness: matches
     };
 
-    systemLogger.log('game', `Estado atualizado do Jogador #${player.id}`, {
+    systemLogger.log('game', `Atualização do Jogador #${player.id}`, {
+      previousScore: player.score,
       newScore: updatedPlayer.score,
-      newFitness: updatedPlayer.fitness,
       reward,
+      matches,
       timestamp: new Date().toISOString()
     });
 
     return updatedPlayer;
-  });
-
-  systemLogger.log('game', 'Métricas globais da rodada', {
-    totalMatches,
-    randomMatches,
-    currentGameMatches,
-    currentGameRandomMatches,
-    totalPredictions,
-    accuracy: totalMatches / (players.length * 15),
-    timestamp: new Date().toISOString()
   });
 
   return {
