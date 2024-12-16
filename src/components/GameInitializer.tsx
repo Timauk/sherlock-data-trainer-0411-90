@@ -25,22 +25,48 @@ const GameInitializer: React.FC<GameInitializerProps> = ({
 
   const initializeNeuralNetwork = async () => {
     try {
-      systemLogger.log('initialization', 'Iniciando inicialização da rede neural');
+      systemLogger.log('system', 'Iniciando inicialização da rede neural');
+      
+      // Try WebGL first
+      try {
+        await tf.setBackend('webgl');
+        await tf.ready();
+        systemLogger.log('system', 'Usando backend WebGL');
+      } catch (webglError) {
+        // Fallback to CPU if WebGL fails
+        systemLogger.log('system', 'WebGL falhou, usando CPU como fallback', { error: webglError });
+        await tf.setBackend('cpu');
+        await tf.ready();
+      }
       
       const model = await ModelInitializer.initializeModel();
       
-      const xs = tf.tensor2d(csvData.map(row => row.slice(0, 15)));
-      const ys = tf.tensor2d(csvData.map(row => row.slice(-15)));
+      // Split data into smaller batches to prevent texture size issues
+      const batchSize = 32;
+      const totalBatches = Math.ceil(csvData.length / batchSize);
       
-      await model.fit(xs, ys, {
-        epochs: 10,
-        batchSize: 32,
-        callbacks: {
-          onEpochEnd: (epoch, logs) => {
-            systemLogger.log('training', `Época ${epoch + 1}`, { loss: logs?.loss });
+      for (let i = 0; i < totalBatches; i++) {
+        const start = i * batchSize;
+        const end = Math.min((i + 1) * batchSize, csvData.length);
+        const batchData = csvData.slice(start, end);
+        
+        const xs = tf.tensor2d(batchData.map(row => row.slice(0, 15)));
+        const ys = tf.tensor2d(batchData.map(row => row.slice(-15)));
+        
+        await model.fit(xs, ys, {
+          epochs: 10,
+          batchSize: Math.min(32, batchData.length),
+          callbacks: {
+            onEpochEnd: (epoch, logs) => {
+              systemLogger.log('system', `Época ${epoch + 1}`, { loss: logs?.loss });
+            }
           }
-        }
-      });
+        });
+
+        // Clean up tensors
+        xs.dispose();
+        ys.dispose();
+      }
 
       setTrainedModel(model);
       setIsDataLoaded(true);
@@ -50,7 +76,7 @@ const GameInitializer: React.FC<GameInitializerProps> = ({
         gameLogic.setNumbers([csvData[0]]);
         const initializedPlayers = gameLogic.initializePlayers();
         
-        systemLogger.log('initialization', 'Jogo inicializado com sucesso', {
+        systemLogger.log('system', 'Jogo inicializado com sucesso', {
           playersCount: initializedPlayers.length,
           modelStatus: model.optimizer ? 'compiled' : 'not compiled',
           firstNumbers: csvData[0]
@@ -61,12 +87,9 @@ const GameInitializer: React.FC<GameInitializerProps> = ({
         title: "Modelo Neural Treinado",
         description: "O modelo foi treinado com sucesso e está pronto para iniciar o jogo.",
       });
-
-      xs.dispose();
-      ys.dispose();
       
     } catch (error) {
-      systemLogger.error('training', 'Erro ao inicializar rede neural', { error });
+      systemLogger.error('system', 'Erro ao inicializar rede neural', { error });
       toast({
         title: "Erro no Treinamento",
         description: "Ocorreu um erro ao treinar o modelo neural. Tente novamente.",
@@ -77,11 +100,11 @@ const GameInitializer: React.FC<GameInitializerProps> = ({
 
   const loadCSV = async (file: File) => {
     try {
-      systemLogger.log('csv', 'Iniciando carregamento do CSV', { fileName: file.name });
+      systemLogger.log('system', 'Iniciando carregamento do CSV', { fileName: file.name });
       const text = await file.text();
       
       const lines = text.trim().split('\n').slice(1);
-      systemLogger.log('csv', 'Processando linhas do CSV', { totalLines: lines.length });
+      systemLogger.log('system', 'Processando linhas do CSV', { totalLines: lines.length });
       
       const data = lines.map(line => {
         const values = line.split(',');
@@ -112,7 +135,7 @@ const GameInitializer: React.FC<GameInitializerProps> = ({
         description: `${data.length} registros foram carregados. Iniciando treinamento...`,
       });
     } catch (error) {
-      systemLogger.error('csv', 'Erro ao carregar CSV', { 
+      systemLogger.error('system', 'Erro ao carregar CSV', { 
         error,
         stack: error instanceof Error ? error.stack : undefined
       });
