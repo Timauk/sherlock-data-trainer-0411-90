@@ -20,7 +20,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   onClonePlayer,
 }) => {
   useEffect(() => {
-    // Log detailed player metrics for debugging
+    // Log detalhado das métricas do jogador
     systemLogger.log('player', `Estado detalhado do Jogador #${player.id}`, {
       id: player.id,
       score: player.score,
@@ -68,8 +68,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
           <Badge variant={isTopPlayer ? "default" : "secondary"}>
             Score: {player.score.toFixed(0)}
           </Badge>
-          <Badge variant="outline">
-            Fitness: {player.fitness.toFixed(2)}
+          <Badge variant="outline" className="bg-blue-100">
+            Acertos: {player.fitness.toFixed(0)}
           </Badge>
         </div>
       </div>
@@ -84,8 +84,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 
         <div className="grid grid-cols-2 gap-2 mt-2">
           <div className="bg-muted p-2 rounded">
-            <p className="text-xs font-medium">Acertos</p>
-            <p className="text-lg font-bold">{player.fitness}</p>
+            <p className="text-xs font-medium">Fitness</p>
+            <p className="text-lg font-bold">{player.fitness.toFixed(2)}</p>
           </div>
           <div className="bg-muted p-2 rounded">
             <p className="text-xs font-medium">Geração</p>
