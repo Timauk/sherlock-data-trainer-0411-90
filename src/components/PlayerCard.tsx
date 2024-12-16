@@ -20,7 +20,6 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   onClonePlayer,
 }) => {
   useEffect(() => {
-    // Log detalhado das métricas do jogador
     systemLogger.log('player', `Estado detalhado do Jogador #${player.id}`, {
       id: player.id,
       score: player.score,
@@ -53,6 +52,13 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
     return validNumbers.join(', ');
   };
 
+  const getRewardClass = (fitness: number): string => {
+    if (fitness >= 11) return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100";
+    if (fitness === 10) return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100";
+    if (fitness >= 7) return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100";
+    return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100";
+  };
+
   return (
     <Card 
       onClick={() => onPlayerClick(player)}
@@ -68,8 +74,8 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
           <Badge variant={isTopPlayer ? "default" : "secondary"}>
             Score: {player.score.toFixed(0)}
           </Badge>
-          <Badge variant="outline" className="bg-blue-100">
-            Acertos: {player.fitness.toFixed(0)}
+          <Badge variant="outline" className={getRewardClass(player.fitness)}>
+            Acertos: {player.fitness}
           </Badge>
         </div>
       </div>

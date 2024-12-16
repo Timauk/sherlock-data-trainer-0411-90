@@ -20,10 +20,16 @@ export const calculateReward = (matches: number): number => {
   } else if (matches === 11) {
     reward = 2;
   } else if (matches === 10) {
-    reward = -1; // Penalização específica para 10 acertos
-  } else if (matches < 6) {
-    reward = -1; // Penalização para menos de 6 acertos
-  } // Entre 6-9 acertos mantém 0 pontos
+    reward = -2;
+  } else if (matches === 9) {
+    reward = -4;
+  } else if (matches === 8) {
+    reward = -8;
+  } else if (matches === 7) {
+    reward = -16;
+  } else if (matches < 7) {
+    reward = -32; // Penalização máxima para menos de 7 acertos
+  }
 
   systemLogger.log('reward', `Recompensa calculada para ${matches} acertos`, {
     matches,
