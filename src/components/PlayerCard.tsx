@@ -65,7 +65,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 
   const getLastMatchHistory = () => {
     if (!player.matchHistory || !Array.isArray(player.matchHistory) || player.matchHistory.length === 0) {
-      return { matches: 0, score: 0 };
+      return { matches: 0, score: 0, predictions: [], drawnNumbers: [] };
     }
     return player.matchHistory[player.matchHistory.length - 1];
   };
@@ -104,13 +104,25 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         <div className="grid grid-cols-2 gap-2 mt-2">
           <div className="bg-muted p-2 rounded">
             <p className="text-xs font-medium">Acertos Atual</p>
-            <p className="text-lg font-bold">{lastMatch.matches}</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-lg font-bold">{lastMatch.matches}</p>
+              <p className="text-xs text-muted-foreground">de 15</p>
+            </div>
           </div>
           <div className="bg-muted p-2 rounded">
             <p className="text-xs font-medium">Pontos Último Jogo</p>
             <p className="text-lg font-bold">{lastMatch.score}</p>
           </div>
         </div>
+
+        {lastMatch.matches > 0 && (
+          <div className="mt-2 p-2 bg-muted rounded">
+            <p className="text-xs font-medium mb-1">Números Sorteados:</p>
+            <p className="text-sm">{lastMatch.drawnNumbers.sort((a, b) => a - b).join(', ')}</p>
+            <p className="text-xs font-medium mt-2 mb-1">Suas Previsões:</p>
+            <p className="text-sm">{lastMatch.predictions.sort((a, b) => a - b).join(', ')}</p>
+          </div>
+        )}
 
         <Button 
           onClick={(e) => onClonePlayer(player, e)}
