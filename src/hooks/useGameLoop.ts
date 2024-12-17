@@ -6,8 +6,6 @@ import { updateModelWithNewData } from '@/utils/modelUtils';
 import { calculateReward, logReward } from '@/utils/rewardSystem';
 import { getLunarPhase, analyzeLunarPatterns } from '@/utils/lunarCalculations';
 import { performCrossValidation } from '@/utils/validation';
-import { calculateConfidence } from '@/utils/prediction';
-import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
 import { temporalAccuracyTracker } from '@/utils/prediction/temporalAccuracy';
 import { TimeSeriesAnalysis } from '@/utils/analysis';
 
@@ -38,7 +36,6 @@ export const useGameLoop = (
   setGameCount: React.Dispatch<React.SetStateAction<number>>,
   showToast?: (title: string, description: string) => void
 ) => {
-
   const gameLoop = useCallback(async () => {
     if (csvData.length === 0 || !trainedModel) return;
 
@@ -49,11 +46,6 @@ export const useGameLoop = (
     const currentBoardNumbers = csvData[nextConcurso];
     setBoardNumbers(currentBoardNumbers);
     
-    const validationMetrics = performCrossValidation(
-      [players[0].predictions],
-      csvData.slice(Math.max(0, nextConcurso - 10), nextConcurso)
-    );
-
     const currentDate = new Date();
     const lunarPhase = getLunarPhase(currentDate);
     const lunarPatterns = analyzeLunarPatterns([currentDate], [currentBoardNumbers]);
@@ -73,10 +65,9 @@ export const useGameLoop = (
           player.weights,
           { 
             lunarPhase, 
-            patterns: lunarPatterns, // Add the patterns property
+            patterns: lunarPatterns, 
             lunarPatterns 
-          },
-          { numbers: [[...currentBoardNumbers]], dates: [currentDate] }
+          }
         );
 
         const timeSeriesAnalyzer = new TimeSeriesAnalysis([[...currentBoardNumbers]]);
@@ -111,7 +102,7 @@ export const useGameLoop = (
       
       if (matches >= 11) {
         const logMessage = logReward(matches, player.id);
-        addLog(logMessage, matches);
+        addLog(logMessage);
         
         if (matches >= 13) {
           showToast?.("Desempenho Excepcional!", 
