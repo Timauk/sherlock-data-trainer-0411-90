@@ -6,7 +6,7 @@ import { updateModelWithNewData } from '@/utils/modelUtils';
 import { calculateReward, logReward } from '@/utils/rewardSystem';
 import { getLunarPhase, analyzeLunarPatterns } from '@/utils/lunarCalculations';
 import { performCrossValidation } from '@/utils/validation';
-import { calculateConfidenceScore } from '@/utils/prediction';
+import { calculateConfidence } from '@/utils/prediction';
 import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
 import { temporalAccuracyTracker } from '@/utils/prediction/temporalAccuracy';
 import { TimeSeriesAnalysis } from '@/utils/analysis';
@@ -69,12 +69,11 @@ export const useGameLoop = (
         const prediction = await makePrediction(
           trainedModel, 
           currentBoardNumbers, 
-          player.weights, 
+          player.weights,
           { lunarPhase, lunarPatterns },
           { numbers: [[...currentBoardNumbers]], dates: [currentDate] }
         );
 
-        // Monitorar previsões
         const timeSeriesAnalyzer = new TimeSeriesAnalysis([[...currentBoardNumbers]]);
         const arimaPredictor = timeSeriesAnalyzer.analyzeNumbers();
         predictionMonitor.recordPrediction(prediction, currentBoardNumbers, arimaPredictor);

@@ -8,23 +8,24 @@ export async function makePrediction(
   model: tf.LayersModel,
   inputData: number[],
   weights: number[],
-  config: { lunarPhase: string; patterns: any }
+  config: { lunarPhase: string; patterns: any },
+  extraData?: { numbers: number[][]; dates: Date[] }
 ): Promise<number[]> {
   try {
     const inputTensor = tf.tensor2d([inputData]);
     const rawPredictions = await model.predict(inputTensor) as tf.Tensor;
     const probabilities = Array.from(await rawPredictions.data());
     
-    // Aplicar pesos do jogador
+    // Apply player weights
     const weightedProbs = probabilities.map((prob, i) => ({
       number: i + 1,
       probability: prob * weights[i % weights.length]
     }));
 
-    // Ordenar por probabilidade
+    // Sort by probability
     weightedProbs.sort((a, b) => b.probability - a.probability);
 
-    // Selecionar 15 números únicos
+    // Select 15 unique numbers
     const selectedNumbers = new Set<number>();
     let index = 0;
     
@@ -36,14 +37,14 @@ export async function makePrediction(
       index++;
     }
 
-    // Converter para array e ordenar
+    // Convert to array and sort
     const result = Array.from(selectedNumbers).sort((a, b) => a - b);
 
     // Cleanup
     inputTensor.dispose();
     rawPredictions.dispose();
 
-    // Feedback para aprendizagem
+    // Feedback for learning
     const feedback = {
       selectedNumbers: result,
       weights: weights,
