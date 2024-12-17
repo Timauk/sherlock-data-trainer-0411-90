@@ -163,4 +163,3 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     initializeGameData
   };
 };
-

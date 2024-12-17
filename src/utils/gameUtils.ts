@@ -14,7 +14,7 @@ export const validateGameState = (
   }
 
   const validationData = historicalData.slice(Math.max(0, currentIndex - 10), currentIndex);
-  return performCrossValidation(players[0].predictions, validationData);
+  return performCrossValidation([players[0].predictions], validationData); // Fixed array dimension
 };
 
 export const performCrossValidation = (
