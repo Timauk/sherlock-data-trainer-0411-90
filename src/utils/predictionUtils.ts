@@ -1,5 +1,5 @@
 import { Player, ModelVisualization } from '@/types/gameTypes';
-import { systemLogger } from '../logging/systemLogger';
+import { systemLogger } from '@/utils/logging/systemLogger';
 import * as tf from '@tensorflow/tfjs';
 
 export async function makePrediction(

@@ -38,6 +38,7 @@ export const useGameLoop = (
   setGameCount: React.Dispatch<React.SetStateAction<number>>,
   showToast?: (title: string, description: string) => void
 ) => {
+
   const gameLoop = useCallback(async () => {
     if (csvData.length === 0 || !trainedModel) return;
 
@@ -70,7 +71,11 @@ export const useGameLoop = (
           trainedModel, 
           currentBoardNumbers, 
           player.weights,
-          { lunarPhase, lunarPatterns },
+          { 
+            lunarPhase, 
+            patterns: lunarPatterns, // Add the patterns property
+            lunarPatterns 
+          },
           { numbers: [[...currentBoardNumbers]], dates: [currentDate] }
         );
 
