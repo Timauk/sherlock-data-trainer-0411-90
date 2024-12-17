@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
+import * as tf from '@tensorflow/tfjs';
 
 export const useGamePlayers = () => {
   const [players, setPlayers] = useState<Player[]>([]);

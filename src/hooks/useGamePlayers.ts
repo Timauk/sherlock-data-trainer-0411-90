@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
+import * as tf from '@tensorflow/tfjs';
 
 export const useGamePlayers = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [champion, setChampion] = useState<Player | null>(null);
 
-  const initializePlayers = useCallback((numPlayers: number = 6) => { // Changed from 100 to 6
+  const initializePlayers = useCallback((numPlayers: number = 6) => {
     systemLogger.log('initialization', 'Initializing players', {
       numPlayers,
       timestamp: new Date().toISOString()
@@ -17,13 +18,18 @@ export const useGamePlayers = () => {
         return 0.5 + Math.random();
       });
       
-      const player = {
+      const player: Player = {
         id: index + 1,
         score: 0,
         predictions: [],
         weights,
         fitness: 0,
-        generation: 1
+        generation: 1,
+        modelConnection: {
+          lastPrediction: null,
+          confidence: 0,
+          successRate: 0
+        }
       };
 
       return player;
@@ -40,14 +46,32 @@ export const useGamePlayers = () => {
     return initialPlayers;
   }, []);
 
-  const updatePlayers = useCallback((updatedPlayers: Player[]) => {
-    systemLogger.log('players', 'Updating players state', {
-      totalPlayers: updatedPlayers.length
-    });
+  const updatePlayers = useCallback((updatedPlayers: Player[], model: tf.LayersModel | null) => {
+    if (!model) {
+      systemLogger.error('players', 'Model not available for player update');
+      return;
+    }
 
-    setPlayers(updatedPlayers);
+    const validPlayers = updatedPlayers.every(player => 
+      player.weights && player.weights.length === 17
+    );
+
+    if (!validPlayers) {
+      systemLogger.error('players', 'Error: Players with incorrect number of weights');
+      return;
+    }
+
+    const playersWithModelConnection = updatedPlayers.map(player => ({
+      ...player,
+      modelConnection: {
+        ...player.modelConnection,
+        lastUpdate: new Date().toISOString()
+      }
+    }));
+
+    setPlayers(playersWithModelConnection);
     
-    const newChampion = updatedPlayers.reduce((prev, current) => 
+    const newChampion = playersWithModelConnection.reduce((prev, current) => 
       current.score > prev.score ? current : prev
     );
     
