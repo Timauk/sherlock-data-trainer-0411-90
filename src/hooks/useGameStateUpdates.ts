@@ -1,6 +1,7 @@
 import { Player } from '@/types/gameTypes';
 import { calculateReward, logReward } from '@/utils/rewardSystem';
-import { temporalAccuracyTracker } from '@/utils/prediction';  // Updated import
+import { temporalAccuracyTracker } from '@/utils/predictions/predictionCore';
+import { systemLogger } from '@/utils/logging/systemLogger';
 
 export const updatePlayerStates = (
   players: Player[],

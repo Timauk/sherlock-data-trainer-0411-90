@@ -4,8 +4,7 @@ import { useGamePlayers } from './game/useGamePlayers';
 import { useBankSystem } from './game/useBankSystem';
 import { useGameEvolution } from './game/useGameEvolution';
 import { useGameState } from './game/useGameState';
-import { handlePlayerPredictions } from '@/utils/game/playerPredictions';
-import { updateModel } from '@/utils/game/modelUpdate';
+import { handlePlayerPredictions, updateModel } from '@/utils/predictions/predictionCore';
 import { validateGameState } from '@/utils/game/validation';
 import { systemLogger } from '@/utils/logging/systemLogger';
 import { getLunarPhase, analyzeLunarPatterns } from '@/utils/game/lunarAnalysis';
@@ -164,3 +163,4 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     initializeGameData
   };
 };
+

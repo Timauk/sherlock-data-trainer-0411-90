@@ -1,14 +1,10 @@
 import { useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import { Player, ModelVisualization } from '@/types/gameTypes';
-import { makePrediction } from '@/utils/predictionUtils';
-import { updateModel } from '@/utils/game/modelUpdate';
-import { calculateReward, logReward } from '@/utils/rewardSystem';
+import { handlePlayerPredictions, updateModel, temporalAccuracyTracker } from '@/utils/predictions/predictionCore';
 import { getLunarPhase, analyzeLunarPatterns } from '@/utils/lunarCalculations';
-import { temporalAccuracyTracker } from '@/utils/predictions/predictionCore';
 import { TimeSeriesAnalysis } from '@/utils/analysis';
 import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
-import { handlePlayerPredictions } from '@/utils/predictions/predictionCore';
 
 export const useGameLoop = (
   players: Player[],
