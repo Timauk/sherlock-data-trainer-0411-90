@@ -1,8 +1,8 @@
 import { Player, ModelVisualization } from '@/types/gameTypes';
-import { systemLogger } from '../logging/systemLogger';
+import { systemLogger } from './logging/systemLogger';
 import * as tf from '@tensorflow/tfjs';
 import { TimeSeriesAnalysis } from './analysis';
-import { performanceMonitor } from './performance';
+import { performanceMonitor } from './performance/performanceMonitor';
 
 export async function makePrediction(
   model: tf.LayersModel,

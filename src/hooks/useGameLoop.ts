@@ -41,7 +41,6 @@ export const useGameLoop = (
   const gameLoop = useCallback(async () => {
     if (csvData.length === 0 || !trainedModel) return;
 
-    // Incrementa o número do concurso e reinicia se necessário
     const nextConcurso = (concursoNumber + 1) % csvData.length;
     setConcursoNumber(nextConcurso);
     setGameCount(prev => prev + 1);
@@ -71,8 +70,6 @@ export const useGameLoop = (
           trainedModel, 
           currentBoardNumbers, 
           player.weights, 
-          nextConcurso,
-          setNeuralNetworkVisualization,
           { lunarPhase, lunarPatterns },
           { numbers: [[...currentBoardNumbers]], dates: [currentDate] }
         );
