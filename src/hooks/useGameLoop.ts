@@ -8,6 +8,7 @@ import { getLunarPhase, analyzeLunarPatterns } from '@/utils/lunarCalculations';
 import { performCrossValidation } from '@/utils/validation';
 import { temporalAccuracyTracker } from '@/utils/prediction/temporalAccuracy';
 import { TimeSeriesAnalysis } from '@/utils/analysis';
+import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
 
 export const useGameLoop = (
   players: Player[],
@@ -17,7 +18,7 @@ export const useGameLoop = (
   concursoNumber: number,
   setEvolutionData: (data: any) => void,
   generation: number,
-  addLog: (message: string, matches?: number) => void,
+  addLog: (message: string) => void,
   updateInterval: number,
   trainingData: number[][],
   setTrainingData: React.Dispatch<React.SetStateAction<number[][]>>,
