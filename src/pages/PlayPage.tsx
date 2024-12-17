@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import * as tf from '@tensorflow/tfjs';
-import { useGameLogic } from '@/hooks/useGameLogic'; // Fixed import
-import { useGameControls } from '@/hooks/useGameControls';
+import { useGameLogic } from '@/hooks/gameHooks';
+import { useGameControls } from '@/hooks/gameHooks';
 import { PlayPageHeader } from '@/components/PlayPageHeader';
 import PlayPageContent from '@/components/PlayPageContent';
 import SpeedControl from '@/components/SpeedControl';

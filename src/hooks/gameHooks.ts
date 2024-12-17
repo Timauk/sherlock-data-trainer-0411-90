@@ -4,6 +4,7 @@ import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
 import { enrichTrainingData } from '@/utils/features/lotteryFeatureEngineering';
 import { calculateReward } from '@/utils/rewardSystem';
+import { useToast } from "@/hooks/use-toast";
 
 // Game Players Hook
 export const useGamePlayers = () => {
@@ -189,5 +190,117 @@ export const useGameEvolution = () => {
     setGeneration,
     setEvolutionData,
     evolveGeneration
+  };
+};
+
+// Game Controls Hook
+export const useGameControls = () => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const { toast } = useToast();
+
+  const playGame = () => {
+    setIsPlaying(true);
+    toast({
+      title: "Jogo Iniciado",
+      description: "O jogo está em execução",
+    });
+  };
+
+  const pauseGame = () => {
+    setIsPlaying(false);
+    toast({
+      title: "Jogo Pausado",
+      description: "O jogo foi pausado",
+    });
+  };
+
+  const resetGame = () => {
+    setIsPlaying(false);
+    toast({
+      title: "Jogo Reiniciado",
+      description: "O jogo foi reiniciado",
+    });
+  };
+
+  return {
+    isPlaying,
+    playGame,
+    pauseGame,
+    resetGame
+  };
+};
+
+// Game Logic Hook
+export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel | null) => {
+  const {
+    players,
+    champion,
+    setPlayers,
+    initializePlayers,
+    updatePlayers
+  } = useGamePlayers();
+
+  const {
+    boardNumbers,
+    concursoNumber,
+    numbers,
+    dates,
+    setNumbers,
+    setBoardNumbers,
+    setConcursoNumber,
+    setDates,
+    updateBank
+  } = useBankSystem();
+
+  const {
+    generation,
+    evolutionData,
+    setEvolutionData,
+    evolveGeneration
+  } = useGameEvolution();
+
+  const gameState = useGameState();
+
+  const initializeGameData = useCallback(() => {
+    systemLogger.log('game', 'Iniciando inicialização do jogo', {
+      hasCsvData: csvData?.length > 0,
+      hasTrainedModel: !!trainedModel
+    });
+
+    if (csvData && csvData.length > 0) {
+      setNumbers([csvData[0]]);
+      setBoardNumbers(csvData[0]);
+      
+      if (!players || players.length === 0) {
+        initializePlayers(100);
+        return true;
+      }
+    }
+    return false;
+  }, [csvData, players, setNumbers, setBoardNumbers, initializePlayers]);
+
+  return {
+    players,
+    champion,
+    generation,
+    evolutionData,
+    initializePlayers,
+    evolveGeneration,
+    dates,
+    numbers,
+    setNumbers,
+    isInfiniteMode: gameState.isInfiniteMode,
+    boardNumbers,
+    concursoNumber,
+    trainedModel,
+    gameCount: gameState.gameCount,
+    isManualMode: gameState.isManualMode,
+    toggleManualMode: useCallback(() => {
+      gameState.setIsManualMode(prev => !prev);
+    }, [gameState]),
+    toggleInfiniteMode: useCallback(() => {
+      gameState.setIsInfiniteMode(prev => !prev);
+    }, [gameState]),
+    initializeGameData
   };
 };
