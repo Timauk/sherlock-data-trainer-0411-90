@@ -1,20 +1,69 @@
-interface Logger {
-  debug: (message: any, ...args: any[]) => void;
-  info: (message: any, ...args: any[]) => void;
-  warn: (message: any, ...args: any[]) => void;
-  error: (message: any, ...args: any[]) => void;
+import { systemLogger } from './systemLogger';
+
+export interface LogEntry {
+  timestamp: Date;
+  type: string;
+  message: string;
+  details?: any;
 }
 
-// Verificar se estamos no ambiente Node.js
-const isNode = typeof process !== 'undefined' && 
-               process.versions != null && 
-               process.versions.node != null;
+class Logger {
+  private static instance: Logger;
+  
+  private constructor() {}
 
-const logger: Logger = {
-  debug: console.debug,
-  info: console.info,
-  warn: console.warn,
-  error: console.error
-};
+  public static getInstance(): Logger {
+    if (!Logger.instance) {
+      Logger.instance = new Logger();
+    }
+    return Logger.instance;
+  }
 
-export { logger };
+  // Game Logging
+  public logGame(message: string, details?: any) {
+    systemLogger.log('game', message, details);
+  }
+
+  // Player Logging
+  public logPlayer(playerId: number, action: string, details?: any) {
+    systemLogger.log('player', `Player #${playerId}: ${action}`, details);
+  }
+
+  // Clone Logging
+  public logClone(originalId: number, newId: number, details?: any) {
+    systemLogger.log('clone', `Cloned Player #${originalId} to #${newId}`, details);
+  }
+
+  // Model Logging
+  public logModel(action: string, details?: any) {
+    systemLogger.log('model', action, details);
+  }
+
+  // Prediction Logging
+  public logPrediction(playerId: number, predictions: number[], details?: any) {
+    systemLogger.log('prediction', `Predictions for Player #${playerId}`, {
+      predictions,
+      ...details
+    });
+  }
+
+  // Error Logging
+  public logError(type: string, error: Error | string, details?: any) {
+    systemLogger.error(type, error instanceof Error ? error.message : error, {
+      stack: error instanceof Error ? error.stack : undefined,
+      ...details
+    });
+  }
+
+  // Warning Logging
+  public logWarning(type: string, message: string, details?: any) {
+    systemLogger.warn(type, message, details);
+  }
+
+  // Performance Logging
+  public logPerformance(action: string, duration: number, details?: any) {
+    systemLogger.log('performance', `${action} took ${duration}ms`, details);
+  }
+}
+
+export const logger = Logger.getInstance();
