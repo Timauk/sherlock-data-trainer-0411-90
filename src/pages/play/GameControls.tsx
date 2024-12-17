@@ -84,12 +84,10 @@ export const GameControls = () => {
     try {
       const games: number[][] = [];
       for (let i = 0; i < 8; i++) {
-        // Usando um tensor aleatório diferente para cada jogo
         const inputTensor = tf.randomNormal([1, 13057]);
         const prediction = model.predict(inputTensor) as tf.Tensor;
         const result = Array.from(await prediction.data());
         
-        // Convertendo as previsões em números de 1 a 25
         const numbers = result
           .map((n, i) => ({ value: n, index: i + 1 }))
           .sort((a, b) => b.value - a.value)
@@ -98,8 +96,6 @@ export const GameControls = () => {
           .sort((a, b) => a - b);
         
         games.push(numbers);
-        
-        // Limpando os tensores para evitar vazamento de memória
         inputTensor.dispose();
         prediction.dispose();
       }
