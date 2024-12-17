@@ -1,11 +1,8 @@
-Here's the complete code for src/pages.tsx:
-
-```typescript
 import React, { useState, useEffect } from 'react';
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Services } from './services';
-import { useToast } from './toast';
+import { useToast } from './hooks/use-toast';
 import { useGameLogic, useGameControls, useModelTraining } from './hooks';
 import { DiagnosticReport, LongTermMonitoring } from './components';
 import * as tf from '@tensorflow/tfjs';
@@ -224,4 +221,3 @@ export const ConfigurationPage: React.FC = () => {
     </div>
   );
 };
-```
