@@ -1,3 +1,4 @@
+// Move existing PlayerCard.tsx content here
 import React, { useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

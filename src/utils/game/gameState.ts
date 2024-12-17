@@ -1,55 +1,8 @@
 import { Player } from '@/types/gameTypes';
-import { systemLogger } from './logging/systemLogger';
-import * as tf from '@tensorflow/tfjs';
-import { enrichTrainingData } from './features/lotteryFeatureEngineering';
-import { calculateReward } from './rewardSystem';
+import { systemLogger } from '@/utils/logging/systemLogger';
+import { calculateReward } from '@/utils/rewardSystem';
 
-export const validateGameState = (
-  players: Player[],
-  historicalData: number[][],
-  currentIndex: number
-) => {
-  if (!players || !historicalData) {
-    throw new Error('Invalid game state data');
-  }
-
-  const validationData = historicalData.slice(Math.max(0, currentIndex - 10), currentIndex);
-  return performCrossValidation([players[0].predictions], validationData);
-};
-
-export const performCrossValidation = (
-  predictions: number[][],
-  validationData: number[][],
-  folds: number = 10
-) => {
-  let totalAccuracy = 0;
-  const foldSize = Math.floor(validationData.length / folds);
-
-  for (let i = 0; i < folds; i++) {
-    const testSet = validationData.slice(i * foldSize, (i + 1) * foldSize);
-    const accuracy = calculateAccuracy(predictions, testSet);
-    totalAccuracy += accuracy;
-  }
-
-  return totalAccuracy / folds;
-};
-
-export const calculateAccuracy = (predictions: number[][], actual: number[][]) => {
-  let correctPredictions = 0;
-  let totalPredictions = 0;
-
-  predictions.forEach((prediction, index) => {
-    if (actual[index]) {
-      const matches = prediction.filter(num => actual[index].includes(num)).length;
-      correctPredictions += matches;
-      totalPredictions += prediction.length;
-    }
-  });
-
-  return totalPredictions > 0 ? correctPredictions / totalPredictions : 0;
-};
-
-export const updatePlayerGameStates = (
+export const updatePlayerStates = (
   players: Player[],
   predictions: number[][],
   currentBoardNumbers: number[],
@@ -128,23 +81,4 @@ export const updatePlayerGameStates = (
       totalPredictions
     }
   };
-};
-
-export const initializeGameData = (
-  csvData: number[][],
-  setNumbers: (numbers: number[][]) => void,
-  setBoardNumbers: (numbers: number[]) => void,
-  initializePlayers: (count: number) => void,
-  players: Player[]
-) => {
-  if (csvData && csvData.length > 0) {
-    setNumbers([csvData[0]]);
-    setBoardNumbers(csvData[0]);
-    
-    if (!players || players.length === 0) {
-      initializePlayers(100);
-      return true;
-    }
-  }
-  return false;
 };

@@ -1,3 +1,4 @@
+// Move existing PlayerList.tsx content here
 import React, { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Player } from '@/types/gameTypes';
@@ -144,3 +145,4 @@ const PlayerList: React.FC<PlayerListProps> = ({
 };
 
 export default PlayerList;
+

@@ -1,7 +1,6 @@
 import { Player } from '@/types/gameTypes';
-import { calculateReward, logReward } from '@/utils/rewardSystem';
-import { temporalAccuracyTracker } from '@/utils/predictions/predictionCore';
-import { systemLogger } from '@/utils/logging/systemLogger';
+import { systemLogger } from './logging/systemLogger';
+import { calculateReward } from './rewardSystem';
 
 export const updatePlayerStates = (
   players: Player[],
@@ -42,16 +41,14 @@ export const updatePlayerStates = (
     randomMatches += randomMatch;
     currentGameRandomMatches += randomMatch;
 
-    temporalAccuracyTracker.recordAccuracy(matches, 15);
-
     const reward = calculateReward(matches);
     
     if (matches >= 11) {
-      const logMessage = logReward(matches, player.id);
+      const logMessage = `Jogador ${player.id} acertou ${matches} números!`;
       addLog(logMessage);
       
-      if (matches >= 13) {
-        showToast?.("Desempenho Excepcional!", 
+      if (matches >= 13 && showToast) {
+        showToast("Desempenho Excepcional!", 
           `Jogador ${player.id} acertou ${matches} números!`);
       }
     }

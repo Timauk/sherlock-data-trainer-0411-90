@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Copy } from 'lucide-react';
 import { Player } from '@/types/gameTypes';
-import { Weight } from './PlayerList';
+import { Weight } from './types';
 import { useToast } from "@/components/ui/use-toast";
 
 interface PlayerWeightsDialogProps {
