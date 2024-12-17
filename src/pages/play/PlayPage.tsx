@@ -12,6 +12,11 @@ export const PlayPage = () => {
     initializePlayers(100);
   }, [initializePlayers]);
 
+  // Calcular melhor pontuação
+  const bestScore = React.useMemo(() => {
+    return players.reduce((max, player) => Math.max(max, player.score), 0);
+  }, [players]);
+
   return (
     <div className="container mx-auto p-4 space-y-6">
       <h1 className="text-4xl font-bold mb-8">Jogar</h1>
@@ -22,7 +27,9 @@ export const PlayPage = () => {
           <GameStatus 
             progress={75} 
             generation={1} 
-            gameCount={gameCount} 
+            gameCount={gameCount}
+            totalPlayers={players.length}
+            bestScore={bestScore}
           />
           <PlayerList 
             players={players}

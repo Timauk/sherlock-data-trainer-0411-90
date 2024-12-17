@@ -3,14 +3,29 @@ import { Card } from "../../ui/card";
 import { Button } from "../../ui/button";
 import { Upload } from 'lucide-react';
 import { useGameControls } from '../../hooks';
+import { useToast } from "../../hooks/use-toast";
 
 export const GameControls = () => {
   const { isPlaying, playGame, pauseGame, resetGame } = useGameControls();
+  const { toast } = useToast();
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      console.log("Arquivo selecionado:", file.name);
+      try {
+        const text = await file.text();
+        console.log("CSV carregado:", text.slice(0, 100)); // Mostra os primeiros 100 caracteres
+        toast({
+          title: "CSV Carregado",
+          description: `Arquivo ${file.name} carregado com sucesso!`,
+        });
+      } catch (error) {
+        toast({
+          title: "Erro ao carregar CSV",
+          description: "Não foi possível ler o arquivo.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -42,11 +57,12 @@ export const GameControls = () => {
           />
           <Button
             className="w-full"
+            onClick={() => document.getElementById('csvUpload')?.click()}
           >
-            <label htmlFor="csvUpload" className="flex items-center justify-center gap-2 cursor-pointer w-full">
+            <span className="flex items-center justify-center gap-2">
               <Upload size={16} />
               Carregar CSV
-            </label>
+            </span>
           </Button>
         </div>
       </div>
