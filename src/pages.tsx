@@ -3,7 +3,8 @@ import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Services } from './services';
 import { useToast } from './hooks/use-toast';
-import { useGameLogic, useGameControls, useModelTraining } from './hooks';
+import { useGameControls, useModelTraining } from './hooks';
+import { useGameLogic } from './hooks/useGameLogic';
 import { DiagnosticReport, LongTermMonitoring } from './components';
 import * as tf from '@tensorflow/tfjs';
 import { systemLogger } from './logger';
@@ -162,7 +163,8 @@ export const AnalysisPage: React.FC = () => {
   );
 };
 
-export const ConfigurationPage: React.FC = () => {
+export const SettingsPage: React.FC = () => {
+  const { toast } = useToast();
   const [config, setConfig] = useState({
     batchSize: 32,
     epochs: 50,
