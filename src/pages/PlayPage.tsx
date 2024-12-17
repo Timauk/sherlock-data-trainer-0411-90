@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import * as tf from '@tensorflow/tfjs';
-import { useGameLogic } from '@/hooks/useGameLogic';
+import { useGamePlayers, useGameState, useBankSystem, useGameEvolution } from '@/hooks/gameHooks';
 import { useGameControls } from '@/hooks/useGameControls';
 import { PlayPageHeader } from '@/components/PlayPageHeader';
 import PlayPageContent from '@/components/PlayPageContent';
@@ -12,6 +12,8 @@ import ChampionPredictions from '@/components/ChampionPredictions';
 import EvolutionStats from '@/components/EvolutionStats';
 import { systemLogger } from '@/utils/logging/systemLogger';
 import { useToast } from '@/hooks/use-toast';
+import { initializeGameData, updatePlayerStates } from '@/utils/gameUtils';
+import { initializeTensorFlow, setupTensorFlowBackend } from '@/utils/tensorflowUtils';
 
 const PlayPage: React.FC = () => {
   const [progress, setProgress] = useState(0);
