@@ -11,7 +11,7 @@ import { PredictionsHeader } from './predictions/PredictionsHeader';
 import { PredictionResult } from './predictions/types';
 import { SystemStatus } from './predictions/SystemStatus';
 import { PredictionGenerator } from './predictions/PredictionGenerator';
-import { generatePredictions } from '../utils/prediction/predictionGenerator';
+import { generatePredictions } from '../utils/prediction';  // Updated import
 
 interface ChampionPredictionsProps {
   champion: Player | undefined;

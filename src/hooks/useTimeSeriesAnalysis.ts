@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { TimeSeriesAnalysis } from '../utils/analysis/timeSeriesAnalysis';
-import { useToast } from "@/components/ui/use-toast";
+import { TimeSeriesAnalysis } from '../utils/analysis';
+import { useToast } from "@/hooks/use-toast";
 
 export const useTimeSeriesAnalysis = (historicalData: number[][]) => {
   const [predictions, setPredictions] = useState<number[]>([]);

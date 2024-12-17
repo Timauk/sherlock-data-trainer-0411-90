@@ -2,7 +2,7 @@ import React from 'react'
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
-import { calculatePredictionConfidence } from '../utils/prediction/confidenceCalculator'
+import { calculatePredictionConfidence } from '../utils/prediction'  // Updated import
 import { Player } from '@/types/gameTypes'
 
 interface RealTimeFeedbackProps {
@@ -69,7 +69,6 @@ const RealTimeFeedback = ({
         />
       </CardContent>
     </Card>
-  )
 }
 
 export default RealTimeFeedback

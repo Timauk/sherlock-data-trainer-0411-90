@@ -1,6 +1,6 @@
 import React from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { generatePredictions } from '@/utils/prediction/predictionGenerator';
+import { generatePredictions } from '@/utils/prediction'; 
 import { systemLogger } from '@/utils/logging/systemLogger';
 import { Player } from '@/types/gameTypes';
 import { PredictionResult } from './types';

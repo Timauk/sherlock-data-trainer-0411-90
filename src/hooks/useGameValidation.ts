@@ -1,4 +1,4 @@
-import { performCrossValidation } from '@/utils/validation/crossValidation';
+import { performCrossValidation } from '@/utils/validation';  // Updated import
 import { Player } from '@/types/gameTypes';
 
 export const validateGameState = (

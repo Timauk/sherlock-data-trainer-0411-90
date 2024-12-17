@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { systemLogger } from '@/utils/logging/systemLogger';
 import * as tf from '@tensorflow/tfjs';
-import { ModelInitializer } from '@/utils/tensorflow/modelInitializer';
+import { ModelInitializer } from '@/utils/tensorflow'; // Updated import
 
 interface GameInitializerProps {
   csvData: number[][];

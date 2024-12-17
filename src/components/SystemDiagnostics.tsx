@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { usePerformanceAlerts } from "@/hooks/usePerformanceAlerts";
-import { performanceMonitor } from "@/utils/performance/performanceMonitor";
-import { modelMonitoring } from "@/utils/monitoring/modelMonitoring";
-import { feedbackSystem } from "@/utils/prediction/feedbackSystem";
+import { performanceMonitor } from "@/utils/performance"; // Updated import
+import { modelMonitoring } from "@/utils/monitoring/modelMonitoring"; // Updated import
+import { feedbackSystem } from '@/utils/prediction'; // Updated import
 import DiagnosticResults from './DiagnosticResults';
 import DiagnosticReport from './DiagnosticReport';
 import ConnectionStatus from './SystemDiagnostics/ConnectionStatus';

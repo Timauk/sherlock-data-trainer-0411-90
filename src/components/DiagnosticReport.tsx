@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { systemLogger } from '@/utils/logging/systemLogger';
-import { performanceMonitor } from '@/utils/performance/performanceMonitor';
+import { performanceMonitor } from '@/utils/performance'; // Updated import
 import { modelMonitoring } from '@/utils/monitoring/modelMonitoring';
 
 interface DiagnosticReport {

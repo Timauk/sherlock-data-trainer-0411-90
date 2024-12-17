@@ -5,11 +5,11 @@ import { makePrediction } from '@/utils/predictionUtils';
 import { updateModelWithNewData } from '@/utils/modelUtils';
 import { calculateReward, logReward } from '@/utils/rewardSystem';
 import { getLunarPhase, analyzeLunarPatterns } from '@/utils/lunarCalculations';
-import { performCrossValidation } from '@/utils/validation/crossValidation';
-import { calculateConfidenceScore } from '@/utils/prediction/confidenceScoring';
+import { performCrossValidation } from '@/utils/validation';
+import { calculateConfidenceScore } from '@/utils/prediction';
 import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
 import { temporalAccuracyTracker } from '@/utils/prediction/temporalAccuracy';
-import { TimeSeriesAnalysis } from '@/utils/analysis/timeSeriesAnalysis';
+import { TimeSeriesAnalysis } from '@/utils/analysis';
 
 export const useGameLoop = (
   players: Player[],

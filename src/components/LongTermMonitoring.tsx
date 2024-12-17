@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { performanceMonitor } from "@/utils/performance/performanceMonitor";
+import { performanceMonitor } from "@/utils/performance"; // Updated import
 import { modelMonitoring } from "@/utils/monitoring/modelMonitoring";
 
 interface SystemHealth {

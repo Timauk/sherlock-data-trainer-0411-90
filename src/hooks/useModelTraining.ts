@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { WorkerPool } from '@/utils/performance/workerPool';
+import { WorkerPool } from '@/utils/performance'; 
 import { summarizeHistoricalData } from '@/utils/dataManagement/dataSummarization';
 import { createEnsembleModels, trainEnsemble } from '@/utils/aiModel/ensembleLearning';
 import * as tf from '@tensorflow/tfjs';
