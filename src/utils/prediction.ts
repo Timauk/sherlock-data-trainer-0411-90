@@ -62,47 +62,68 @@ export const feedbackSystem = {
       matches,
       total: prediction.length
     };
+  },
+  getConfidenceCorrelation: () => {
+    // Implementation of confidence correlation calculation
+    return 0.75; // Placeholder value
+  },
+  getAccuracyTrend: () => {
+    // Implementation of accuracy trend calculation
+    return [0.65, 0.70, 0.75, 0.80]; // Placeholder values
   }
 };
 
-// Main Prediction Function
-export const makePrediction = async (
+// Generate Predictions Function
+export const generatePredictions = async (
+  champion: Player,
   model: tf.LayersModel,
-  inputData: number[],
-  weights: number[],
-  config: { lunarPhase: string; patterns: any }
-): Promise<number[]> => {
+  lastNumbers: number[],
+  selectedNumbers: number[] = []
+): Promise<Array<{
+  numbers: number[];
+  estimatedAccuracy: number;
+  targetMatches: number;
+  matchesWithSelected: number;
+  isGoodDecision: boolean;
+}>> => {
   try {
-    const inputTensor = tf.tensor2d([inputData]);
-    const rawPredictions = await model.predict(inputTensor) as tf.Tensor;
-    const probabilities = Array.from(await rawPredictions.data());
-    
-    const weightedProbs = probabilities.map((prob, i) => ({
-      number: i + 1,
-      probability: prob * weights[i % weights.length]
-    }));
+    const predictions = [];
+    for (let i = 0; i < 8; i++) {
+      const inputTensor = tf.tensor2d([lastNumbers]);
+      const rawPrediction = await model.predict(inputTensor) as tf.Tensor;
+      const probabilities = Array.from(await rawPrediction.data());
+      
+      // Get top 15 numbers based on probabilities
+      const numbers = probabilities
+        .map((prob, index) => ({ prob, num: index + 1 }))
+        .sort((a, b) => b.prob - a.prob)
+        .slice(0, 15)
+        .map(item => item.num)
+        .sort((a, b) => a - b);
 
-    weightedProbs.sort((a, b) => b.probability - a.probability);
+      const estimatedAccuracy = probabilities.reduce((sum, prob) => sum + prob, 0) / probabilities.length * 100;
+      const targetMatches = Math.floor(estimatedAccuracy / 10);
+      const matchesWithSelected = selectedNumbers.length > 0 
+        ? numbers.filter(n => selectedNumbers.includes(n)).length 
+        : 0;
+      const isGoodDecision = estimatedAccuracy > 60;
 
-    const selectedNumbers = new Set<number>();
-    let index = 0;
-    
-    while (selectedNumbers.size < 15 && index < weightedProbs.length) {
-      const num = weightedProbs[index].number;
-      if (num >= 1 && num <= 25) {
-        selectedNumbers.add(num);
-      }
-      index++;
+      predictions.push({
+        numbers,
+        estimatedAccuracy,
+        targetMatches,
+        matchesWithSelected,
+        isGoodDecision
+      });
+
+      // Cleanup
+      inputTensor.dispose();
+      rawPrediction.dispose();
     }
 
-    const result = Array.from(selectedNumbers).sort((a, b) => a - b);
-
-    inputTensor.dispose();
-    rawPredictions.dispose();
-
-    return result;
+    return predictions;
   } catch (error) {
-    systemLogger.error('prediction', 'Error making prediction', { error });
+    systemLogger.error('prediction', 'Error generating predictions', { error });
     throw error;
   }
 };
