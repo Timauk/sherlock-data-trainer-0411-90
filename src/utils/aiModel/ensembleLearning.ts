@@ -1,5 +1,5 @@
 import * as tf from '@tensorflow/tfjs';
-import { DataSummary } from '../dataManagement/dataSummarization';
+import { dataServices } from '@/services/dataServices';
 
 interface EnsembleModel {
   seasonal: tf.LayersModel;
@@ -42,7 +42,7 @@ export const createEnsembleModels = async (): Promise<EnsembleModel> => {
 export const trainEnsemble = async (
   models: EnsembleModel,
   historicalData: number[][],
-  summaries: DataSummary[],
+  summaries: any[],
   lunarData: any[]
 ) => {
   // Training data preparation
@@ -76,7 +76,7 @@ export const trainEnsemble = async (
   ]);
 };
 
-const prepareSeassonalData = (summaries: DataSummary[]) => {
+const prepareSeassonalData = (summaries: any[]) => {
   // Implementação da preparação de dados sazonais
   return {
     inputs: tf.tensor2d([]),

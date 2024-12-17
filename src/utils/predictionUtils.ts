@@ -1,7 +1,7 @@
 import * as tf from '@tensorflow/tfjs';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from './logging/systemLogger';
-import { enrichTrainingData } from './features/lotteryFeatureEngineering';
+import { dataServices } from '@/services/dataServices';
 
 interface PredictionConfig {
   lunarPhase: string;
@@ -123,7 +123,7 @@ export async function handlePlayerPredictions(
         }
 
         const currentDate = new Date();
-        const enrichedData = enrichTrainingData([[...currentBoardNumbers]], [currentDate]);
+        const enrichedData = dataServices.enrichLotteryData([[...currentBoardNumbers]], [currentDate]);
         
         if (!enrichedData || !enrichedData[0]) {
           throw new Error('Falha ao enriquecer dados de entrada');

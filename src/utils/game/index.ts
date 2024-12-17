@@ -1,1 +1,1 @@
-export * from './gameUtils';
+export * from '@/services/gameServices';
