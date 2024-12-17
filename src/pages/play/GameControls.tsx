@@ -10,7 +10,6 @@ export const GameControls = () => {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Implementar lógica de upload
       console.log("Arquivo selecionado:", file.name);
     }
   };
@@ -20,10 +19,16 @@ export const GameControls = () => {
       <h2 className="text-2xl font-bold mb-4">Controles do Jogo</h2>
       <div className="flex flex-col gap-4">
         <div className="flex gap-4">
-          <Button onClick={isPlaying ? pauseGame : playGame} className="flex-1">
+          <Button 
+            onClick={isPlaying ? pauseGame : playGame} 
+            className="flex-1"
+          >
             {isPlaying ? "Pausar" : "Iniciar"}
           </Button>
-          <Button onClick={resetGame} variant="outline" className="flex-1">
+          <Button 
+            onClick={resetGame} 
+            className="flex-1"
+          >
             Reiniciar
           </Button>
         </div>
@@ -36,11 +41,9 @@ export const GameControls = () => {
             className="hidden"
           />
           <Button
-            asChild
-            variant="outline"
             className="w-full"
           >
-            <label htmlFor="csvUpload" className="flex items-center justify-center gap-2 cursor-pointer">
+            <label htmlFor="csvUpload" className="flex items-center justify-center gap-2 cursor-pointer w-full">
               <Upload size={16} />
               Carregar CSV
             </label>
