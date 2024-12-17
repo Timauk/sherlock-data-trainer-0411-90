@@ -213,11 +213,38 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     concursoNumber,
     numbers,
     dates,
-    updateBank
+    updateBank,
+    setNumbers
   } = useBankSystem();
+
+  const [generation, setGeneration] = useState(1);
+  const [evolutionData, setEvolutionData] = useState<Array<{
+    generation: number;
+    playerId: number;
+    score: number;
+    fitness: number;
+  }>>([]);
 
   const toggleInfiniteMode = () => setIsInfiniteMode(prev => !prev);
   const toggleManualMode = () => setIsManualMode(prev => !prev);
+
+  const evolveGeneration = useCallback((players: Player[]) => {
+    setGeneration(prev => prev + 1);
+    
+    const newEvolutionData = players.map(player => ({
+      generation,
+      playerId: player.id,
+      score: player.score,
+      fitness: player.fitness
+    }));
+
+    setEvolutionData(prev => [...prev, ...newEvolutionData]);
+
+    systemLogger.log('evolution', 'Geração evoluída', {
+      newGeneration: generation + 1,
+      playersEvolved: players.length
+    });
+  }, [generation]);
 
   const gameLoop = useCallback(() => {
     if (!trainedModel || csvData.length === 0) return;
@@ -234,7 +261,6 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
   }, [csvData, trainedModel, gameCount, players, updateBank, initializePlayers, updatePlayers]);
 
   const setSelectedNumbers = (numbers: number[]) => {
-    // Implementation for handling selected numbers
     console.log('Selected numbers:', numbers);
   };
 
@@ -258,6 +284,11 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
     modelMetrics,
     setSelectedNumbers,
     generateGames,
-    gameCount
+    gameCount,
+    setNumbers,
+    initializePlayers,
+    evolveGeneration,
+    generation,
+    evolutionData
   };
 };
