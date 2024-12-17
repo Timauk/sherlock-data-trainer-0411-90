@@ -1,5 +1,6 @@
 import { Toast, ToastProvider, ToastViewport } from "./toast"
 import { useToast } from "../hooks/use-toast"
+import { ReactNode } from "react"
 
 export function Toaster() {
   const { toasts } = useToast()
@@ -13,7 +14,7 @@ export function Toaster() {
               {title && <div className="font-semibold">{title}</div>}
               {description && <div className="text-sm opacity-90">{description}</div>}
             </div>
-            {action}
+            {action && <div>{action as ReactNode}</div>}
           </Toast>
         )
       })}
