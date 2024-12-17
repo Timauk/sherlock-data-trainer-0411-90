@@ -1,6 +1,7 @@
 import * as tf from '@tensorflow/tfjs';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '../logging/systemLogger';
+import { enrichTrainingData } from '../features/lotteryFeatureEngineering';
 
 export interface PredictionConfig {
   phase: string;
@@ -43,9 +44,11 @@ export const generatePredictions = async (
       throw new Error("Dados necessários não disponíveis");
     }
 
+    const enrichedData = enrichTrainingData([[...lastConcursoNumbers]], [new Date()]);
     const predictions = [];
+
     for (let i = 0; i < 8; i++) {
-      const inputTensor = tf.tensor2d([lastConcursoNumbers]);
+      const inputTensor = tf.tensor2d(enrichedData);
       const prediction = trainedModel.predict(inputTensor) as tf.Tensor;
       const probabilities = Array.from(await prediction.data());
       
@@ -81,71 +84,6 @@ export const generatePredictions = async (
   }
 };
 
-export const generateDirectPredictions = async (
-  model: tf.LayersModel,
-  lastConcursoNumbers: number[],
-  count: number = 10
-): Promise<number[][]> => {
-  try {
-    const predictions: number[][] = [];
-    
-    for (let i = 0; i < count; i++) {
-      const inputTensor = tf.tensor2d([lastConcursoNumbers]);
-      const prediction = model.predict(inputTensor) as tf.Tensor;
-      const probabilities = Array.from(await prediction.data());
-      
-      const numbers = new Set<number>();
-      const sortedProbs = probabilities
-        .map((prob, idx) => ({ prob, num: idx + 1 }))
-        .sort((a, b) => b.prob - a.prob);
-        
-      for (const item of sortedProbs) {
-        if (numbers.size < 15) {
-          numbers.add(item.num);
-        }
-      }
-      
-      predictions.push(Array.from(numbers).sort((a, b) => a - b));
-      
-      inputTensor.dispose();
-      prediction.dispose();
-    }
-    
-    return predictions;
-  } catch (error) {
-    systemLogger.error('prediction', 'Erro ao gerar previsões diretas', { error });
-    throw error;
-  }
-};
-
-export const updateModel = async (
-  model: tf.LayersModel,
-  trainingData: number[][],
-  onProgress: (message: string) => void
-): Promise<void> => {
-  try {
-    const xs = tf.tensor2d(trainingData.map(row => row.slice(0, -15)));
-    const ys = tf.tensor2d(trainingData.map(row => row.slice(-15)));
-
-    await model.fit(xs, ys, {
-      epochs: 10,
-      batchSize: 32,
-      validationSplit: 0.2,
-      callbacks: {
-        onEpochEnd: (epoch, logs) => {
-          onProgress(`Epoch ${epoch + 1}: loss = ${logs?.loss.toFixed(4)}`);
-        }
-      }
-    });
-
-    xs.dispose();
-    ys.dispose();
-  } catch (error) {
-    systemLogger.error('model', 'Error updating model', { error });
-    throw error;
-  }
-};
-
 export const handlePlayerPredictions = async (
   players: Player[],
   trainedModel: tf.LayersModel,
@@ -158,9 +96,11 @@ export const handlePlayerPredictions = async (
       throw new Error('Modelo não carregado');
     }
 
+    const enrichedData = enrichTrainingData([[...currentBoardNumbers]], [new Date()]);
+
     return Promise.all(
       players.map(async player => {
-        const inputTensor = tf.tensor2d([currentBoardNumbers]);
+        const inputTensor = tf.tensor2d(enrichedData);
         const prediction = trainedModel.predict(inputTensor) as tf.Tensor;
         const probabilities = Array.from(await prediction.data());
         
