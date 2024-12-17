@@ -186,3 +186,78 @@ export const useGameControls = () => {
     resetGame
   };
 };
+
+export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel | null) => {
+  const {
+    isInfiniteMode,
+    setIsInfiniteMode,
+    isManualMode,
+    setIsManualMode,
+    gameCount,
+    setGameCount,
+    trainingData,
+    setTrainingData,
+    modelMetrics,
+    setModelMetrics
+  } = useGameState();
+
+  const {
+    players,
+    champion,
+    initializePlayers,
+    updatePlayers
+  } = useGamePlayers();
+
+  const {
+    boardNumbers,
+    concursoNumber,
+    numbers,
+    dates,
+    updateBank
+  } = useBankSystem();
+
+  const toggleInfiniteMode = () => setIsInfiniteMode(prev => !prev);
+  const toggleManualMode = () => setIsManualMode(prev => !prev);
+
+  const gameLoop = useCallback(() => {
+    if (!trainedModel || csvData.length === 0) return;
+    
+    setGameCount(prev => prev + 1);
+    const currentNumbers = csvData[gameCount % csvData.length];
+    updateBank(currentNumbers, gameCount);
+    
+    if (players.length === 0) {
+      initializePlayers(100);
+    }
+    
+    updatePlayers(players, trainedModel);
+  }, [csvData, trainedModel, gameCount, players, updateBank, initializePlayers, updatePlayers]);
+
+  const setSelectedNumbers = (numbers: number[]) => {
+    // Implementation for handling selected numbers
+    console.log('Selected numbers:', numbers);
+  };
+
+  const generateGames = () => {
+    if (!trainedModel) return;
+    gameLoop();
+  };
+
+  return {
+    isInfiniteMode,
+    isManualMode,
+    toggleInfiniteMode,
+    toggleManualMode,
+    gameLoop,
+    champion,
+    players,
+    boardNumbers,
+    concursoNumber,
+    numbers,
+    dates,
+    modelMetrics,
+    setSelectedNumbers,
+    generateGames,
+    gameCount
+  };
+};
