@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
+import { Play, Pause, RotateCcw, Moon } from 'lucide-react';
 import DataUploader from '../DataUploader';
 
 interface ControlPanelProps {
@@ -42,18 +43,25 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
       />
 
       <div className="flex flex-wrap gap-2">
-        <Button onClick={isPlaying ? onPause : onPlay} disabled={false}>
+        <Button onClick={isPlaying ? onPause : onPlay} disabled={disabled}>
+          {isPlaying ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
           {isPlaying ? 'Pausar' : 'Iniciar'}
         </Button>
-        <Button onClick={onReset} disabled={false}>Reiniciar</Button>
-        <Button onClick={onThemeToggle}>Alternar Tema</Button>
-        <Button onClick={toggleInfiniteMode} disabled={false}>
+        <Button onClick={onReset} disabled={disabled}>
+          <RotateCcw className="mr-2 h-4 w-4" />
+          Reiniciar
+        </Button>
+        <Button onClick={onThemeToggle}>
+          <Moon className="mr-2 h-4 w-4" />
+          Alternar Tema
+        </Button>
+        <Button onClick={toggleInfiniteMode} disabled={disabled}>
           {isInfiniteMode ? 'Desativar' : 'Ativar'} Modo Infinito
         </Button>
         <Button 
           onClick={toggleManualMode}
           variant={isManualMode ? "destructive" : "outline"}
-          disabled={false}
+          disabled={disabled}
         >
           {isManualMode ? 'Desativar' : 'Ativar'} Modo Manual
         </Button>

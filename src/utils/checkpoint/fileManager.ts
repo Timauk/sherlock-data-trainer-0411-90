@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import path from 'path';
-import { logger } from '../../utils/logging/logger.js';
+import { logger } from '../logging/logger';
 
 export class FileManager {
   constructor(private basePath: string) {
@@ -17,25 +17,39 @@ export class FileManager {
     const fullPath = path.join(this.basePath, relativePath);
     this.ensureDirectory(path.dirname(fullPath));
     
-    if (isBinary) {
-      await fs.promises.writeFile(fullPath, data);
-    } else {
-      await fs.promises.writeFile(fullPath, JSON.stringify(data, null, 2));
+    try {
+      if (isBinary) {
+        await fs.promises.writeFile(fullPath, data);
+      } else {
+        await fs.promises.writeFile(fullPath, JSON.stringify(data, null, 2));
+      }
+      logger.debug(`File saved: ${relativePath}`);
+    } catch (error) {
+      logger.error(`Error saving file ${relativePath}: ${error}`);
+      throw error;
     }
-    logger.debug(`Arquivo salvo: ${relativePath}`);
   }
 
   async readFile(relativePath: string, isBinary = false) {
     const fullPath = path.join(this.basePath, relativePath);
-    if (!fs.existsSync(fullPath)) return null;
     
-    if (isBinary) {
-      return await fs.promises.readFile(fullPath);
+    try {
+      if (!fs.existsSync(fullPath)) {
+        logger.warn(`File not found: ${relativePath}`);
+        return null;
+      }
+      
+      if (isBinary) {
+        return await fs.promises.readFile(fullPath);
+      }
+      return JSON.parse(await fs.promises.readFile(fullPath, 'utf8'));
+    } catch (error) {
+      logger.error(`Error reading file ${relativePath}: ${error}`);
+      throw error;
     }
-    return JSON.parse(await fs.promises.readFile(fullPath, 'utf8'));
   }
 
-  listFiles() {
+  listFiles(): string[] {
     const files: string[] = [];
     
     const readDirRecursive = (dir: string) => {
