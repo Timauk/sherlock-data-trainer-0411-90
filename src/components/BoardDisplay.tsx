@@ -26,11 +26,18 @@ const BoardDisplay: React.FC<BoardDisplayProps> = ({ numbers, concursoNumber, to
       </h3>
       <div className="bg-gray-100 p-4 rounded-lg">
         {numbers.length > 0 ? (
-          numbers.map((number, index) => (
-            <span key={index} className="inline-block bg-blue-500 text-white rounded-full px-3 py-1 text-sm font-semibold mr-2 mb-2">
-              {number}
-            </span>
-          ))
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              {numbers.map((number, index) => (
+                <span 
+                  key={index} 
+                  className="inline-block bg-blue-500 text-white rounded-full px-3 py-1 text-sm font-semibold"
+                >
+                  {number.toString().padStart(2, '0')}
+                </span>
+              ))}
+            </div>
+          </div>
         ) : (
           <span className="text-gray-500">Nenhum número disponível</span>
         )}
