@@ -108,7 +108,7 @@ export const GameControls = () => {
           </Button>
         </div>
 
-        <div className="p-4 bg-secondary rounded-lg">
+        <Card className="p-4 bg-secondary rounded-lg">
           <h3 className="font-semibold mb-2">Números Selecionados:</h3>
           <div className="flex flex-wrap gap-2">
             {selectedNumbers.map(number => (
@@ -117,7 +117,7 @@ export const GameControls = () => {
               </span>
             ))}
           </div>
-        </div>
+        </Card>
       </div>
     </Card>
   );
