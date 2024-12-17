@@ -7,7 +7,7 @@ interface SystemStatusProps {
   icon?: React.ReactNode;
 }
 
-const SystemStatus: React.FC<SystemStatusProps> = ({ isReady, message, icon }) => {
+export const SystemStatus: React.FC<SystemStatusProps> = ({ isReady, message, icon }) => {
   return (
     <Alert variant={isReady ? "default" : "destructive"}>
       <AlertDescription className="flex items-center gap-2">
@@ -17,5 +17,3 @@ const SystemStatus: React.FC<SystemStatusProps> = ({ isReady, message, icon }) =
     </Alert>
   );
 };
-
-export default SystemStatus;

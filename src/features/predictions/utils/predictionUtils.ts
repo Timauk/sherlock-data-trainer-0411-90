@@ -1,22 +1,17 @@
 import * as tf from '@tensorflow/tfjs';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
-import { validatePrediction } from './predictionCore';
+import { PredictionResult } from '../types';
 
 export const generatePredictions = async (
   champion: Player,
-  model: tf.LayersModel,
-  lastNumbers: number[],
+  trainedModel: tf.LayersModel,
+  lastConcursoNumbers: number[],
   selectedNumbers: number[]
-) => {
+): Promise<PredictionResult[]> => {
   try {
-    const isValid = await validatePrediction(model, lastNumbers);
-    if (!isValid) {
-      throw new Error('Modelo inválido para previsões');
-    }
-
-    const inputTensor = tf.tensor2d([lastNumbers]);
-    const prediction = model.predict(inputTensor) as tf.Tensor;
+    const inputTensor = tf.tensor2d([lastConcursoNumbers]);
+    const prediction = trainedModel.predict(inputTensor) as tf.Tensor;
     const probabilities = Array.from(await prediction.data());
     
     const predictions = probabilities
@@ -48,7 +43,7 @@ export const generatePredictions = async (
 export const generateDirectPredictions = async (
   model: tf.LayersModel,
   lastNumbers: number[]
-) => {
+): Promise<number[][]> => {
   const predictions: number[][] = [];
   for (let i = 0; i < 10; i++) {
     const inputTensor = tf.tensor2d([lastNumbers]);

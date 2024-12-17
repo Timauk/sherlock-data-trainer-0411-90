@@ -1,5 +1,3 @@
-import * as tf from '@tensorflow/tfjs';
-
 export const temporalAccuracyTracker = {
   accuracyHistory: [] as number[],
   getAverageAccuracy: () => {
@@ -12,20 +10,5 @@ export const temporalAccuracyTracker = {
     if (temporalAccuracyTracker.accuracyHistory.length > 100) {
       temporalAccuracyTracker.accuracyHistory.shift();
     }
-  }
-};
-
-export const validatePrediction = async (model: tf.LayersModel, input: number[]): Promise<boolean> => {
-  try {
-    const inputTensor = tf.tensor2d([input]);
-    const prediction = model.predict(inputTensor) as tf.Tensor;
-    const result = await prediction.data();
-    
-    inputTensor.dispose();
-    prediction.dispose();
-    
-    return result.length > 0;
-  } catch (error) {
-    return false;
   }
 };

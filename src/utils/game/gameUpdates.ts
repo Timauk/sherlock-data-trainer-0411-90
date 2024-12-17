@@ -1,6 +1,6 @@
 import { Player } from '@/types/gameTypes';
-import { systemLogger } from './logging/systemLogger';
-import { calculateReward } from './rewardSystem';
+import { systemLogger } from '@/utils/logging/systemLogger';
+import { calculateReward } from '@/utils/rewardSystem';
 
 export const updatePlayerStates = (
   players: Player[],

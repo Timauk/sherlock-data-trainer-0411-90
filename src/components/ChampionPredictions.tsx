@@ -9,9 +9,9 @@ import NumberSelector from './NumberSelector';
 import PredictionsList from './PredictionsList';
 import { systemLogger } from '../utils/logging/systemLogger';
 import { PredictionsHeader } from './predictions/PredictionsHeader';
-import { PredictionResult } from './predictions/types';
-import { SystemStatus } from './predictions/SystemStatus';
-import { generatePredictions, generateDirectPredictions } from '@/utils/predictions/predictionUtils';
+import { PredictionResult } from '@/features/predictions/types';
+import { SystemStatus } from '@/features/predictions/components/SystemStatus';
+import { generatePredictions, generateDirectPredictions } from '@/features/predictions/utils/predictionUtils';
 
 interface ChampionPredictionsProps {
   champion: Player | undefined;
