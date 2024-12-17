@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { WorkerPool } from '@/utils/performance'; 
-import { dataServices } from '@/services/dataServices';
+import { DataServices } from '@/services/dataServices';
 import { createEnsembleModels, trainEnsemble } from '@/utils/aiModel/ensembleLearning';
 import * as tf from '@tensorflow/tfjs';
 
@@ -21,7 +21,7 @@ export const useModelTraining = () => {
       setProgress(0);
 
       // Sumarização de dados históricos
-      const summaries = dataServices.summarizeData(historicalData);
+      const summaries = DataServices.summarizeData(historicalData);
       setProgress(20);
 
       // Criação dos modelos ensemble

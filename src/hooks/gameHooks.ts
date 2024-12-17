@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
-import { dataServices } from '@/services/dataServices';
+import { DataServices } from '@/services/dataServices';
 import { calculateReward } from '@/utils/rewardSystem';
 import { useToast } from "@/hooks/use-toast";
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from "@/components/ui/card";
-import { performanceServices } from '@/services/performanceServices';
+import { PerformanceServices } from '@/services/performanceServices';
 
 interface DiagnosticReportProps {
   modelMetrics: any;

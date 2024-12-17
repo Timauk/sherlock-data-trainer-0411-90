@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Card } from "@/components/ui/card";
-import { dataServices } from '@/services/dataServices';
+import { DataServices } from '@/services/dataServices';
 import { useToast } from "@/hooks/use-toast";
 
 const TrainingPage: React.FC = () => {
@@ -11,8 +11,8 @@ const TrainingPage: React.FC = () => {
   const handleTrainModel = async () => {
     setIsTraining(true);
     try {
-      const model = await dataServices.GameLogicService.createSharedModel();
-      const trainedModel = await dataServices.GameLogicService.trainModel(model, trainingData);
+      const model = await DataServices.GameLogicService.createSharedModel();
+      const trainedModel = await DataServices.GameLogicService.trainModel(model, trainingData);
       toast({
         title: "Modelo Treinado",
         description: "O modelo foi treinado com sucesso!",

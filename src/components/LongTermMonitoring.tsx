@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from "@/components/ui/card";
-import { performanceServices } from '@/services/performanceServices';
+import { PerformanceServices } from '@/services/performanceServices';
 
 const LongTermMonitoring: React.FC = () => {
   const [metrics, setMetrics] = React.useState({
@@ -12,7 +12,7 @@ const LongTermMonitoring: React.FC = () => {
 
   React.useEffect(() => {
     const updateMetrics = () => {
-      const currentMetrics = performanceServices.getModelMetrics();
+      const currentMetrics = PerformanceServices.getModelMetrics();
       setMetrics(currentMetrics);
     };
 

@@ -1,5 +1,5 @@
 import * as tf from '@tensorflow/tfjs';
-import { dataServices } from '@/services/dataServices';
+import { DataServices } from '@/services/dataServices';
 
 interface EnsembleModel {
   seasonal: tf.LayersModel;
@@ -107,3 +107,4 @@ const prepareSequentialData = (historicalData: number[][]) => {
     targets: tf.tensor2d([])
   };
 };
+
