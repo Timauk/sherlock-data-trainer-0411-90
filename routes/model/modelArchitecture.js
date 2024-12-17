@@ -15,57 +15,36 @@ export const createModelArchitecture = () => {
     const model = tf.sequential();
     
     // Input layer with correct shape
-    const inputLayer = tf.layers.dense({
+    model.add(tf.layers.dense({
       units: 256,
       activation: 'relu',
-      inputShape: [13057], // Match the expected input shape
+      inputShape: [15], // Corrigido para o shape esperado
       kernelInitializer: 'heNormal',
       kernelRegularizer: tf.regularizers.l2({ l2: 0.001 })
-    });
-    
-    model.add(inputLayer);
-    
-    systemLogger.log('model', 'Camada de entrada configurada', {
-      inputShape: inputLayer.inputShape,
-      units: inputLayer.units,
-      activation: inputLayer.activation
-    });
+    }));
     
     model.add(tf.layers.batchNormalization());
     model.add(tf.layers.dropout({ rate: 0.3 }));
     
-    // Hidden layer
-    const hiddenLayer = tf.layers.dense({
+    // Hidden layers
+    model.add(tf.layers.dense({
       units: 128,
       activation: 'relu',
       kernelInitializer: 'heNormal',
       kernelRegularizer: tf.regularizers.l2({ l2: 0.001 })
-    });
-    
-    model.add(hiddenLayer);
-    
-    systemLogger.log('model', 'Camada intermediária configurada', {
-      units: hiddenLayer.units,
-      activation: hiddenLayer.activation
-    });
+    }));
     
     model.add(tf.layers.batchNormalization());
     model.add(tf.layers.dropout({ rate: 0.2 }));
     
     // Output layer
-    const outputLayer = tf.layers.dense({
+    model.add(tf.layers.dense({
       units: 15,
       activation: 'sigmoid',
       kernelInitializer: 'glorotNormal'
-    });
-    
-    model.add(outputLayer);
-    
-    systemLogger.log('model', 'Camada de saída configurada', {
-      units: outputLayer.units,
-      activation: outputLayer.activation
-    });
+    }));
 
+    // Compile model
     model.compile({
       optimizer: tf.train.adam(0.001),
       loss: 'binaryCrossentropy',
@@ -85,8 +64,8 @@ export const createModelArchitecture = () => {
     return model;
   } catch (error) {
     systemLogger.error('model', 'Erro ao criar modelo', { 
-      error: error.message,
-      stack: error.stack,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
       timestamp: new Date().toISOString()
     });
     throw error;

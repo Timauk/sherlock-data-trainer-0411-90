@@ -20,12 +20,9 @@ export async function processGameLogic(
   });
 
   try {
-    try {
-      await tf.setBackend('cpu');
-    } catch (e) {
-      logger.warn('CPU backend setup failed', { error: e.message });
-      throw e;
-    }
+    // Forçar backend CPU
+    await tf.setBackend('cpu');
+    await tf.ready();
 
     logger.info('Backend TensorFlow:', {
       backend: tf.getBackend(),
@@ -42,17 +39,13 @@ export async function processGameLogic(
       throw new Error('Invalid input data');
     }
 
-    // Ensure input data is properly padded to 13057
-    const enrichedData = enrichTrainingData([inputData], [new Date()]);
-    if (!enrichedData || !enrichedData[0]) {
-      throw new Error('Failed to enrich input data');
-    }
-    
-    const tensor = tf.tensor2d([enrichedData[0]]);
+    // Preparar dados de entrada (apenas os 15 números)
+    const inputNumbers = inputData.slice(0, 15);
+    const tensor = tf.tensor2d([inputNumbers]);
     
     logger.info('Tensor criado:', {
       shape: tensor.shape,
-      sampleData: enrichedData[0].slice(0, 5)
+      sampleData: inputNumbers
     });
 
     const prediction = await model.predict(tensor);
