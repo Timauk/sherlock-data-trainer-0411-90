@@ -11,7 +11,7 @@ export interface LogEntry {
 class SystemLogger {
   private static instance: SystemLogger;
   private logs: LogEntry[] = [];
-  private maxLogs = 1000;
+  private maxLogs = 100; // Reduced from 1000
   private logInterval: NodeJS.Timeout | null = null;
 
   private constructor() {
@@ -25,27 +25,24 @@ class SystemLogger {
       clearInterval(this.logInterval);
     }
 
+    // Increased interval from 300000 to 600000 (10 minutes)
     this.logInterval = setInterval(() => {
       try {
         const usage = this.getMemoryUsage();
         if (usage) {
-          this.warn('performance', 'Uso de Memória do Sistema', usage);
+          this.warn('performance', 'Memory Usage', usage);
         }
       } catch (error) {
-        console.debug('Não foi possível obter uso de memória:', error);
+        console.debug('Memory usage check failed:', error);
       }
-    }, 300000);
+    }, 600000);
   }
 
   private getMemoryUsage() {
     try {
       if (typeof performance !== 'undefined' && performance.memory) {
         return {
-          // @ts-ignore - propriedade memory existe no Chrome
-          jsHeapSizeLimit: Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024) + 'MB',
-          // @ts-ignore
-          totalJSHeapSize: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024) + 'MB',
-          // @ts-ignore
+          // @ts-ignore - memory exists in Chrome
           usedJSHeapSize: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + 'MB'
         };
       }
@@ -63,12 +60,15 @@ class SystemLogger {
   }
 
   public log(type: LogEntry['type'], message: string, details?: any) {
-    this.addLog({
-      timestamp: new Date(),
-      type,
-      message,
-      details,
-    });
+    // Only log essential information
+    if (['error', 'system', 'game', 'model'].includes(type)) {
+      this.addLog({
+        timestamp: new Date(),
+        type,
+        message,
+        details,
+      });
+    }
   }
 
   public error(type: LogEntry['type'], message: string, details?: any) {
@@ -81,21 +81,15 @@ class SystemLogger {
   }
 
   public warn(type: LogEntry['type'], message: string, details?: any) {
-    this.addLog({
-      timestamp: new Date(),
-      type,
-      message: `WARNING: ${message}`,
-      details,
-    });
-  }
-
-  public debug(type: LogEntry['type'], message: string, details?: any) {
-    this.addLog({
-      timestamp: new Date(),
-      type,
-      message: `DEBUG: ${message}`,
-      details,
-    });
+    // Only log performance warnings
+    if (type === 'performance') {
+      this.addLog({
+        timestamp: new Date(),
+        type,
+        message: `WARNING: ${message}`,
+        details,
+      });
+    }
   }
 
   private addLog(entry: LogEntry) {
@@ -110,33 +104,12 @@ class SystemLogger {
         window.dispatchEvent(new CustomEvent('systemLog', { detail: entry }));
       }
 
-      // Log para console com tratamento de erro
-      this.printLog(entry);
-    } catch (error) {
-      console.error('Erro ao adicionar log:', error);
-    }
-  }
-
-  private printLog(entry: LogEntry) {
-    try {
+      // Simplified console output
       const logLevel = entry.message.startsWith('ERROR:') ? 'error' : 
-                      entry.message.startsWith('WARNING:') ? 'warn' : 
-                      entry.message.startsWith('DEBUG:') ? 'debug' : 'info';
-
-      const colorMap = {
-        info: '\x1b[32m',  // Verde
-        warn: '\x1b[33m',  // Amarelo
-        error: '\x1b[31m', // Vermelho
-        debug: '\x1b[36m', // Ciano
-      };
-
-      const color = colorMap[logLevel] || '\x1b[0m';
-      const logMessage = `${color}[${entry.type.toUpperCase()}] ${entry.message}\x1b[0m`;
-      
-      console[logLevel](logMessage, entry.details || '');
+                      entry.message.startsWith('WARNING:') ? 'warn' : 'info';
+      console[logLevel](`[${entry.type}] ${entry.message}`);
     } catch (error) {
-      // Fallback para log simples em caso de erro
-      console.log(entry.message, entry.details);
+      console.error('Log error:', error);
     }
   }
 
