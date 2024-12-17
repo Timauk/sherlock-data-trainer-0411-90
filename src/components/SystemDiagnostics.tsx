@@ -1,5 +1,5 @@
 import React from 'react';
-import { temporalAccuracyTracker } from '@/utils/predictions/predictionCore';
+import { temporalAccuracyTracker } from '@/features/predictions/utils/predictionCore';
 
 export interface DiagnosticResult {
   phase: string;
