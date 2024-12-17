@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import * as tf from '@tensorflow/tfjs';
-import { useGameLogic } from '@/hooks/game';
-import { useGameControls } from '@/hooks/game';
+import { useGameLogic, useGameControls } from '@/hooks/game';
 import { PlayPageHeader } from '@/components/PlayPageHeader';
 import PlayPageContent from '@/components/PlayPageContent';
 import SpeedControl from '@/components/SpeedControl';
@@ -12,12 +11,12 @@ import ChampionPredictions from '@/components/ChampionPredictions';
 import EvolutionStats from '@/components/EvolutionStats';
 import { systemLogger } from '@/utils/logging/systemLogger';
 import { useToast } from '@/hooks/use-toast';
-import { initializeGameData } from '@/utils/gameUtils';
 
 const PlayPage: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const [gameSpeed, setGameSpeed] = useState(1000);
   const [csvData, setCsvData] = useState<number[][]>([]);
+  const [csvDates, setCsvDates] = useState<Date[]>([]);
   const [trainedModel, setTrainedModel] = useState<tf.LayersModel | null>(null);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const { theme, setTheme } = useTheme();
@@ -112,6 +111,7 @@ const PlayPage: React.FC = () => {
           <GameInitializer
             csvData={csvData}
             setCsvData={setCsvData}
+            setCsvDates={setCsvDates}
             setTrainedModel={setTrainedModel}
             setIsDataLoaded={setIsDataLoaded}
             gameLogic={gameLogic}

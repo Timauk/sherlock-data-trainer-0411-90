@@ -1,6 +1,6 @@
 import React from 'react';
 import BoardDisplay from './BoardDisplay';
-import PlayerList from './PlayerList';
+import { PlayerList } from '@/components/players';
 import EvolutionChart from './EvolutionChart';
 import { Player } from '@/types/gameTypes';
 
