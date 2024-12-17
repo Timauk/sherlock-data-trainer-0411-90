@@ -1,6 +1,13 @@
 import React from 'react';
 import { temporalAccuracyTracker } from '@/utils/predictions/predictionCore';
 
+export interface DiagnosticResult {
+  phase: string;
+  status: 'error' | 'warning' | 'success';
+  message: string;
+  details?: string;
+}
+
 const SystemDiagnostics: React.FC = () => {
   return (
     <div>

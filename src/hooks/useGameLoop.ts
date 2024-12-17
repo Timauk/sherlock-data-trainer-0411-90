@@ -5,6 +5,7 @@ import { handlePlayerPredictions, updateModel, temporalAccuracyTracker } from '@
 import { getLunarPhase, analyzeLunarPatterns } from '@/utils/lunarCalculations';
 import { TimeSeriesAnalysis } from '@/utils/analysis';
 import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
+import { calculateReward, logReward } from '@/utils/rewardSystem';
 
 export const useGameLoop = (
   players: Player[],
@@ -161,3 +162,4 @@ export const useGameLoop = (
 
   return gameLoop;
 };
+
