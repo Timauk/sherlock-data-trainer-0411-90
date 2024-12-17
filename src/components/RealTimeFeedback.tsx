@@ -2,7 +2,7 @@ import React from 'react'
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
-import { calculatePredictionConfidence } from '../utils/prediction'  // Updated import
+import { calculatePredictionConfidence } from '@/utils/prediction'
 import { Player } from '@/types/gameTypes'
 
 interface RealTimeFeedbackProps {
@@ -26,7 +26,6 @@ const RealTimeFeedback = ({
 }: RealTimeFeedbackProps) => {
   const { toast } = useToast()
   
-  // Calculate real confidence if we have all required data
   const calculatedConfidence = currentPrediction && historicalData ? 
     calculatePredictionConfidence(currentPrediction, champion, historicalData) :
     predictionConfidence;
