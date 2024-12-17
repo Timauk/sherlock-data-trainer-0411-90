@@ -3,6 +3,7 @@ import { Card } from "../../ui/card";
 import { Button } from "../../ui/button";
 import { useToast } from "../../hooks/use-toast";
 import * as tf from '@tensorflow/tfjs';
+import { systemLogger } from '../../logger';
 
 export const GameControls = () => {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
@@ -15,7 +16,7 @@ export const GameControls = () => {
     if (selectedNumbers.includes(number)) {
       setSelectedNumbers(prev => prev.filter(n => n !== number));
     } else if (selectedNumbers.length < 15) {
-      setSelectedNumbers(prev => [...prev, number]);
+      setSelectedNumbers(prev => [...prev, number].sort((a, b) => a - b));
     }
   };
 
@@ -83,9 +84,12 @@ export const GameControls = () => {
     try {
       const games: number[][] = [];
       for (let i = 0; i < 8; i++) {
+        // Usando um tensor aleatório diferente para cada jogo
         const inputTensor = tf.randomNormal([1, 13057]);
         const prediction = model.predict(inputTensor) as tf.Tensor;
         const result = Array.from(await prediction.data());
+        
+        // Convertendo as previsões em números de 1 a 25
         const numbers = result
           .map((n, i) => ({ value: n, index: i + 1 }))
           .sort((a, b) => b.value - a.value)
@@ -94,21 +98,43 @@ export const GameControls = () => {
           .sort((a, b) => a - b);
         
         games.push(numbers);
+        
+        // Limpando os tensores para evitar vazamento de memória
         inputTensor.dispose();
         prediction.dispose();
       }
       
       setGeneratedGames(games);
+      systemLogger.log('game', 'Games generated:', { games });
+      
       toast({
         title: "Jogos Gerados",
         description: "8 jogos foram gerados com sucesso!",
       });
     } catch (error) {
+      systemLogger.error('game', 'Error generating games:', { error });
       toast({
         title: "Erro ao gerar jogos",
         description: "Ocorreu um erro ao gerar os jogos",
         variant: "destructive",
       });
+    }
+  };
+
+  const handlePlayClick = () => {
+    setIsPlaying(prev => !prev);
+    if (!isPlaying) {
+      toast({
+        title: "Jogo Iniciado",
+        description: "O jogo está em execução",
+      });
+      systemLogger.log('game', 'Game started');
+    } else {
+      toast({
+        title: "Jogo Pausado",
+        description: "O jogo foi pausado",
+      });
+      systemLogger.log('game', 'Game paused');
     }
   };
 
@@ -121,7 +147,7 @@ export const GameControls = () => {
             <Button
               key={number}
               onClick={() => handleNumberClick(number)}
-              className={selectedNumbers.includes(number) ? "bg-primary" : "bg-secondary"}
+              variant={selectedNumbers.includes(number) ? "default" : "secondary"}
             >
               {number}
             </Button>
@@ -130,14 +156,16 @@ export const GameControls = () => {
 
         <div className="flex gap-4">
           <Button 
-            onClick={() => setIsPlaying(!isPlaying)}
+            onClick={handlePlayClick}
             className="flex-1"
+            variant={isPlaying ? "destructive" : "default"}
           >
             {isPlaying ? "Pausar" : "Iniciar"}
           </Button>
           <Button 
             onClick={() => setSelectedNumbers([])}
             className="flex-1"
+            variant="secondary"
           >
             Limpar
           </Button>
@@ -145,6 +173,7 @@ export const GameControls = () => {
             onClick={generateGames}
             className="flex-1"
             disabled={!model}
+            variant="default"
           >
             Gerar 8 Jogos
           </Button>
@@ -161,6 +190,7 @@ export const GameControls = () => {
             />
             <Button
               className="w-full"
+              variant="outline"
               onClick={() => document.getElementById('csvUpload')?.click()}
             >
               Carregar CSV
@@ -178,6 +208,7 @@ export const GameControls = () => {
             />
             <Button
               className="w-full"
+              variant="outline"
               onClick={() => document.getElementById('modelUpload')?.click()}
             >
               Carregar Modelo
