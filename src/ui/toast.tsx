@@ -5,6 +5,16 @@ import { X } from "lucide-react"
 import { cn } from "../utils"
 
 const ToastProvider = ToastPrimitives.Provider
+
+interface ToastProps extends React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> {
+  variant?: "default" | "destructive"
+}
+
+interface ToastActionElement {
+  altText?: string
+  action?: React.ReactNode
+}
+
 const ToastViewport = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Viewport>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Viewport>

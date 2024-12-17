@@ -3,7 +3,7 @@ import * as tf from '@tensorflow/tfjs';
 import { Player } from './types';
 import { Services } from './services';
 import { systemLogger } from './logger';
-import { useToast } from './toast';
+import { useToast } from './hooks/use-toast';
 
 export const useGameState = () => {
   const [isInfiniteMode, setIsInfiniteMode] = useState(false);

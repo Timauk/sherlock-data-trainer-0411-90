@@ -4,7 +4,7 @@ import { Button } from "./ui/button";
 import { Services } from './services';
 import { systemLogger } from './logger';
 import { Player, PredictionResult } from './types';
-import { useToast } from './toast';
+import { useToast } from './hooks/use-toast';
 
 export const DiagnosticReport: React.FC<{ modelMetrics: any }> = ({ modelMetrics }) => {
   return (
@@ -174,3 +174,4 @@ export const TrainingActions: React.FC<{ startTraining: () => void; saveModel: (
     </div>
   );
 };
+
