@@ -3,7 +3,7 @@ export interface LogEntry {
   type: 'action' | 'prediction' | 'performance' | 'system' | 'lunar' | 'player' | 
         'checkpoint' | 'learning' | 'model' | 'initialization' | 'training' | 
         'csv' | 'bank' | 'evolution' | 'players' | 'game' | 'error' | 
-        'features' | 'weights' | 'tensor' | 'metrics' | 'validation' | 'reward';
+        'features' | 'weights' | 'tensor' | 'metrics' | 'validation' | 'reward' | 'clone';
   message: string;
   details?: any;
 }

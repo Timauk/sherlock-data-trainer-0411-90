@@ -1,8 +1,14 @@
 import { systemLogger } from './systemLogger';
 
+export type LogType = 'action' | 'prediction' | 'performance' | 'system' | 'lunar' | 
+                     'player' | 'checkpoint' | 'learning' | 'model' | 'initialization' | 
+                     'training' | 'csv' | 'bank' | 'evolution' | 'players' | 'game' | 
+                     'error' | 'features' | 'weights' | 'tensor' | 'metrics' | 
+                     'validation' | 'reward' | 'clone';
+
 export interface LogEntry {
   timestamp: Date;
-  type: string;
+  type: LogType;
   message: string;
   details?: any;
 }
@@ -17,6 +23,23 @@ class Logger {
       Logger.instance = new Logger();
     }
     return Logger.instance;
+  }
+
+  // Métodos básicos de logging
+  public debug(message: string, details?: any) {
+    systemLogger.log('system', message, details);
+  }
+
+  public info(message: string, details?: any) {
+    systemLogger.log('system', message, details);
+  }
+
+  public warn(message: string, details?: any) {
+    systemLogger.warn('system', message, details);
+  }
+
+  public error(message: string, details?: any) {
+    systemLogger.error('system', message, details);
   }
 
   // Game Logging
@@ -48,7 +71,7 @@ class Logger {
   }
 
   // Error Logging
-  public logError(type: string, error: Error | string, details?: any) {
+  public logError(type: LogType, error: Error | string, details?: any) {
     systemLogger.error(type, error instanceof Error ? error.message : error, {
       stack: error instanceof Error ? error.stack : undefined,
       ...details
@@ -56,7 +79,7 @@ class Logger {
   }
 
   // Warning Logging
-  public logWarning(type: string, message: string, details?: any) {
+  public logWarning(type: LogType, message: string, details?: any) {
     systemLogger.warn(type, message, details);
   }
 
