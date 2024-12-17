@@ -1,9 +1,22 @@
 import * as tf from '@tensorflow/tfjs';
-import { systemLogger } from '../logging/systemLogger';
+import { systemLogger } from './logging/systemLogger';
 
+// TensorFlow Initialization
+export const initTensorFlow = async (): Promise<boolean> => {
+  try {
+    await tf.ready();
+    systemLogger.log('system', 'TensorFlow.js initialized successfully');
+    return true;
+  } catch (error) {
+    systemLogger.error('system', 'Failed to initialize TensorFlow.js:', { error });
+    return false;
+  }
+};
+
+// Model Initialization
 export class ModelInitializer {
   private static readonly BATCH_SIZE = 32;
-  private static readonly MAX_TEXTURE_SIZE = 4096; // Reduced from 16384 to be safer
+  private static readonly MAX_TEXTURE_SIZE = 4096;
 
   static async initializeModel(): Promise<tf.LayersModel> {
     try {
@@ -11,9 +24,8 @@ export class ModelInitializer {
       
       const model = tf.sequential();
       
-      // Significantly reduced layer sizes and complexity
       model.add(tf.layers.dense({
-        units: 64, // Reduced from 128
+        units: 64,
         activation: 'relu',
         inputShape: [15],
         kernelInitializer: 'glorotNormal'
@@ -22,7 +34,7 @@ export class ModelInitializer {
       model.add(tf.layers.dropout({ rate: 0.2 }));
       
       model.add(tf.layers.dense({
-        units: 32, // Reduced from 64
+        units: 32,
         activation: 'relu',
         kernelInitializer: 'glorotNormal'
       }));
@@ -39,28 +51,14 @@ export class ModelInitializer {
         metrics: ['accuracy']
       });
 
-      systemLogger.log('system', 'Modelo neural inicializado com sucesso', {
-        backend: tf.getBackend(),
-        layers: model.layers.length,
-        inputShape: model.inputs[0].shape,
-        outputShape: model.outputs[0].shape,
-        memoryInfo: tf.memory()
-      });
-
       return model;
     } catch (error) {
-      systemLogger.error('system', 'Erro ao inicializar modelo', {
-        error,
-        stack: error instanceof Error ? error.stack : undefined,
-        backend: tf.getBackend(),
-        memoryInfo: tf.memory()
-      });
+      systemLogger.error('system', 'Erro ao inicializar modelo', { error });
       throw error;
     }
   }
 
   private static async setupBackend(): Promise<void> {
-    // Try CPU first as it's more stable
     try {
       await tf.setBackend('cpu');
       await tf.ready();
@@ -70,16 +68,14 @@ export class ModelInitializer {
       systemLogger.warn('system', 'CPU backend failed, trying WebGL', { error: cpuError });
     }
 
-    // Try WebGL with reduced settings
     try {
       await tf.setBackend('webgl');
       await tf.ready();
       
-      // Configure WebGL for better stability
       tf.env().set('WEBGL_MAX_TEXTURE_SIZE', this.MAX_TEXTURE_SIZE);
       tf.env().set('WEBGL_FORCE_F16_TEXTURES', true);
-      tf.env().set('WEBGL_VERSION', 1); // Force WebGL 1.0 for better compatibility
-      tf.env().set('WEBGL_CPU_FORWARD', true); // Enable CPU fallback
+      tf.env().set('WEBGL_VERSION', 1);
+      tf.env().set('WEBGL_CPU_FORWARD', true);
       
       systemLogger.log('system', 'Using WebGL backend with reduced settings');
     } catch (webglError) {
@@ -112,12 +108,21 @@ export class ModelInitializer {
           }
         });
       } finally {
-        // Clean up tensors
         xs.dispose();
         ys.dispose();
-        // Force garbage collection
         await tf.nextFrame();
       }
     }
   }
 }
+
+// Model Utilities
+export const predictNumbers = async (
+  trainedModel: tf.LayersModel,
+  inputData: number[]
+): Promise<tf.Tensor> => {
+  const inputTensor = tf.tensor2d([inputData]);
+  const predictions = trainedModel.predict(inputTensor) as tf.Tensor;
+  inputTensor.dispose();
+  return predictions;
+};
