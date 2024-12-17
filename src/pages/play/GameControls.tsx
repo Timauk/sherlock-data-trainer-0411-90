@@ -3,6 +3,7 @@ import { Button } from "../../ui/button";
 import { Upload } from 'lucide-react';
 import { useGameControls } from '../../hooks';
 import { useToast } from "../../hooks/use-toast";
+import { Card } from "../../ui/card";
 
 export const GameControls = () => {
   const { isPlaying, playGame, pauseGame, resetGame } = useGameControls();
