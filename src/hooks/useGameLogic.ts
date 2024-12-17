@@ -4,7 +4,7 @@ import { useGamePlayers } from './game/useGamePlayers';
 import { useBankSystem } from './game/useBankSystem';
 import { useGameEvolution } from './game/useGameEvolution';
 import { useGameState } from './game/useGameState';
-import { handlePlayerPredictions, updateModel } from '@/utils/predictions/predictionCore';
+import { handlePlayerPredictions, updateModel } from '@/utils/predictions/predictionUtils';
 import { validateGameState } from '@/utils/game/validation';
 import { systemLogger } from '@/utils/logging/systemLogger';
 import { getLunarPhase, analyzeLunarPatterns } from '@/utils/game/lunarAnalysis';

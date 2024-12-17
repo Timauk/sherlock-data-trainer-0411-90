@@ -11,7 +11,7 @@ import { systemLogger } from '../utils/logging/systemLogger';
 import { PredictionsHeader } from './predictions/PredictionsHeader';
 import { PredictionResult } from './predictions/types';
 import { SystemStatus } from './predictions/SystemStatus';
-import { generatePredictions, generateDirectPredictions } from '@/utils/predictions/predictionCore';
+import { generatePredictions, generateDirectPredictions } from '@/utils/predictions/predictionUtils';
 
 interface ChampionPredictionsProps {
   champion: Player | undefined;
@@ -209,3 +209,4 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
 };
 
 export default ChampionPredictions;
+

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import { Player, ModelVisualization } from '@/types/gameTypes';
-import { handlePlayerPredictions, updateModel, temporalAccuracyTracker } from '@/utils/predictions/predictionCore';
+import { handlePlayerPredictions, updateModel, temporalAccuracyTracker } from '@/utils/predictions/predictionUtils';
 import { getLunarPhase, analyzeLunarPatterns } from '@/utils/lunarCalculations';
 import { TimeSeriesAnalysis } from '@/utils/analysis';
 import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
