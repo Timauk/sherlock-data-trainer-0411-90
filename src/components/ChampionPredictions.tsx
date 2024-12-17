@@ -11,8 +11,7 @@ import { systemLogger } from '../utils/logging/systemLogger';
 import { PredictionsHeader } from './predictions/PredictionsHeader';
 import { PredictionResult } from './predictions/types';
 import { SystemStatus } from './predictions/SystemStatus';
-import { generatePredictions } from '../utils/prediction';
-import { generateDirectPredictions } from '../utils/directPrediction';
+import { generatePredictions, generateDirectPredictions } from '@/utils/predictions/predictionCore';
 
 interface ChampionPredictionsProps {
   champion: Player | undefined;

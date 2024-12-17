@@ -2,13 +2,13 @@ import { useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import { Player, ModelVisualization } from '@/types/gameTypes';
 import { makePrediction } from '@/utils/predictionUtils';
-import { updateModelWithNewData } from '@/utils/modelUtils';
+import { updateModel } from '@/utils/game/modelUpdate';
 import { calculateReward, logReward } from '@/utils/rewardSystem';
 import { getLunarPhase, analyzeLunarPatterns } from '@/utils/lunarCalculations';
-import { performCrossValidation } from '@/utils/validation';
-import { temporalAccuracyTracker } from '@/utils/prediction/temporalAccuracy';
+import { temporalAccuracyTracker } from '@/utils/predictions/predictionCore';
 import { TimeSeriesAnalysis } from '@/utils/analysis';
 import { predictionMonitor } from '@/utils/monitoring/predictionMonitor';
+import { handlePlayerPredictions } from '@/utils/predictions/predictionCore';
 
 export const useGameLoop = (
   players: Player[],
@@ -58,25 +58,12 @@ export const useGameLoop = (
     
     setDates(currentDates => [...currentDates, currentDate].slice(-100));
 
-    const playerPredictions = await Promise.all(
-      players.map(async player => {
-        const prediction = await makePrediction(
-          trainedModel, 
-          currentBoardNumbers, 
-          player.weights,
-          { 
-            lunarPhase, 
-            patterns: lunarPatterns, 
-            lunarPatterns 
-          }
-        );
-
-        const timeSeriesAnalyzer = new TimeSeriesAnalysis([[...currentBoardNumbers]]);
-        const arimaPredictor = timeSeriesAnalyzer.analyzeNumbers();
-        predictionMonitor.recordPrediction(prediction, currentBoardNumbers, arimaPredictor);
-
-        return prediction;
-      })
+    const playerPredictions = await handlePlayerPredictions(
+      players,
+      trainedModel,
+      currentBoardNumbers,
+      setNeuralNetworkVisualization,
+      { phase: lunarPhase, patterns: lunarPatterns }
     );
 
     let totalMatches = 0;
@@ -150,7 +137,7 @@ export const useGameLoop = (
       [...currentTrainingData, enhancedTrainingData]);
 
     if (nextConcurso % Math.min(updateInterval, 50) === 0 && trainingData.length > 0) {
-      await updateModelWithNewData(trainedModel, trainingData, addLog, showToast);
+      await updateModel(trainedModel, trainingData, addLog);
       setTrainingData([]);
     }
     
