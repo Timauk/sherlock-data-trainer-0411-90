@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Save } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import NumberSelector from './NumberSelector';
 
 interface PlayPageContentProps {
   isPlaying: boolean;
@@ -38,6 +39,31 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
 }) => {
   const { toast } = useToast();
 
+  const handleGenerateGames = () => {
+    if (!isDataLoaded) {
+      toast({
+        title: "Dados não carregados",
+        description: "Por favor, carregue o CSV e o modelo antes de gerar jogos.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      gameLogic.generateGames();
+      toast({
+        title: "Jogos Gerados",
+        description: "Novos jogos foram gerados com sucesso!"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao gerar novos jogos",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <ControlPanel
@@ -61,6 +87,20 @@ const PlayPageContent: React.FC<PlayPageContentProps> = ({
         champion={gameLogic.champion}
         modelMetrics={gameLogic.modelMetrics}
       />
+
+      <NumberSelector 
+        onNumbersSelected={(numbers) => gameLogic.setSelectedNumbers(numbers)}
+        predictions={gameLogic.predictions}
+      />
+
+      <Button
+        onClick={handleGenerateGames}
+        className="w-full"
+        variant="default"
+        disabled={!isDataLoaded}
+      >
+        Gerar Jogos
+      </Button>
 
       {!isDataLoaded && (
         <Alert>
