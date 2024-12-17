@@ -69,6 +69,7 @@ const RealTimeFeedback = ({
         />
       </CardContent>
     </Card>
+  )
 }
 
 export default RealTimeFeedback
