@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
+import * as tf from '@tensorflow/tfjs';
 
 export const useGamePlayers = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [champion, setChampion] = useState<Player | null>(null);
 
-  const initializePlayers = useCallback((numPlayers: number = 100) => {
+  const initializePlayers = useCallback((numPlayers: number = 6) => {
     systemLogger.log('initialization', 'Iniciando criação dos jogadores', {
       numPlayers,
       timestamp: new Date().toISOString()
@@ -25,13 +26,13 @@ export const useGamePlayers = () => {
         predictions: [],
         weights,
         fitness: 0,
-        generation: 1
+        generation: 1,
+        modelConnection: {
+          lastPrediction: null,
+          confidence: 0,
+          successRate: 0
+        }
       };
-
-      systemLogger.log('player', `Jogador #${player.id} criado`, {
-        weightsLength: weights.length,
-        timestamp: new Date().toISOString()
-      });
 
       return player;
     });
@@ -41,19 +42,17 @@ export const useGamePlayers = () => {
 
     systemLogger.log('initialization', 'Jogadores criados com sucesso', {
       totalPlayers: initialPlayers.length,
-      championId: initialPlayers[0].id,
-      weightsLength: initialPlayers[0].weights.length,
-      timestamp: new Date().toISOString()
+      championId: initialPlayers[0].id
     });
 
     return initialPlayers;
   }, []);
 
-  const updatePlayers = useCallback((updatedPlayers: Player[]) => {
-    systemLogger.log('players', 'Atualizando estado dos jogadores', {
-      totalPlayers: updatedPlayers.length,
-      timestamp: new Date().toISOString()
-    });
+  const updatePlayers = useCallback((updatedPlayers: Player[], model: tf.LayersModel | null) => {
+    if (!model) {
+      systemLogger.error('players', 'Modelo não disponível para atualização dos jogadores');
+      return;
+    }
 
     // Validação dos pesos antes da atualização
     const validPlayers = updatedPlayers.every(player => 
@@ -65,9 +64,18 @@ export const useGamePlayers = () => {
       return;
     }
 
-    setPlayers(updatedPlayers);
+    // Atualiza jogadores com conexão ao modelo
+    const playersWithModelConnection = updatedPlayers.map(player => ({
+      ...player,
+      modelConnection: {
+        ...player.modelConnection,
+        lastUpdate: new Date().toISOString()
+      }
+    }));
+
+    setPlayers(playersWithModelConnection);
     
-    const newChampion = updatedPlayers.reduce((prev, current) => 
+    const newChampion = playersWithModelConnection.reduce((prev, current) => 
       current.score > prev.score ? current : prev
     );
     
@@ -75,9 +83,7 @@ export const useGamePlayers = () => {
       setChampion(newChampion);
       systemLogger.log('player', `Novo campeão: Jogador #${newChampion.id}`, {
         score: newChampion.score,
-        fitness: newChampion.fitness,
-        weightsLength: newChampion.weights.length,
-        timestamp: new Date().toISOString()
+        fitness: newChampion.fitness
       });
     }
   }, [champion]);
