@@ -6,7 +6,88 @@ import { enrichTrainingData } from '@/utils/features/lotteryFeatureEngineering';
 import { calculateReward } from '@/utils/rewardSystem';
 import { useToast } from "@/hooks/use-toast";
 
-// Game Players Hook
+export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel | null) => {
+  const {
+    players,
+    champion,
+    setPlayers,
+    initializePlayers,
+    updatePlayers
+  } = useGamePlayers();
+
+  const {
+    boardNumbers,
+    concursoNumber,
+    numbers,
+    dates,
+    setNumbers,
+    setBoardNumbers,
+    setConcursoNumber,
+    setDates,
+    updateBank
+  } = useBankSystem();
+
+  const {
+    generation,
+    evolutionData,
+    setEvolutionData,
+    evolveGeneration
+  } = useGameEvolution();
+
+  const gameState = useGameState();
+
+  const initializeGameData = useCallback(() => {
+    systemLogger.log('game', 'Iniciando inicialização do jogo', {
+      hasCsvData: csvData?.length > 0,
+      hasTrainedModel: !!trainedModel
+    });
+
+    if (csvData && csvData.length > 0) {
+      setNumbers([csvData[0]]);
+      setBoardNumbers(csvData[0]);
+      
+      if (!players || players.length === 0) {
+        initializePlayers(100);
+        return true;
+      }
+    }
+    return false;
+  }, [csvData, players, setNumbers, setBoardNumbers, initializePlayers]);
+
+  const gameLoop = useCallback(() => {
+    if (csvData && csvData.length > 0 && trainedModel) {
+      // Game loop logic here
+      systemLogger.log('game', 'Executando loop do jogo');
+    }
+  }, [csvData, trainedModel]);
+
+  return {
+    players,
+    champion,
+    generation,
+    evolutionData,
+    initializePlayers,
+    evolveGeneration,
+    dates,
+    numbers,
+    setNumbers,
+    isInfiniteMode: gameState.isInfiniteMode,
+    boardNumbers,
+    concursoNumber,
+    trainedModel,
+    gameCount: gameState.gameCount,
+    isManualMode: gameState.isManualMode,
+    toggleManualMode: useCallback(() => {
+      gameState.setIsManualMode(prev => !prev);
+    }, [gameState]),
+    toggleInfiniteMode: useCallback(() => {
+      gameState.setIsInfiniteMode(prev => !prev);
+    }, [gameState]),
+    initializeGameData,
+    gameLoop
+  };
+};
+
 export const useGamePlayers = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [champion, setChampion] = useState<Player | null>(null);
@@ -227,80 +308,5 @@ export const useGameControls = () => {
     playGame,
     pauseGame,
     resetGame
-  };
-};
-
-// Game Logic Hook
-export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel | null) => {
-  const {
-    players,
-    champion,
-    setPlayers,
-    initializePlayers,
-    updatePlayers
-  } = useGamePlayers();
-
-  const {
-    boardNumbers,
-    concursoNumber,
-    numbers,
-    dates,
-    setNumbers,
-    setBoardNumbers,
-    setConcursoNumber,
-    setDates,
-    updateBank
-  } = useBankSystem();
-
-  const {
-    generation,
-    evolutionData,
-    setEvolutionData,
-    evolveGeneration
-  } = useGameEvolution();
-
-  const gameState = useGameState();
-
-  const initializeGameData = useCallback(() => {
-    systemLogger.log('game', 'Iniciando inicialização do jogo', {
-      hasCsvData: csvData?.length > 0,
-      hasTrainedModel: !!trainedModel
-    });
-
-    if (csvData && csvData.length > 0) {
-      setNumbers([csvData[0]]);
-      setBoardNumbers(csvData[0]);
-      
-      if (!players || players.length === 0) {
-        initializePlayers(100);
-        return true;
-      }
-    }
-    return false;
-  }, [csvData, players, setNumbers, setBoardNumbers, initializePlayers]);
-
-  return {
-    players,
-    champion,
-    generation,
-    evolutionData,
-    initializePlayers,
-    evolveGeneration,
-    dates,
-    numbers,
-    setNumbers,
-    isInfiniteMode: gameState.isInfiniteMode,
-    boardNumbers,
-    concursoNumber,
-    trainedModel,
-    gameCount: gameState.gameCount,
-    isManualMode: gameState.isManualMode,
-    toggleManualMode: useCallback(() => {
-      gameState.setIsManualMode(prev => !prev);
-    }, [gameState]),
-    toggleInfiniteMode: useCallback(() => {
-      gameState.setIsInfiniteMode(prev => !prev);
-    }, [gameState]),
-    initializeGameData
   };
 };
