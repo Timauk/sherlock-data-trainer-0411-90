@@ -14,13 +14,12 @@ export const useGamePlayers = () => {
     });
     
     const initialPlayers: Player[] = Array.from({ length: numPlayers }, (_, index) => {
-      // Inicializa pesos com valores entre 0 e 1000
       const weights = Array.from({ length: 13072 }, () => {
-        const baseWeight = Math.floor(Math.random() * 1001); // 0 to 1000
+        const baseWeight = Math.floor(Math.random() * 1001);
         return baseWeight;
       });
       
-      const player = {
+      const player: Player = {
         id: index + 1,
         score: 0,
         predictions: [],
@@ -54,7 +53,6 @@ export const useGamePlayers = () => {
       return;
     }
 
-    // Validação dos pesos antes da atualização
     const validPlayers = updatedPlayers.every(player => 
       player.weights && player.weights.length === 13072
     );
@@ -64,7 +62,6 @@ export const useGamePlayers = () => {
       return;
     }
 
-    // Atualiza jogadores com conexão ao modelo
     const playersWithModelConnection = updatedPlayers.map(player => ({
       ...player,
       modelConnection: {
