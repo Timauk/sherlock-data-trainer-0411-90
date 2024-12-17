@@ -1,16 +1,13 @@
 import { Player } from '../types/gameTypes';
 import * as tf from '@tensorflow/tfjs';
-import { cloneLogger } from './logging/cloneLogger';
 
 export const cloneChampion = (champion: Player, totalPlayers: number): Player[] => {
   const clones: Player[] = [];
   
-  // Mantém o campeão original sem modificações (elitismo)
   clones.push({...champion});
   
-  // Cria clones com variação adaptativa nos pesos
   for (let i = 1; i < totalPlayers; i++) {
-    const mutationScale = Math.exp(-i / (totalPlayers * 0.5)); // Decaimento exponencial
+    const mutationScale = Math.exp(-i / (totalPlayers * 0.5));
     const modifiedWeights = champion.weights.map(weight => {
       const variation = (Math.random() - 0.5) * weight * mutationScale;
       return weight + variation;
@@ -22,13 +19,17 @@ export const cloneChampion = (champion: Player, totalPlayers: number): Player[] 
       predictions: [],
       weights: modifiedWeights,
       fitness: 0,
-      generation: champion.generation + 1
+      generation: champion.generation + 1,
+      modelConnection: {
+        lastPrediction: null,
+        confidence: 0,
+        successRate: 0
+      }
     });
   }
 
-  cloneLogger.logCloneEvent(champion, clones, champion.generation + 1);
   return clones;
-}
+};
 
 export const updateModelWithChampionKnowledge = async (
   model: tf.LayersModel,

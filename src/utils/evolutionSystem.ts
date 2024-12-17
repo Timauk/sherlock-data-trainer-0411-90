@@ -1,24 +1,21 @@
 import { Player } from '../types/gameTypes';
 
 export const createOffspring = (parent1: Player, parent2: Player, generation: number): Player => {
-  // Crossover inteligente com média ponderada
   const childWeights = parent1.weights.map((weight, index) => {
     const parentFitness1 = parent1.fitness || 0.1;
     const parentFitness2 = parent2.fitness || 0.1;
     const totalFitness = parentFitness1 + parentFitness2;
     
-    // Peso ponderado baseado no fitness dos pais
     const weight1Contribution = (parentFitness1 / totalFitness) * weight;
     const weight2Contribution = (parentFitness2 / totalFitness) * parent2.weights[index];
     
     return weight1Contribution + weight2Contribution;
   });
 
-  // Taxa de mutação exponencial adaptativa
   const mutationRate = 0.1 * Math.exp(generation / 100);
   const mutatedWeights = childWeights.map(weight => {
     return Math.random() < mutationRate 
-      ? weight + (Math.random() - 0.5) * 0.01 // Mutação pequena e controlada
+      ? weight + (Math.random() - 0.5) * 0.01
       : weight;
   });
 
@@ -28,7 +25,12 @@ export const createOffspring = (parent1: Player, parent2: Player, generation: nu
     predictions: [],
     weights: mutatedWeights,
     fitness: 0,
-    generation: generation + 1
+    generation: generation + 1,
+    modelConnection: {
+      lastPrediction: null,
+      confidence: 0,
+      successRate: 0
+    }
   };
 };
 

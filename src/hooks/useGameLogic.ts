@@ -98,7 +98,7 @@ export const useGameLogic = (csvData: number[][], trainedModel: tf.LayersModel |
           currentBoardNumbers.includes(n)).length)
       }));
 
-      updatePlayers(updatedPlayers);
+      updatePlayers(updatedPlayers, trainedModel);
       setEvolutionData(prev => [
         ...prev,
         ...updatedPlayers.map(player => ({

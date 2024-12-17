@@ -54,12 +54,16 @@ export const createMutatedClone = (player: Player, mutationRate: number = 0.1): 
     predictions: [],
     weights: mutatedWeights,
     fitness: 0,
-    generation: player.generation + 1
+    generation: player.generation + 1,
+    modelConnection: {
+      lastPrediction: null,
+      confidence: 0,
+      successRate: 0
+    }
   };
 };
 
 export const crossoverPlayers = (parent1: Player, parent2: Player): Player => {
-  // Crossover com média ponderada pelo fitness
   const parent1Fitness = parent1.fitness || 0.1;
   const parent2Fitness = parent2.fitness || 0.1;
   const totalFitness = parent1Fitness + parent2Fitness;
@@ -76,6 +80,11 @@ export const crossoverPlayers = (parent1: Player, parent2: Player): Player => {
     predictions: [],
     weights: childWeights,
     fitness: 0,
-    generation: Math.max(parent1.generation, parent2.generation) + 1
+    generation: Math.max(parent1.generation, parent2.generation) + 1,
+    modelConnection: {
+      lastPrediction: null,
+      confidence: 0,
+      successRate: 0
+    }
   };
 };

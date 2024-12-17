@@ -8,13 +8,18 @@ export const useGameInitialization = () => {
   const initializePlayers = useCallback(() => {
     systemLogger.log('initialization', 'Iniciando criação dos jogadores');
     
-    const initialPlayers: Player[] = Array.from({ length: 100 }, (_, index) => ({
+    const initialPlayers: Player[] = Array.from({ length: 6 }, (_, index) => ({
       id: index + 1,
       score: 0,
       predictions: [],
       weights: Array.from({ length: 17 }, () => Math.random()),
       fitness: 0,
-      generation: 1
+      generation: 1,
+      modelConnection: {
+        lastPrediction: null,
+        confidence: 0,
+        successRate: 0
+      }
     }));
 
     systemLogger.log('initialization', 'Jogadores criados com sucesso', {
