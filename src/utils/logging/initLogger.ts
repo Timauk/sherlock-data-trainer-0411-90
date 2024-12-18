@@ -1,3 +1,6 @@
+import { systemLogger } from './systemLogger';
+
 export const initLogger = () => {
-  console.log('Logger initialized');
+  // Inicializa o logger do sistema
+  systemLogger.log('initialization', 'Logger system initialized');
 };
