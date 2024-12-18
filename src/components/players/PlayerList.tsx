@@ -5,6 +5,15 @@ import PlayerCard from './PlayerCard';
 import PlayerWeightsDialog from './PlayerWeightsDialog';
 import { systemLogger } from '@/utils/logging/systemLogger';
 
+/**
+ * Componente que gerencia e exibe a lista de jogadores
+ * 
+ * Funcionalidades:
+ * - Renderiza cards para cada jogador
+ * - Gerencia seleção de jogadores
+ * - Permite edição de pesos
+ * - Monitora campeões
+ */
 export interface Weight {
   name: string;
   value: number;
@@ -55,6 +64,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const maxScore = Math.max(...players.map(p => p.score));
 
+  // Monitora mudanças nos jogadores
   useEffect(() => {
     console.log('PlayerList - useEffect - Players atualizados:', players);
     systemLogger.log('player', 'Lista de jogadores atualizada', {
@@ -64,6 +74,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
       timestamp: new Date().toISOString()
     });
 
+    // Atualiza pesos do jogador selecionado
     if (selectedPlayer) {
       const currentPlayer = players.find(p => p.id === selectedPlayer.id);
       if (currentPlayer) {

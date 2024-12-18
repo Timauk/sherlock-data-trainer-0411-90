@@ -6,6 +6,15 @@ import { Copy } from 'lucide-react';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
 
+/**
+ * Componente que exibe informações detalhadas de um jogador
+ * 
+ * Funcionalidades:
+ * - Exibe score e previsões do jogador
+ * - Mostra histórico de partidas
+ * - Permite clonar o jogador
+ * - Destaca jogadores campeões
+ */
 interface PlayerCardProps {
   player: Player;
   isTopPlayer: boolean;
@@ -21,6 +30,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 }) => {
   console.log('PlayerCard - Dados do jogador:', player);
 
+  // Monitora atualizações do jogador
   useEffect(() => {
     console.log('PlayerCard - useEffect - Player atualizado:', player);
     systemLogger.log('player', `Player ${player.id} updated`, {
@@ -31,6 +41,10 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
     });
   }, [player]);
 
+  /**
+   * Obtém o último histórico de partida do jogador
+   * Se não houver histórico, retorna objeto vazio
+   */
   const getLastMatchHistory = () => {
     if (!player.matchHistory || player.matchHistory.length === 0) {
       return {
@@ -46,6 +60,10 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   const lastMatch = getLastMatchHistory();
   console.log('PlayerCard - Último jogo:', lastMatch);
 
+  /**
+   * Formata array de números para exibição
+   * @param numbers Array de números a ser formatado
+   */
   const formatNumbers = (numbers: number[]): string => {
     return numbers.map(n => n.toString().padStart(2, '0')).join(', ');
   };
