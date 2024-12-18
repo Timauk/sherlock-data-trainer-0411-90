@@ -6,12 +6,14 @@ interface TrainingProgressProps {
 }
 
 const TrainingProgress: React.FC<TrainingProgressProps> = ({ trainingProgress }) => {
-  return trainingProgress > 0 ? (
+  return (
     <div className="mt-4">
       <Progress value={trainingProgress} className="w-full" />
-      <p className="text-center mt-2">{trainingProgress}% Concluído</p>
+      <p className="text-center mt-2 text-sm text-muted-foreground">
+        {Math.round(trainingProgress)}% Concluído
+      </p>
     </div>
-  ) : null;
+  );
 };
 
 export default TrainingProgress;

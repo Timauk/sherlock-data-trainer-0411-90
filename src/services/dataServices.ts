@@ -3,32 +3,49 @@ import { systemLogger } from '@/utils/logging/systemLogger';
 import * as tf from '@tensorflow/tfjs';
 
 export class DataServices {
-  static GameLogicService = {
-    createSharedModel: async () => {
-      const model = tf.sequential();
-      model.add(tf.layers.dense({ units: 128, activation: 'relu', inputShape: [15] }));
-      model.add(tf.layers.dense({ units: 128, activation: 'relu' }));
-      model.add(tf.layers.dense({ units: 15, activation: 'sigmoid' }));
-      model.compile({ optimizer: 'adam', loss: 'meanSquaredError' });
-      return model;
-    },
+  static async createSharedModel() {
+    const model = tf.sequential();
+    model.add(tf.layers.dense({ units: 128, activation: 'relu', inputShape: [15] }));
+    model.add(tf.layers.dense({ units: 128, activation: 'relu' }));
+    model.add(tf.layers.dense({ units: 15, activation: 'sigmoid' }));
+    model.compile({ optimizer: 'adam', loss: 'meanSquaredError' });
+    return model;
+  }
 
-    trainModel: async (model: tf.Sequential, data: number[][]) => {
-      const xs = tf.tensor2d(data.map(row => row.slice(0, 15)));
-      const ys = tf.tensor2d(data.map(row => row.slice(15)));
-      
+  static async trainModel(
+    model: tf.Sequential, 
+    data: number[][], 
+    onProgress?: (progress: number) => void
+  ) {
+    const xs = tf.tensor2d(data.map(row => row.slice(0, 15)));
+    const ys = tf.tensor2d(data.map(row => row.slice(15)));
+    
+    try {
       await model.fit(xs, ys, {
         epochs: 50,
         batchSize: 32,
         shuffle: true,
         validationSplit: 0.2,
+        callbacks: {
+          onEpochEnd: (epoch, logs) => {
+            const progress = (epoch + 1) / 50;
+            onProgress?.(progress);
+            
+            systemLogger.log('training', `Época ${epoch + 1} finalizada`, {
+              loss: logs?.loss,
+              valLoss: logs?.val_loss,
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
       });
 
+      return model;
+    } finally {
       xs.dispose();
       ys.dispose();
-      return model;
     }
-  };
+  }
 
   // Weighted Training
   static calculateWeights(data: number[][], outcomes: number[]) {
