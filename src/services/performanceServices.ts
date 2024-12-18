@@ -12,6 +12,16 @@ export class PerformanceServices {
     accuracy: []
   };
 
+  // Add the missing getModelMetrics method
+  static getModelMetrics() {
+    return {
+      accuracy: 0,
+      loss: 0,
+      predictions: 0,
+      successRate: 0
+    };
+  }
+
   // Cache Management
   static cacheManager = {
     cache: new Map<string, any>(),

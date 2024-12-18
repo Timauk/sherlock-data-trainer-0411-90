@@ -22,6 +22,7 @@ export const useModelTraining = () => {
 
       // Sumarização de dados históricos
       const summaries = DataServices.summarizeData(historicalData);
+      const summaryArray = [...summaries.mean, ...summaries.variance]; // Convert to array format
       setProgress(20);
 
       // Criação dos modelos ensemble
@@ -29,7 +30,7 @@ export const useModelTraining = () => {
       setProgress(40);
 
       // Treinamento dos modelos
-      await trainEnsemble(models, historicalData, summaries, lunarData);
+      await trainEnsemble(models, historicalData, summaryArray, lunarData);
       setProgress(90);
 
       // Salva os modelos
