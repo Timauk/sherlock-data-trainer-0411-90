@@ -20,11 +20,11 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   onClonePlayer,
 }) => {
   useEffect(() => {
-    console.log('Player Update:', {
-      id: player.id,
+    systemLogger.log('player', `Player ${player.id} updated`, {
       predictions: player.predictions,
       matchHistory: player.matchHistory,
-      score: player.score
+      score: player.score,
+      timestamp: new Date().toISOString()
     });
   }, [player]);
 

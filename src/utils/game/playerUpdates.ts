@@ -22,7 +22,8 @@ export const updatePlayerWithMatchResults = (
     matches,
     score,
     predictions,
-    drawnNumbers
+    drawnNumbers,
+    timestamp: new Date().toISOString()
   });
 
   return {
