@@ -11,12 +11,19 @@ import { createEnhancedModel } from '@/utils/training/modelArchitecture';
 import { performCrossValidation } from '@/utils/training/crossValidation';
 import * as tf from '@tensorflow/tfjs';
 
+interface TrainingLog {
+  epoch: number;
+  loss: number;
+  val_loss: number;
+}
+
 const TrainingPage: React.FC = () => {
   const [trainingData, setTrainingData] = useState<number[][]>([]);
   const [dates, setDates] = useState<Date[]>([]);
   const [isTraining, setIsTraining] = useState(false);
   const [progress, setProgress] = useState(0);
   const [model, setModel] = useState<tf.LayersModel | null>(null);
+  const [trainingLogs, setTrainingLogs] = useState<TrainingLog[]>([]);
   const { toast } = useToast();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,12 +63,11 @@ const TrainingPage: React.FC = () => {
 
     setIsTraining(true);
     setProgress(0);
+    setTrainingLogs([]);
 
     try {
-      // Criar modelo
       const model = createEnhancedModel();
       
-      // Preparar features
       const features = trainingData.map((numbers, i) => {
         const allFeatures = extractFeatures(numbers, dates[i], trainingData);
         return [
@@ -72,19 +78,16 @@ const TrainingPage: React.FC = () => {
         ];
       });
 
-      // Preparar labels (saída esperada 1-15)
       const labels = trainingData.map(numbers => 
-        numbers.map(n => n / 25) // Normalizar para [0,1]
+        numbers.map(n => n / 25)
       );
 
-      // Cross-validation
       const validationMetrics = await performCrossValidation(
         model,
         features,
         labels
       );
 
-      // Treinamento final
       await model.fit(tf.tensor2d(features), tf.tensor2d(labels), {
         epochs: 50,
         batchSize: 32,
@@ -93,12 +96,18 @@ const TrainingPage: React.FC = () => {
           onEpochEnd: (epoch, logs) => {
             const progress = ((epoch + 1) / 50) * 100;
             setProgress(progress);
+            if (logs) {
+              setTrainingLogs(prevLogs => [...prevLogs, {
+                epoch: epoch + 1,
+                loss: logs.loss,
+                val_loss: logs.val_loss
+              }]);
+            }
             systemLogger.log('training', `Época ${epoch + 1}`, { logs });
           }
         }
       });
 
-      // Salvar modelo
       await model.save('indexeddb://lottery-model');
       setModel(model);
 
@@ -138,10 +147,10 @@ const TrainingPage: React.FC = () => {
         </Button>
 
         {isTraining && (
-          <TrainingProgress progress={progress} />
+          <TrainingProgress trainingProgress={progress} />
         )}
 
-        <TrainingChart />
+        <TrainingChart logs={trainingLogs} />
       </div>
     </Card>
   );

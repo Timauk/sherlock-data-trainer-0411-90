@@ -12,8 +12,14 @@ ChartJS.register(
   Legend
 );
 
+interface TrainingLog {
+  epoch: number;
+  loss: number;
+  val_loss: number;
+}
+
 interface TrainingChartProps {
-  logs: { epoch: number; loss: number; val_loss: number }[];
+  logs: TrainingLog[];
 }
 
 const TrainingChart: React.FC<TrainingChartProps> = ({ logs }) => {

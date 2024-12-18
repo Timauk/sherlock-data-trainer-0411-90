@@ -2,7 +2,7 @@ import React from 'react';
 import { Progress } from "@/components/ui/progress";
 
 interface TrainingProgressProps {
-  trainingProgress: number;
+  trainingProgress: number;  // Mudamos de progress para trainingProgress
 }
 
 const TrainingProgress: React.FC<TrainingProgressProps> = ({ trainingProgress }) => {
