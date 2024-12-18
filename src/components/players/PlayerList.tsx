@@ -20,6 +20,7 @@ export interface Weight {
   description: string;
 }
 
+// Descrições dos pesos para documentação e UI
 const WEIGHT_DESCRIPTIONS: Weight[] = [
   { name: "Aprendizado Base", value: 0, description: "Capacidade de aprender com dados históricos" },
   { name: "Adaptabilidade", value: 0, description: "Velocidade de adaptação a mudanças" },
@@ -51,12 +52,16 @@ const PlayerList: React.FC<PlayerListProps> = ({
   onUpdatePlayer,
   onClonePlayer 
 }) => {
-  console.log('PlayerList - Players recebidos:', players);
-  systemLogger.log('player', 'Lista de jogadores renderizada', {
-    totalPlayers: players.length,
-    playersWithPredictions: players.filter(p => p.predictions.length > 0).length,
-    timestamp: new Date().toISOString()
-  });
+  // Log detalhado dos jogadores recebidos
+  useEffect(() => {
+    systemLogger.log('player', 'Lista de jogadores atualizada', {
+      totalPlayers: players.length,
+      playersWithPredictions: players.filter(p => p.predictions?.length > 0).length,
+      playersWithoutPredictions: players.filter(p => !p.predictions?.length).length,
+      averageScore: players.reduce((acc, p) => acc + p.score, 0) / players.length,
+      timestamp: new Date().toISOString()
+    });
+  }, [players]);
 
   const { toast } = useToast();
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -66,34 +71,25 @@ const PlayerList: React.FC<PlayerListProps> = ({
 
   // Monitora mudanças nos jogadores
   useEffect(() => {
-    console.log('PlayerList - useEffect - Players atualizados:', players);
-    systemLogger.log('player', 'Lista de jogadores atualizada', {
-      totalPlayers: players.length,
-      topScore: maxScore,
-      playersWithPredictions: players.filter(p => p.predictions.length > 0).length,
-      timestamp: new Date().toISOString()
-    });
-
-    // Atualiza pesos do jogador selecionado
     if (selectedPlayer) {
       const currentPlayer = players.find(p => p.id === selectedPlayer.id);
       if (currentPlayer) {
-        console.log('PlayerList - Jogador selecionado atualizado:', currentPlayer);
+        systemLogger.log('player', `Atualizando jogador #${currentPlayer.id}`, {
+          score: currentPlayer.score,
+          hasPredictions: currentPlayer.predictions?.length > 0,
+          predictions: currentPlayer.predictions,
+          weights: currentPlayer.weights?.length,
+          fitness: currentPlayer.fitness
+        });
+
         const weights = currentPlayer.weights.map((value, index) => ({
           ...WEIGHT_DESCRIPTIONS[index],
           value: Math.round(value)
         }));
         setEditedWeights(weights);
-        
-        systemLogger.log('player', `Jogador #${currentPlayer.id} selecionado`, {
-          score: currentPlayer.score,
-          predictions: currentPlayer.predictions,
-          fitness: currentPlayer.fitness,
-          weights: weights.map(w => ({ name: w.name, value: w.value }))
-        });
       }
     }
-  }, [selectedPlayer, players, maxScore]);
+  }, [selectedPlayer, players]);
 
   const handlePlayerClick = (player: Player) => {
     setSelectedPlayer(player);
@@ -116,11 +112,19 @@ const PlayerList: React.FC<PlayerListProps> = ({
     if (selectedPlayer && onUpdatePlayer) {
       const newWeights = [...selectedPlayer.weights];
       newWeights[index] = newValue;
+      
+      systemLogger.log('weights', `Atualizando peso do jogador #${selectedPlayer.id}`, {
+        weightIndex: index,
+        oldValue: selectedPlayer.weights[index],
+        newValue: newValue
+      });
+
       onUpdatePlayer(selectedPlayer.id, newWeights);
       
       const updatedWeights = [...editedWeights];
       updatedWeights[index] = { ...updatedWeights[index], value: newValue };
       setEditedWeights(updatedWeights);
+      
       toast({
         title: "Peso Ajustado",
         description: `${editedWeights[index].name}: ${newValue}`,
@@ -131,6 +135,12 @@ const PlayerList: React.FC<PlayerListProps> = ({
   const handleClonePlayer = (player: Player, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (onClonePlayer) {
+      systemLogger.log('clone', `Clonando jogador #${player.id}`, {
+        originalScore: player.score,
+        predictions: player.predictions,
+        weights: player.weights?.length
+      });
+
       onClonePlayer(player);
       toast({
         title: "Jogador Clonado",
@@ -138,6 +148,16 @@ const PlayerList: React.FC<PlayerListProps> = ({
       });
     }
   };
+
+  // Renderiza a lista de jogadores com validação
+  if (!players || players.length === 0) {
+    systemLogger.warn('player', 'Nenhum jogador disponível para exibição');
+    return (
+      <div className="p-4 text-center text-gray-500">
+        Nenhum jogador disponível no momento.
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">

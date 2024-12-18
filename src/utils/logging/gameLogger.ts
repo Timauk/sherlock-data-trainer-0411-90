@@ -1,40 +1,58 @@
 import { systemLogger } from './systemLogger';
-import { Player } from '@/types/gameTypes';
-import * as tf from '@tensorflow/tfjs';
 
 /**
- * Utilitário para logging específico do jogo
- * Centraliza todos os logs relacionados ao jogo para facilitar depuração
+ * Logger especializado para eventos do jogo
+ * Centraliza e padroniza os logs relacionados aos jogadores e suas ações
  */
-export const gameLogger = {
+class GameLogger {
   /**
-   * Registra eventos relacionados ao modelo
+   * Registra eventos relacionados a jogadores
+   * @param playerId ID do jogador
+   * @param message Mensagem descritiva
+   * @param details Detalhes adicionais do evento
    */
-  logModelEvent: (action: string, details?: any) => {
-    systemLogger.log('model', `Modelo: ${action}`, details);
-  },
-
-  /**
-   * Registra eventos relacionados aos jogadores
-   */
-  logPlayerEvent: (playerId: number, action: string, details?: any) => {
-    systemLogger.log('player', `Jogador #${playerId}: ${action}`, details);
-  },
-
-  /**
-   * Registra eventos relacionados às predições
-   */
-  logPredictionEvent: (action: string, details?: any) => {
-    systemLogger.log('prediction', `Predição: ${action}`, details);
-  },
-
-  /**
-   * Registra erros específicos do jogo
-   */
-  logGameError: (error: Error, context: string) => {
-    systemLogger.error('game', `Erro em ${context}`, {
-      message: error.message,
-      stack: error.stack
+  logPlayerEvent(playerId: number, message: string, details?: any) {
+    systemLogger.log('player', `Jogador #${playerId}: ${message}`, {
+      ...details,
+      timestamp: new Date().toISOString()
     });
   }
-};
+
+  /**
+   * Registra eventos de predição
+   * @param message Mensagem descritiva
+   * @param details Detalhes da predição
+   */
+  logPredictionEvent(message: string, details?: any) {
+    systemLogger.log('prediction', message, {
+      ...details,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Registra erros do jogo
+   * @param error Objeto de erro
+   * @param context Contexto onde o erro ocorreu
+   */
+  logGameError(error: Error, context: string) {
+    systemLogger.error('game', `Erro em ${context}: ${error.message}`, {
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Registra eventos de performance
+   * @param message Mensagem descritiva
+   * @param metrics Métricas de performance
+   */
+  logPerformance(message: string, metrics: any) {
+    systemLogger.log('performance', message, {
+      ...metrics,
+      timestamp: new Date().toISOString()
+    });
+  }
+}
+
+export const gameLogger = new GameLogger();

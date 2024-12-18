@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Copy } from 'lucide-react';
 import { Player } from '@/types/gameTypes';
-import { gameLogger } from '@/utils/logging/gameLogger';
+import { systemLogger } from '@/utils/logging/systemLogger';
 
 interface PlayerCardProps {
   player: Player;
@@ -21,18 +21,19 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 }) => {
   // Log do estado do jogador ao montar/atualizar
   useEffect(() => {
-    gameLogger.logPlayerEvent(player.id, 'Renderizando card', {
+    systemLogger.log('player', `Renderizando card do jogador #${player.id}`, {
       score: player.score,
       hasPredictions: player.predictions?.length > 0,
       predictions: player.predictions,
       weights: player.weights?.length,
-      fitness: player.fitness
+      fitness: player.fitness,
+      timestamp: new Date().toISOString()
     });
   }, [player]);
 
   const getLastMatchHistory = () => {
     if (!player.matchHistory || player.matchHistory.length === 0) {
-      gameLogger.logPlayerEvent(player.id, 'Sem histórico de partidas');
+      systemLogger.log('player', `Jogador #${player.id} sem histórico de partidas`);
       return {
         matches: 0,
         score: 0,
@@ -46,8 +47,17 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   const lastMatch = getLastMatchHistory();
 
   const formatNumbers = (numbers: number[]): string => {
+    if (!numbers || numbers.length === 0) {
+      return 'Nenhum número disponível';
+    }
     return numbers.map(n => n.toString().padStart(2, '0')).join(', ');
   };
+
+  // Validação de dados do jogador
+  if (!player || typeof player.id === 'undefined') {
+    systemLogger.error('player', 'Dados inválidos do jogador', { player });
+    return null;
+  }
 
   return (
     <Card 
