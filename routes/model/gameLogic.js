@@ -20,14 +20,8 @@ export async function processGameLogic(
   });
 
   try {
-    // Forçar backend CPU
     await tf.setBackend('cpu');
     await tf.ready();
-
-    logger.info('Backend TensorFlow:', {
-      backend: tf.getBackend(),
-      memory: tf.memory()
-    });
 
     const model = await getOrCreateModel();
     
@@ -39,7 +33,6 @@ export async function processGameLogic(
       throw new Error('Invalid input data');
     }
 
-    // Preparar dados de entrada (apenas os 15 números)
     const inputNumbers = inputData.slice(0, 15);
     const tensor = tf.tensor2d([inputNumbers]);
     
@@ -51,7 +44,6 @@ export async function processGameLogic(
     const prediction = await model.predict(tensor);
     const result = Array.from(await prediction.data());
 
-    // Calculate hits for each player
     const playerResults = playerWeights.map((weights, index) => {
       const playerPredictions = result.slice(0, 15).map(num => 
         Math.max(1, Math.min(25, Math.round(num)))
@@ -61,10 +53,10 @@ export async function processGameLogic(
       const matches = playerPredictions.filter(num => drawnNumbers.includes(num)).length;
       const score = calculateReward(matches);
 
-      logger.info(`Jogador #${index + 1} acertos:`, {
+      logger.info(`Jogador #${index + 1} resultados:`, {
         predictions: playerPredictions,
         matches,
-        inputNumbers: drawnNumbers,
+        drawnNumbers,
         score
       });
 
@@ -85,7 +77,6 @@ export async function processGameLogic(
       };
     });
 
-    // Cleanup
     tensor.dispose();
     prediction.dispose();
 
