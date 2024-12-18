@@ -1,96 +1,115 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card } from "@/components/ui/card";
-import { DataServices } from '@/services/dataServices';
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { systemLogger } from '@/utils/logging/systemLogger';
 import TrainingProgress from '@/components/training/TrainingProgress';
 import TrainingControls from '@/components/training/TrainingControls';
 import TrainingChart from '@/components/TrainingChart';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload } from 'lucide-react';
+import { extractFeatures } from '@/utils/features/featureEngineering';
+import { createEnhancedModel } from '@/utils/training/modelArchitecture';
+import { performCrossValidation } from '@/utils/training/crossValidation';
+import * as tf from '@tensorflow/tfjs';
 
 const TrainingPage: React.FC = () => {
   const [trainingData, setTrainingData] = useState<number[][]>([]);
+  const [dates, setDates] = useState<Date[]>([]);
   const [isTraining, setIsTraining] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [batchSize, setBatchSize] = useState('32');
-  const [epochs, setEpochs] = useState(50);
-  const [trainingLogs, setTrainingLogs] = useState<{ epoch: number; loss: number; val_loss: number; }[]>([]);
+  const [model, setModel] = useState<tf.LayersModel | null>(null);
   const { toast } = useToast();
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const text = e.target?.result as string;
-          const data = DataServices.processCSV(text);
-          setTrainingData(data);
-          toast({
-            title: "Dados Carregados",
-            description: `${data.length} registros carregados com sucesso.`,
-          });
-        } catch (error) {
-          toast({
-            title: "Erro ao Carregar Arquivo",
-            description: error instanceof Error ? error.message : "Erro desconhecido",
-            variant: "destructive"
-          });
-        }
-      };
-      reader.readAsText(file);
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const lines = text.trim().split('\n').slice(1);
+      
+      const processedData = lines.map(line => {
+        const [concurso, data, ...numeros] = line.split(',');
+        return {
+          numbers: numeros.slice(0, 15).map(Number),
+          date: new Date(data.split('/').reverse().join('-'))
+        };
+      });
+
+      setTrainingData(processedData.map(d => d.numbers));
+      setDates(processedData.map(d => d.date));
+
+      toast({
+        title: "Dados Carregados",
+        description: `${processedData.length} registros processados.`
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao Carregar Arquivo",
+        description: "Formato de arquivo inválido",
+        variant: "destructive"
+      });
     }
   };
 
-  const handleTrainModel = async () => {
+  const trainModel = async () => {
+    if (!trainingData.length) return;
+
     setIsTraining(true);
     setProgress(0);
-    setTrainingLogs([]);
-    
+
     try {
-      systemLogger.log('training', 'Iniciando treinamento do modelo', {
-        dataSize: trainingData.length,
-        batchSize,
-        epochs,
-        timestamp: new Date().toISOString()
+      // Criar modelo
+      const model = createEnhancedModel();
+      
+      // Preparar features
+      const features = trainingData.map((numbers, i) => {
+        const allFeatures = extractFeatures(numbers, dates[i], trainingData);
+        return [
+          ...allFeatures.baseFeatures,
+          ...allFeatures.temporalFeatures,
+          ...allFeatures.lunarFeatures,
+          ...allFeatures.statisticalFeatures
+        ];
       });
 
-      const model = await DataServices.createSharedModel();
-      
-      setProgress(30);
-      
-      // Training with logs callback
-      await DataServices.trainModel(model, trainingData, (currentProgress) => {
-        setProgress(30 + (currentProgress * 0.7));
-      }, {
-        batchSize: parseInt(batchSize),
-        epochs,
-        onEpochEnd: (epoch, logs) => {
-          setTrainingLogs(prev => [...prev, {
-            epoch,
-            loss: logs?.loss || 0,
-            val_loss: logs?.val_loss || 0
-          }]);
+      // Preparar labels (saída esperada 1-15)
+      const labels = trainingData.map(numbers => 
+        numbers.map(n => n / 25) // Normalizar para [0,1]
+      );
+
+      // Cross-validation
+      const validationMetrics = await performCrossValidation(
+        model,
+        features,
+        labels
+      );
+
+      // Treinamento final
+      await model.fit(tf.tensor2d(features), tf.tensor2d(labels), {
+        epochs: 50,
+        batchSize: 32,
+        validationSplit: 0.2,
+        callbacks: {
+          onEpochEnd: (epoch, logs) => {
+            const progress = ((epoch + 1) / 50) * 100;
+            setProgress(progress);
+            systemLogger.log('training', `Época ${epoch + 1}`, { logs });
+          }
         }
       });
 
-      toast({
-        title: "Modelo Treinado",
-        description: "O modelo foi treinado com sucesso!",
-      });
+      // Salvar modelo
+      await model.save('indexeddb://lottery-model');
+      setModel(model);
 
-      setProgress(100);
+      toast({
+        title: "Treinamento Concluído",
+        description: "Modelo treinado e salvo com sucesso!"
+      });
     } catch (error) {
-      systemLogger.error('training', 'Erro ao treinar modelo', { 
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
-      });
-
       toast({
-        title: "Erro ao Treinar Modelo",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
+        title: "Erro no Treinamento",
+        description: "Falha ao treinar modelo",
         variant: "destructive"
       });
     } finally {
@@ -100,68 +119,29 @@ const TrainingPage: React.FC = () => {
 
   return (
     <Card className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold mb-4">Treinamento de Modelo</h1>
+      <h1 className="text-2xl font-bold">Treinamento Avançado</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Configuração do Treinamento</h2>
-            <TrainingControls
-              batchSize={batchSize}
-              setBatchSize={setBatchSize}
-              epochs={epochs}
-              setEpochs={setEpochs}
-            />
-          </div>
+      <div className="space-y-4">
+        <input
+          type="file"
+          accept=".csv"
+          onChange={handleFileUpload}
+          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+        />
 
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Dados de Treinamento</h2>
-            <div className="flex items-center space-x-4">
-              <input
-                type="file"
-                accept=".csv"
-                onChange={handleFileUpload}
-                className="hidden"
-                id="csvUpload"
-              />
-              <label
-                htmlFor="csvUpload"
-                className="cursor-pointer inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Carregar CSV
-              </label>
-              {trainingData.length > 0 && (
-                <span className="text-sm text-gray-600">
-                  {trainingData.length} registros carregados
-                </span>
-              )}
-            </div>
-          </div>
+        <Button
+          onClick={trainModel}
+          disabled={isTraining || !trainingData.length}
+          className="w-full"
+        >
+          {isTraining ? "Treinando..." : "Iniciar Treinamento"}
+        </Button>
 
-          <Button 
-            onClick={handleTrainModel} 
-            disabled={isTraining || trainingData.length === 0}
-            className="w-full"
-          >
-            {isTraining ? "Treinando..." : "Iniciar Treinamento"}
-          </Button>
+        {isTraining && (
+          <TrainingProgress progress={progress} />
+        )}
 
-          {isTraining && <TrainingProgress trainingProgress={progress} />}
-        </div>
-
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Progresso do Treinamento</h2>
-          {trainingLogs.length > 0 ? (
-            <TrainingChart logs={trainingLogs} />
-          ) : (
-            <Alert>
-              <AlertDescription>
-                O gráfico de treinamento será exibido quando o treinamento começar.
-              </AlertDescription>
-            </Alert>
-          )}
-        </div>
+        <TrainingChart />
       </div>
     </Card>
   );
