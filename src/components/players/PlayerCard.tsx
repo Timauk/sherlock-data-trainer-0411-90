@@ -1,3 +1,17 @@
+/**
+ * Componente PlayerCard
+ * 
+ * Responsável por exibir as informações de um jogador individual, incluindo:
+ * - Score atual
+ * - Previsões realizadas
+ * - Status do jogador
+ * - Histórico de partidas
+ * 
+ * @param player - Dados do jogador a ser exibido
+ * @param isTopPlayer - Indica se é o jogador com maior pontuação
+ * @param onPlayerClick - Função chamada ao clicar no card
+ * @param onClonePlayer - Função para clonar o jogador
+ */
 import React, { useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -5,16 +19,8 @@ import { Card } from "@/components/ui/card";
 import { Copy } from 'lucide-react';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
+import { useToast } from "@/hooks/use-toast";
 
-/**
- * Componente que exibe informações detalhadas de um jogador
- * 
- * Funcionalidades:
- * - Exibe score e previsões do jogador
- * - Mostra histórico de partidas
- * - Permite clonar o jogador
- * - Destaca jogadores campeões
- */
 interface PlayerCardProps {
   player: Player;
   isTopPlayer: boolean;
@@ -28,25 +34,24 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   onPlayerClick,
   onClonePlayer,
 }) => {
-  console.log('PlayerCard - Dados do jogador:', player);
+  const { toast } = useToast();
 
-  // Monitora atualizações do jogador
+  // Log detalhado do estado do jogador
   useEffect(() => {
-    console.log('PlayerCard - useEffect - Player atualizado:', player);
-    systemLogger.log('player', `Player ${player.id} updated`, {
-      predictions: player.predictions,
-      matchHistory: player.matchHistory,
+    systemLogger.log('player', `Estado do Jogador #${player.id}`, {
       score: player.score,
+      hasPredictions: player.predictions?.length > 0,
+      predictions: player.predictions,
+      weights: player.weights?.length,
+      fitness: player.fitness,
+      matchHistory: player.matchHistory?.length,
       timestamp: new Date().toISOString()
     });
   }, [player]);
 
-  /**
-   * Obtém o último histórico de partida do jogador
-   * Se não houver histórico, retorna objeto vazio
-   */
   const getLastMatchHistory = () => {
     if (!player.matchHistory || player.matchHistory.length === 0) {
+      systemLogger.log('player', `Jogador #${player.id} sem histórico de partidas`);
       return {
         matches: 0,
         score: 0,
@@ -58,12 +63,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   };
 
   const lastMatch = getLastMatchHistory();
-  console.log('PlayerCard - Último jogo:', lastMatch);
 
-  /**
-   * Formata array de números para exibição
-   * @param numbers Array de números a ser formatado
-   */
   const formatNumbers = (numbers: number[]): string => {
     return numbers.map(n => n.toString().padStart(2, '0')).join(', ');
   };
@@ -87,7 +87,13 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       <div className="space-y-2">
         <div className="bg-muted p-2 rounded">
           <p className="text-sm font-medium">Previsões Atuais:</p>
-          <p className="text-sm">{formatNumbers(player.predictions)}</p>
+          {player.predictions && player.predictions.length > 0 ? (
+            <p className="text-sm">{formatNumbers(player.predictions)}</p>
+          ) : (
+            <p className="text-sm text-yellow-600 dark:text-yellow-400">
+              Predições indisponíveis
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-2">
