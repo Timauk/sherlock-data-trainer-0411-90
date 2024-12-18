@@ -22,7 +22,7 @@ export const useModelTraining = () => {
 
       // Sumarização de dados históricos
       const summaries = DataServices.summarizeData(historicalData);
-      const summaryArray = [...summaries.mean, ...summaries.variance]; // Convert to array format
+      const summaryArray = [...summaries.mean, ...summaries.variance];
       setProgress(20);
 
       // Criação dos modelos ensemble

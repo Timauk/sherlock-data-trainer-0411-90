@@ -70,4 +70,38 @@ export class DataServices {
       return numbers;
     });
   }
+
+  static summarizeData(historicalData: number[][]): { mean: number[], variance: number[] } {
+    const transposed = historicalData[0].map((_, colIndex) => 
+      historicalData.map(row => row[colIndex])
+    );
+
+    const mean = transposed.map(column => 
+      column.reduce((sum, val) => sum + val, 0) / column.length
+    );
+
+    const variance = transposed.map((column, i) => {
+      const columnMean = mean[i];
+      return column.reduce((sum, val) => sum + Math.pow(val - columnMean, 2), 0) / column.length;
+    });
+
+    return { mean, variance };
+  }
+
+  static enrichLotteryData(data: number[][], dates: Date[]): number[][] {
+    return data.map((row, index) => {
+      const date = dates[index];
+      const dayOfWeek = date.getDay();
+      const month = date.getMonth();
+      
+      // Add temporal features
+      const enrichedRow = [
+        ...row,
+        dayOfWeek / 7, // Normalize day of week
+        month / 12,    // Normalize month
+      ];
+      
+      return enrichedRow;
+    });
+  }
 }
