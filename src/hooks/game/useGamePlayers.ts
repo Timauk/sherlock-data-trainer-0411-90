@@ -8,6 +8,7 @@ export const useGamePlayers = () => {
   const [champion, setChampion] = useState<Player | null>(null);
 
   const initializePlayers = useCallback((numPlayers: number = 6) => {
+    console.log('useGamePlayers - Iniciando criação dos jogadores:', { numPlayers });
     systemLogger.log('initialization', 'Iniciando criação dos jogadores', {
       numPlayers,
       timestamp: new Date().toISOString()
@@ -36,6 +37,7 @@ export const useGamePlayers = () => {
       return player;
     });
 
+    console.log('useGamePlayers - Jogadores criados:', initialPlayers);
     setChampion(initialPlayers[0]);
     setPlayers(initialPlayers);
 
@@ -48,7 +50,13 @@ export const useGamePlayers = () => {
   }, []);
 
   const updatePlayers = useCallback((updatedPlayers: Player[], model: tf.LayersModel | null) => {
+    console.log('useGamePlayers - Atualizando jogadores:', { 
+      totalPlayers: updatedPlayers.length,
+      hasModel: !!model 
+    });
+
     if (!model) {
+      console.error('useGamePlayers - Erro: Modelo não disponível');
       systemLogger.error('players', 'Modelo não disponível para atualização dos jogadores');
       return;
     }
@@ -58,6 +66,7 @@ export const useGamePlayers = () => {
     );
 
     if (!validPlayers) {
+      console.error('useGamePlayers - Erro: Jogadores com número incorreto de pesos');
       systemLogger.error('players', 'Erro: Jogadores com número incorreto de pesos');
       return;
     }
@@ -77,6 +86,7 @@ export const useGamePlayers = () => {
     );
     
     if (!champion || newChampion.score > champion.score) {
+      console.log('useGamePlayers - Novo campeão:', newChampion);
       setChampion(newChampion);
       systemLogger.log('player', `Novo campeão: Jogador #${newChampion.id}`, {
         score: newChampion.score,

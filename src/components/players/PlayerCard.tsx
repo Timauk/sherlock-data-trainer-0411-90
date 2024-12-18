@@ -19,7 +19,10 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   onPlayerClick,
   onClonePlayer,
 }) => {
+  console.log('PlayerCard - Dados do jogador:', player);
+
   useEffect(() => {
+    console.log('PlayerCard - useEffect - Player atualizado:', player);
     systemLogger.log('player', `Player ${player.id} updated`, {
       predictions: player.predictions,
       matchHistory: player.matchHistory,
@@ -41,6 +44,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   };
 
   const lastMatch = getLastMatchHistory();
+  console.log('PlayerCard - Último jogo:', lastMatch);
 
   const formatNumbers = (numbers: number[]): string => {
     return numbers.map(n => n.toString().padStart(2, '0')).join(', ');

@@ -1,4 +1,3 @@
-// Move existing PlayerList.tsx content here
 import React, { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Player } from '@/types/gameTypes';
@@ -43,6 +42,13 @@ const PlayerList: React.FC<PlayerListProps> = ({
   onUpdatePlayer,
   onClonePlayer 
 }) => {
+  console.log('PlayerList - Players recebidos:', players);
+  systemLogger.log('player', 'Lista de jogadores renderizada', {
+    totalPlayers: players.length,
+    playersWithPredictions: players.filter(p => p.predictions.length > 0).length,
+    timestamp: new Date().toISOString()
+  });
+
   const { toast } = useToast();
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [editedWeights, setEditedWeights] = useState<Weight[]>([]);
@@ -50,6 +56,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
   const maxScore = Math.max(...players.map(p => p.score));
 
   useEffect(() => {
+    console.log('PlayerList - useEffect - Players atualizados:', players);
     systemLogger.log('player', 'Lista de jogadores atualizada', {
       totalPlayers: players.length,
       topScore: maxScore,
@@ -60,6 +67,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
     if (selectedPlayer) {
       const currentPlayer = players.find(p => p.id === selectedPlayer.id);
       if (currentPlayer) {
+        console.log('PlayerList - Jogador selecionado atualizado:', currentPlayer);
         const weights = currentPlayer.weights.map((value, index) => ({
           ...WEIGHT_DESCRIPTIONS[index],
           value: Math.round(value)
@@ -145,4 +153,3 @@ const PlayerList: React.FC<PlayerListProps> = ({
 };
 
 export default PlayerList;
-
