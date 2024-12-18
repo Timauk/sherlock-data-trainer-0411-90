@@ -1,40 +1,30 @@
-/**
- * Hook useGamePlayers
- * 
- * Gerencia o estado e comportamento dos jogadores no sistema.
- * Responsável por:
- * - Inicialização dos jogadores
- * - Atualização de estados
- * - Gerenciamento do campeão
- * - Integração com o modelo de IA
- */
 import { useState, useCallback } from 'react';
 import { Player } from '@/types/gameTypes';
-import { systemLogger } from '@/utils/logging/systemLogger';
-import * as tf from '@tensorflow/tfjs';
+import { gameLogger } from '@/utils/logging/gameLogger';
+import { PredictionService } from '@/services/predictionService';
 import { useToast } from "@/hooks/use-toast";
+import * as tf from '@tensorflow/tfjs';
 
+/**
+ * Hook para gerenciar o estado e comportamento dos jogadores
+ */
 export const useGamePlayers = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [champion, setChampion] = useState<Player | null>(null);
   const { toast } = useToast();
 
   /**
-   * Inicializa um conjunto de jogadores com pesos aleatórios
-   * @param numPlayers Número de jogadores a serem criados
+   * Inicializa jogadores com pesos aleatórios
    */
-  const initializePlayers = useCallback((numPlayers: number = 6) => {
-    systemLogger.log('initialization', 'Iniciando criação dos jogadores', {
-      numPlayers,
-      timestamp: new Date().toISOString()
-    });
-    
+  const initializePlayers = useCallback((numPlayers: number = 10) => {
     try {
+      gameLogger.logPlayerEvent(0, 'Iniciando criação de jogadores', { numPlayers });
+      
       const initialPlayers: Player[] = Array.from({ length: numPlayers }, (_, index) => {
-        // Reduzindo o tamanho inicial dos pesos para melhor performance
-        const weights = Array.from({ length: 1000 }, () => Math.random());
+        // Reduzindo número de pesos para teste
+        const weights = Array.from({ length: 100 }, () => Math.random());
         
-        const player: Player = {
+        return {
           id: index + 1,
           score: 0,
           predictions: [],
@@ -47,17 +37,14 @@ export const useGamePlayers = () => {
             successRate: 0
           }
         };
-
-        return player;
-      });
-
-      systemLogger.log('initialization', 'Jogadores criados com sucesso', {
-        totalPlayers: initialPlayers.length,
-        samplePlayer: initialPlayers[0]
       });
 
       setChampion(initialPlayers[0]);
       setPlayers(initialPlayers);
+
+      gameLogger.logPlayerEvent(0, 'Jogadores criados com sucesso', {
+        count: initialPlayers.length
+      });
 
       toast({
         title: "Jogadores Inicializados",
@@ -66,10 +53,10 @@ export const useGamePlayers = () => {
 
       return initialPlayers;
     } catch (error) {
-      systemLogger.error('initialization', 'Erro ao criar jogadores', { error });
+      gameLogger.logGameError(error as Error, 'initializePlayers');
       toast({
         title: "Erro na Inicialização",
-        description: "Falha ao criar jogadores. Tente novamente.",
+        description: "Falha ao criar jogadores",
         variant: "destructive"
       });
       return [];
@@ -77,73 +64,50 @@ export const useGamePlayers = () => {
   }, [toast]);
 
   /**
-   * Atualiza os jogadores com base no modelo de IA
-   * @param updatedPlayers Lista de jogadores a serem atualizados
-   * @param model Modelo de IA treinado
+   * Atualiza jogadores com novas predições do modelo
    */
-  const updatePlayers = useCallback(async (updatedPlayers: Player[], model: tf.LayersModel | null) => {
+  const updatePlayers = useCallback(async (
+    currentPlayers: Player[],
+    model: tf.LayersModel | null
+  ) => {
     if (!model) {
-      systemLogger.error('players', 'Modelo não disponível para atualização');
+      gameLogger.logGameError(
+        new Error('Modelo não disponível'),
+        'updatePlayers'
+      );
       return;
     }
 
     try {
-      // Gerar previsões para cada jogador
-      const updatedPlayersWithPredictions = await Promise.all(
-        updatedPlayers.map(async (player) => {
-          // Log do processo de previsão
-          systemLogger.log('prediction', `Gerando previsão para Jogador #${player.id}`, {
-            hasWeights: player.weights?.length > 0,
-            currentScore: player.score
-          });
-
-          // Criar tensor com os pesos do jogador
-          const inputTensor = tf.tensor2d([player.weights]);
-          const prediction = model.predict(inputTensor) as tf.Tensor;
-          const predictions = Array.from(await prediction.data())
-            .map(p => Math.floor(p * 25) + 1)
-            .slice(0, 15);
-
-          // Limpar tensores
-          inputTensor.dispose();
-          prediction.dispose();
-
-          return {
-            ...player,
-            predictions,
-            modelConnection: {
-              ...player.modelConnection,
-              lastPrediction: predictions,
-              lastUpdate: new Date().toISOString()
-            }
-          };
-        })
+      const updatedPlayers = await PredictionService.generateBatchPredictions(
+        currentPlayers,
+        model
       );
 
-      setPlayers(updatedPlayersWithPredictions);
+      setPlayers(updatedPlayers);
       
       // Atualizar campeão se necessário
-      const newChampion = updatedPlayersWithPredictions.reduce((prev, current) => 
+      const newChampion = updatedPlayers.reduce((prev, current) => 
         current.score > prev.score ? current : prev
       );
       
       if (!champion || newChampion.score > champion.score) {
         setChampion(newChampion);
-        systemLogger.log('player', `Novo campeão: Jogador #${newChampion.id}`, {
+        gameLogger.logPlayerEvent(newChampion.id, 'Novo campeão', {
           score: newChampion.score,
           fitness: newChampion.fitness
         });
 
         toast({
           title: "Novo Campeão!",
-          description: `Jogador #${newChampion.id} é o novo líder com ${newChampion.score} pontos!`
+          description: `Jogador #${newChampion.id} é o novo líder!`
         });
       }
     } catch (error) {
-      systemLogger.error('players', 'Erro ao atualizar jogadores', { error });
+      gameLogger.logGameError(error as Error, 'updatePlayers');
       toast({
         title: "Erro na Atualização",
-        description: "Falha ao atualizar jogadores com o modelo.",
+        description: "Falha ao atualizar jogadores",
         variant: "destructive"
       });
     }

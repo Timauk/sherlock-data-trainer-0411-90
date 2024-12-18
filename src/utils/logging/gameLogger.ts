@@ -1,68 +1,40 @@
-/**
- * gameLogger.ts
- * 
- * Sistema de logging específico para eventos do jogo
- * Centraliza todos os logs relacionados ao jogo para facilitar
- * o diagnóstico e monitoramento
- */
 import { systemLogger } from './systemLogger';
 import { Player } from '@/types/gameTypes';
+import * as tf from '@tensorflow/tfjs';
 
+/**
+ * Utilitário para logging específico do jogo
+ * Centraliza todos os logs relacionados ao jogo para facilitar depuração
+ */
 export const gameLogger = {
-  /**
-   * Registra eventos relacionados aos jogadores
-   */
-  logPlayerEvent: (
-    playerId: number,
-    event: string,
-    data: any
-  ) => {
-    systemLogger.log('player', `Jogador #${playerId}: ${event}`, {
-      ...data,
-      timestamp: new Date().toISOString()
-    });
-  },
-
-  /**
-   * Registra eventos relacionados às previsões
-   */
-  logPredictionEvent: (
-    playerId: number,
-    predictions: number[],
-    modelInfo: any
-  ) => {
-    systemLogger.log('prediction', `Previsão gerada para Jogador #${playerId}`, {
-      predictions,
-      modelInfo,
-      timestamp: new Date().toISOString()
-    });
-  },
-
   /**
    * Registra eventos relacionados ao modelo
    */
-  logModelEvent: (
-    event: string,
-    modelInfo: any
-  ) => {
-    systemLogger.log('model', event, {
-      ...modelInfo,
-      timestamp: new Date().toISOString()
-    });
+  logModelEvent: (action: string, details?: any) => {
+    systemLogger.log('model', `Modelo: ${action}`, details);
+  },
+
+  /**
+   * Registra eventos relacionados aos jogadores
+   */
+  logPlayerEvent: (playerId: number, action: string, details?: any) => {
+    systemLogger.log('player', `Jogador #${playerId}: ${action}`, details);
+  },
+
+  /**
+   * Registra eventos relacionados às predições
+   */
+  logPredictionEvent: (action: string, details?: any) => {
+    systemLogger.log('prediction', `Predição: ${action}`, details);
   },
 
   /**
    * Registra erros específicos do jogo
    */
-  logGameError: (
-    context: string,
-    error: any,
-    additionalInfo?: any
-  ) => {
+  logGameError: (error: Error, context: string) => {
     systemLogger.error('game', `Erro em ${context}`, {
-      error,
-      ...additionalInfo,
-      timestamp: new Date().toISOString()
+      message: error.message,
+      stack: error.stack
     });
   }
 };

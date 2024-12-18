@@ -1,25 +1,10 @@
-/**
- * Componente PlayerCard
- * 
- * Responsável por exibir as informações de um jogador individual, incluindo:
- * - Score atual
- * - Previsões realizadas
- * - Status do jogador
- * - Histórico de partidas
- * 
- * @param player - Dados do jogador a ser exibido
- * @param isTopPlayer - Indica se é o jogador com maior pontuação
- * @param onPlayerClick - Função chamada ao clicar no card
- * @param onClonePlayer - Função para clonar o jogador
- */
 import React, { useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Copy } from 'lucide-react';
 import { Player } from '@/types/gameTypes';
-import { systemLogger } from '@/utils/logging/systemLogger';
-import { useToast } from "@/hooks/use-toast";
+import { gameLogger } from '@/utils/logging/gameLogger';
 
 interface PlayerCardProps {
   player: Player;
@@ -34,24 +19,20 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   onPlayerClick,
   onClonePlayer,
 }) => {
-  const { toast } = useToast();
-
-  // Log detalhado do estado do jogador
+  // Log do estado do jogador ao montar/atualizar
   useEffect(() => {
-    systemLogger.log('player', `Estado do Jogador #${player.id}`, {
+    gameLogger.logPlayerEvent(player.id, 'Renderizando card', {
       score: player.score,
       hasPredictions: player.predictions?.length > 0,
       predictions: player.predictions,
       weights: player.weights?.length,
-      fitness: player.fitness,
-      matchHistory: player.matchHistory?.length,
-      timestamp: new Date().toISOString()
+      fitness: player.fitness
     });
   }, [player]);
 
   const getLastMatchHistory = () => {
     if (!player.matchHistory || player.matchHistory.length === 0) {
-      systemLogger.log('player', `Jogador #${player.id} sem histórico de partidas`);
+      gameLogger.logPlayerEvent(player.id, 'Sem histórico de partidas');
       return {
         matches: 0,
         score: 0,
@@ -80,7 +61,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
           {isTopPlayer && <span className="ml-2 text-yellow-600">👑</span>}
         </h4>
         <Badge variant={isTopPlayer ? "default" : "secondary"}>
-          Score Total: {player.score}
+          Score: {player.score}
         </Badge>
       </div>
       
@@ -91,7 +72,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
             <p className="text-sm">{formatNumbers(player.predictions)}</p>
           ) : (
             <p className="text-sm text-yellow-600 dark:text-yellow-400">
-              Predições indisponíveis
+              Aguardando predições do modelo...
             </p>
           )}
         </div>
