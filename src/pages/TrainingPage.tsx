@@ -44,7 +44,12 @@ const TrainingPage: React.FC = () => {
     if (!file) return;
 
     try {
-      systemLogger.log('training', 'Iniciando carregamento do CSV', { fileName: file.name });
+      systemLogger.log('training', 'Iniciando carregamento do CSV', { 
+        fileName: file.name,
+        fileSize: file.size,
+        timestamp: new Date().toISOString()
+      });
+
       const text = await file.text();
       const lines = text.trim().split('\n').slice(1);
       
@@ -61,7 +66,12 @@ const TrainingPage: React.FC = () => {
 
       systemLogger.log('training', 'Dados carregados com sucesso', {
         totalSamples: processedData.length,
-        firstSample: processedData[0].numbers
+        firstSample: processedData[0].numbers,
+        lastSample: processedData[processedData.length - 1].numbers,
+        dataRange: {
+          start: processedData[0].date,
+          end: processedData[processedData.length - 1].date
+        }
       });
 
       toast({
@@ -69,7 +79,10 @@ const TrainingPage: React.FC = () => {
         description: `${processedData.length} registros processados.`
       });
     } catch (error) {
-      systemLogger.error('training', 'Erro ao carregar arquivo', { error });
+      systemLogger.error('training', 'Erro ao carregar arquivo', { 
+        error,
+        timestamp: new Date().toISOString()
+      });
       toast({
         title: "Erro ao Carregar Arquivo",
         description: "Formato de arquivo inválido",
@@ -80,6 +93,7 @@ const TrainingPage: React.FC = () => {
 
   const saveModel = async () => {
     if (!model) {
+      systemLogger.warn('model', 'Tentativa de salvar modelo sem treinamento');
       toast({
         title: "Erro",
         description: "Nenhum modelo treinado para salvar",
@@ -89,16 +103,30 @@ const TrainingPage: React.FC = () => {
     }
 
     try {
-      systemLogger.log('model', 'Iniciando salvamento do modelo');
+      systemLogger.log('model', 'Iniciando salvamento do modelo', {
+        timestamp: new Date().toISOString(),
+        modelInfo: {
+          epochs: epochs,
+          batchSize: batchSize,
+          finalLoss: trainingLogs[trainingLogs.length - 1]?.loss
+        }
+      });
+
       await model.save('downloads://modelo-aprendiz');
-      systemLogger.log('model', 'Modelo salvo com sucesso');
+      
+      systemLogger.log('model', 'Modelo salvo com sucesso', {
+        files: ['modelo-aprendiz.json', 'modelo-aprendiz.weights.bin']
+      });
       
       toast({
         title: "Modelo Salvo",
         description: "Arquivos modelo-aprendiz.json e modelo-aprendiz.weights.bin gerados"
       });
     } catch (error) {
-      systemLogger.error('model', 'Erro ao salvar modelo', { error });
+      systemLogger.error('model', 'Erro ao salvar modelo', { 
+        error,
+        timestamp: new Date().toISOString()
+      });
       toast({
         title: "Erro ao Salvar",
         description: "Falha ao gerar arquivos do modelo",
@@ -108,7 +136,10 @@ const TrainingPage: React.FC = () => {
   };
 
   const trainModel = async () => {
-    if (!trainingData.length) return;
+    if (!trainingData.length) {
+      systemLogger.warn('training', 'Tentativa de treinar sem dados');
+      return;
+    }
 
     setIsTraining(true);
     setProgress(0);
@@ -118,11 +149,21 @@ const TrainingPage: React.FC = () => {
       systemLogger.log('training', 'Iniciando treinamento do modelo', {
         epochs,
         batchSize,
-        dataSize: trainingData.length
+        dataSize: trainingData.length,
+        timestamp: new Date().toISOString(),
+        configuration: {
+          learningRate: 0.001,
+          optimizer: 'adam',
+          lossFunction: 'binaryCrossentropy'
+        }
       });
 
       const model = createEnhancedModel();
       
+      systemLogger.log('training', 'Iniciando extração de features', {
+        dataSize: trainingData.length
+      });
+
       const features = trainingData.map((numbers, i) => {
         const allFeatures = extractFeatures(numbers, dates[i], trainingData);
         return [
@@ -137,16 +178,29 @@ const TrainingPage: React.FC = () => {
         numbers.map(n => n / 25)
       );
 
+      systemLogger.log('training', 'Iniciando validação cruzada', {
+        folds: 5,
+        timestamp: new Date().toISOString()
+      });
+
       const metrics = await performCrossValidation(model, features, labels);
       setValidationMetrics(metrics);
 
-      systemLogger.log('training', 'Validação cruzada concluída', { metrics });
+      systemLogger.log('training', 'Validação cruzada concluída', { 
+        metrics,
+        meanAccuracy: metrics.reduce((acc, curr) => acc + curr.accuracy, 0) / metrics.length
+      });
 
       await model.fit(tf.tensor2d(features), tf.tensor2d(labels), {
         epochs: epochs,
         batchSize: parseInt(batchSize),
         validationSplit: 0.2,
         callbacks: {
+          onEpochBegin: (epoch) => {
+            systemLogger.log('training', `Iniciando época ${epoch + 1}`, {
+              timestamp: new Date().toISOString()
+            });
+          },
           onEpochEnd: (epoch, logs) => {
             const progress = ((epoch + 1) / epochs) * 100;
             setProgress(progress);
@@ -159,16 +213,17 @@ const TrainingPage: React.FC = () => {
                 val_accuracy: logs.val_acc
               }]);
               
-              const currentLogs = trainingLogs;
-              const convergenceRate = epoch > 0 && currentLogs.length > 0 ? 
-                (currentLogs[currentLogs.length - 1].loss - logs.loss) / currentLogs[currentLogs.length - 1].loss : 
+              const convergenceRate = epoch > 0 && trainingLogs.length > 0 ? 
+                (trainingLogs[trainingLogs.length - 1].loss - logs.loss) / trainingLogs[trainingLogs.length - 1].loss : 
                 0;
               
-              systemLogger.log('training', `Época ${epoch + 1}`, { 
+              systemLogger.log('training', `Época ${epoch + 1} finalizada`, { 
                 loss: logs.loss,
                 val_loss: logs.val_loss,
                 accuracy: logs.acc,
-                convergenceRate
+                convergenceRate,
+                progress: `${progress.toFixed(2)}%`,
+                timeElapsed: new Date().toISOString()
               });
             }
           }
@@ -179,7 +234,9 @@ const TrainingPage: React.FC = () => {
       
       systemLogger.log('training', 'Treinamento concluído', {
         finalLoss: trainingLogs[trainingLogs.length - 1]?.loss,
-        totalEpochs: epochs
+        totalEpochs: epochs,
+        finalAccuracy: trainingLogs[trainingLogs.length - 1]?.accuracy,
+        timestamp: new Date().toISOString()
       });
 
       toast({
@@ -187,7 +244,10 @@ const TrainingPage: React.FC = () => {
         description: "Modelo treinado com sucesso!"
       });
     } catch (error) {
-      systemLogger.error('training', 'Erro no treinamento', { error });
+      systemLogger.error('training', 'Erro no treinamento', { 
+        error,
+        timestamp: new Date().toISOString()
+      });
       toast({
         title: "Erro no Treinamento",
         description: "Falha ao treinar modelo",
