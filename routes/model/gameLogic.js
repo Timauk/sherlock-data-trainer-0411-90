@@ -6,6 +6,26 @@ import { enrichTrainingData } from '../../src/utils/features/lotteryFeatureEngin
 import { calculateReward } from '../../src/utils/rewardSystem.js';
 import { systemLogger } from '../../src/utils/logging/systemLogger.js';
 
+const PLAYER_BASE_WEIGHTS = {
+  aprendizadoBase: 185,
+  adaptabilidade: 874,
+  memoria: 617,
+  intuicao: 166,
+  precisao: 234,
+  consistencia: 168,
+  inovacao: 855,
+  equilibrio: 828,
+  foco: 974,
+  resiliencia: 67,
+  otimizacao: 371,
+  cooperacao: 126,
+  especializacao: 372,
+  generalizacao: 50,
+  evolucao: 668,
+  estabilidade: 444,
+  criatividade: 178
+};
+
 export async function processGameLogic(
   inputData,
   generation,
@@ -13,7 +33,7 @@ export async function processGameLogic(
   isInfiniteMode,
   isManualMode
 ) {
-  logger.info('Iniciando processamento da lógica do jogo', {
+  systemLogger.log('game', 'Iniciando processamento da lógica do jogo', {
     dataLength: inputData.length,
     generation,
     mode: { infinite: isInfiniteMode, manual: isManualMode },
@@ -37,30 +57,40 @@ export async function processGameLogic(
     const inputNumbers = inputData.slice(0, 15);
     const tensor = tf.tensor2d([inputNumbers]);
     
-    systemLogger.log('prediction', 'Gerando previsões com novo modelo treinado', {
+    systemLogger.log('prediction', 'Gerando previsões com modelo', {
       inputShape: tensor.shape,
       modelLayers: model.layers.length,
+      inputNumbers: inputNumbers,
       timestamp: new Date().toISOString()
     });
 
     const prediction = await model.predict(tensor);
     const result = Array.from(await prediction.data());
 
+    systemLogger.log('prediction', 'Previsão gerada pelo modelo', {
+      rawPrediction: result,
+      timestamp: new Date().toISOString()
+    });
+
     const playerResults = playerWeights.map((weights, index) => {
-      const playerPredictions = result.slice(0, 15).map(num => 
-        Math.max(1, Math.min(25, Math.round(num)))
-      );
+      // Aplicar os pesos base do jogador
+      const playerPredictions = result.slice(0, 15).map((num, i) => {
+        const baseWeight = Object.values(PLAYER_BASE_WEIGHTS)[i] || 1;
+        return Math.max(1, Math.min(25, Math.round(num * (baseWeight / 1000))));
+      });
       
       const drawnNumbers = inputData.slice(0, 15);
       const matches = playerPredictions.filter(num => drawnNumbers.includes(num)).length;
       const score = calculateReward(matches);
 
-      systemLogger.log('player', `Jogador #${index + 1} resultados atualizados:`, {
+      systemLogger.log('player', `Jogador #${index + 1} resultados detalhados:`, {
         predictions: playerPredictions,
         matches,
         drawnNumbers,
         score,
-        modelVersion: model.modelVersion || 'latest'
+        baseWeights: PLAYER_BASE_WEIGHTS,
+        modelVersion: model.modelVersion || 'latest',
+        timestamp: new Date().toISOString()
       });
 
       const matchHistory = {
@@ -78,7 +108,8 @@ export async function processGameLogic(
         predictions: playerPredictions,
         score,
         matchHistory,
-        modelVersion: model.modelVersion || 'latest'
+        modelVersion: model.modelVersion || 'latest',
+        weights: PLAYER_BASE_WEIGHTS
       };
     });
 
@@ -99,9 +130,10 @@ export async function processGameLogic(
       }
     };
   } catch (error) {
-    logger.error('Erro na lógica do jogo', {
+    systemLogger.error('game', 'Erro na lógica do jogo', {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      timestamp: new Date().toISOString()
     });
     throw error;
   }

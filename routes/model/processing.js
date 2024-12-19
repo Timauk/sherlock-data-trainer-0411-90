@@ -5,11 +5,12 @@ import { logger } from '../../src/utils/logging/logger.js';
 import { validateInputData, validatePlayerWeights } from './validation.js';
 import { processGameLogic } from './gameLogic.js';
 import { enrichTrainingData } from '../../src/utils/features/lotteryFeatureEngineering.js';
+import { systemLogger } from '../../src/utils/logging/systemLogger.js';
 
 const router = express.Router();
 
 router.post('/process-game', async (req, res) => {
-  logger.info('Nova requisição /process-game recebida', {
+  systemLogger.log('game', 'Nova requisição /process-game recebida', {
     timestamp: new Date().toISOString(),
     headers: req.headers,
     body: req.body
@@ -24,19 +25,20 @@ router.post('/process-game', async (req, res) => {
       isManualMode 
     } = req.body;
 
-    logger.info('Dados recebidos:', {
+    systemLogger.log('game', 'Dados recebidos para processamento:', {
       hasInputData: !!inputData,
       inputDataLength: inputData?.length,
       generation,
       hasPlayerWeights: !!playerWeights,
       playerWeightsLength: playerWeights?.length,
       isInfiniteMode,
-      isManualMode
+      isManualMode,
+      timestamp: new Date().toISOString()
     });
 
     const validationError = validateInputData(inputData) || validatePlayerWeights(playerWeights);
     if (validationError) {
-      logger.error('Erro de validação', {
+      systemLogger.error('validation', 'Erro de validação', {
         error: validationError,
         body: req.body,
         timestamp: new Date().toISOString()
@@ -48,7 +50,7 @@ router.post('/process-game', async (req, res) => {
     }
 
     const enrichedData = enrichTrainingData([inputData], [new Date()]);
-    logger.info('Dados enriquecidos:', {
+    systemLogger.log('features', 'Dados enriquecidos:', {
       originalLength: inputData.length,
       enrichedLength: enrichedData[0].length,
       timestamp: new Date().toISOString()
@@ -64,21 +66,23 @@ router.post('/process-game', async (req, res) => {
     );
 
     // Log detalhado dos acertos
-    logger.info('Processamento concluído com sucesso', { 
+    systemLogger.log('prediction', 'Processamento concluído com sucesso', { 
       resultSize: result.prediction.length,
       patternsFound: result.patterns.length,
       newGeneration: result.generation,
       playerResults: result.players?.map(p => ({
         id: p.id,
         fitness: p.fitness,
-        score: p.score
+        score: p.score,
+        predictions: p.predictions,
+        matches: p.matches
       })),
       timestamp: new Date().toISOString()
     });
 
     res.json(result);
   } catch (error) {
-    logger.error('Erro no processamento do jogo', {
+    systemLogger.error('game', 'Erro no processamento do jogo', {
       error: error.message,
       stack: error.stack,
       timestamp: new Date().toISOString()

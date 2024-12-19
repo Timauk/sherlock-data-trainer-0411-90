@@ -1,6 +1,13 @@
-import { logger } from '../../src/utils/logging/logger.js';
+import { systemLogger } from '../../src/utils/logging/systemLogger.js';
 
 export function validateInputData(inputData) {
+  systemLogger.log('validation', 'Validando dados de entrada', {
+    hasData: !!inputData,
+    isArray: Array.isArray(inputData),
+    length: inputData?.length,
+    timestamp: new Date().toISOString()
+  });
+
   if (!inputData) {
     return {
       message: 'Input data is required',
@@ -26,6 +33,13 @@ export function validateInputData(inputData) {
 }
 
 export function validatePlayerWeights(playerWeights) {
+  systemLogger.log('validation', 'Validando pesos dos jogadores', {
+    hasWeights: !!playerWeights,
+    isArray: Array.isArray(playerWeights),
+    length: playerWeights?.length,
+    timestamp: new Date().toISOString()
+  });
+
   if (!playerWeights) {
     return {
       message: 'Player weights are required',
