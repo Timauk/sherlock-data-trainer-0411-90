@@ -29,25 +29,25 @@ const TrainingChart: React.FC<TrainingChartProps> = ({ logs }) => {
     labels: logs.map(log => log.epoch),
     datasets: [
       {
-        label: 'Loss',
+        label: 'Perda',
         data: logs.map(log => log.loss),
         borderColor: 'rgb(255, 99, 132)',
         backgroundColor: 'rgba(255, 99, 132, 0.5)',
       },
       {
-        label: 'Validation Loss',
+        label: 'Perda na Validação',
         data: logs.map(log => log.val_loss),
         borderColor: 'rgb(53, 162, 235)',
         backgroundColor: 'rgba(53, 162, 235, 0.5)',
       },
       ...(logs[0].accuracy ? [{
-        label: 'Accuracy',
+        label: 'Precisão',
         data: logs.map(log => log.accuracy),
         borderColor: 'rgb(75, 192, 192)',
         backgroundColor: 'rgba(75, 192, 192, 0.5)',
       }] : []),
       ...(logs[0].val_accuracy ? [{
-        label: 'Validation Accuracy',
+        label: 'Precisão na Validação',
         data: logs.map(log => log.val_accuracy),
         borderColor: 'rgb(153, 102, 255)',
         backgroundColor: 'rgba(153, 102, 255, 0.5)',
