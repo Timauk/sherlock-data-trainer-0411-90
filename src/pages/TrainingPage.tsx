@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -12,25 +12,31 @@ import { performCrossValidation } from '@/utils/training/crossValidation';
 import { Save, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import * as tf from '@tensorflow/tfjs';
-
-interface TrainingLog {
-  epoch: number;
-  loss: number;
-  val_loss: number;
-  accuracy?: number;
-  val_accuracy?: number;
-}
+import { useTrainingState } from '@/hooks/useTrainingState';
+import type { TrainingLog } from '@/types/training';
 
 const TrainingPage: React.FC = () => {
-  const [trainingData, setTrainingData] = useState<number[][]>([]);
-  const [dates, setDates] = useState<Date[]>([]);
-  const [isTraining, setIsTraining] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [model, setModel] = useState<tf.LayersModel | null>(null);
-  const [trainingLogs, setTrainingLogs] = useState<TrainingLog[]>([]);
-  const [epochs, setEpochs] = useState(50);
-  const [batchSize, setBatchSize] = useState("32");
-  const [validationMetrics, setValidationMetrics] = useState<{accuracy: number, loss: number}[]>([]);
+  const {
+    trainingData,
+    setTrainingData,
+    dates,
+    setDates,
+    isTraining,
+    setIsTraining,
+    progress,
+    setProgress,
+    model,
+    setModel,
+    trainingLogs,
+    setTrainingLogs,
+    epochs,
+    setEpochs,
+    batchSize,
+    setBatchSize,
+    validationMetrics,
+    setValidationMetrics
+  } = useTrainingState();
+  
   const { toast } = useToast();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,10 +90,7 @@ const TrainingPage: React.FC = () => {
 
     try {
       systemLogger.log('model', 'Iniciando salvamento do modelo');
-      
-      // Salva o modelo no formato necessário para a página de jogo
       await model.save('downloads://modelo-aprendiz');
-      
       systemLogger.log('model', 'Modelo salvo com sucesso');
       
       toast({
@@ -134,7 +137,6 @@ const TrainingPage: React.FC = () => {
         numbers.map(n => n / 25)
       );
 
-      // Validação cruzada
       const metrics = await performCrossValidation(model, features, labels);
       setValidationMetrics(metrics);
 
@@ -149,7 +151,7 @@ const TrainingPage: React.FC = () => {
             const progress = ((epoch + 1) / epochs) * 100;
             setProgress(progress);
             if (logs) {
-              setTrainingLogs(prevLogs => [...prevLogs, {
+              setTrainingLogs(currentLogs => [...currentLogs, {
                 epoch: epoch + 1,
                 loss: logs.loss,
                 val_loss: logs.val_loss,
@@ -157,13 +159,16 @@ const TrainingPage: React.FC = () => {
                 val_accuracy: logs.val_acc
               }]);
               
+              const currentLogs = trainingLogs;
+              const convergenceRate = epoch > 0 && currentLogs.length > 0 ? 
+                (currentLogs[currentLogs.length - 1].loss - logs.loss) / currentLogs[currentLogs.length - 1].loss : 
+                0;
+              
               systemLogger.log('training', `Época ${epoch + 1}`, { 
                 loss: logs.loss,
                 val_loss: logs.val_loss,
                 accuracy: logs.acc,
-                convergenceRate: epoch > 0 ? 
-                  (prevLogs[prevLogs.length - 1].loss - logs.loss) / prevLogs[prevLogs.length - 1].loss : 
-                  0
+                convergenceRate
               });
             }
           }
