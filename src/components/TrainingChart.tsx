@@ -16,6 +16,8 @@ interface TrainingLog {
   epoch: number;
   loss: number;
   val_loss: number;
+  accuracy?: number;
+  val_accuracy?: number;
 }
 
 interface TrainingChartProps {
@@ -38,6 +40,18 @@ const TrainingChart: React.FC<TrainingChartProps> = ({ logs }) => {
         borderColor: 'rgb(53, 162, 235)',
         backgroundColor: 'rgba(53, 162, 235, 0.5)',
       },
+      ...(logs[0].accuracy ? [{
+        label: 'Accuracy',
+        data: logs.map(log => log.accuracy),
+        borderColor: 'rgb(75, 192, 192)',
+        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+      }] : []),
+      ...(logs[0].val_accuracy ? [{
+        label: 'Validation Accuracy',
+        data: logs.map(log => log.val_accuracy),
+        borderColor: 'rgb(153, 102, 255)',
+        backgroundColor: 'rgba(153, 102, 255, 0.5)',
+      }] : [])
     ],
   };
 
@@ -49,9 +63,14 @@ const TrainingChart: React.FC<TrainingChartProps> = ({ logs }) => {
       },
       title: {
         display: true,
-        text: 'Perda de Treinamento e Validação',
+        text: 'Métricas de Treinamento',
       },
     },
+    scales: {
+      y: {
+        beginAtZero: true
+      }
+    }
   };
 
   return <Line data={data} options={options} />;

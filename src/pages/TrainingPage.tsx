@@ -9,12 +9,16 @@ import TrainingChart from '@/components/TrainingChart';
 import { extractFeatures } from '@/utils/features/featureEngineering';
 import { createEnhancedModel } from '@/utils/training/modelArchitecture';
 import { performCrossValidation } from '@/utils/training/crossValidation';
+import { Save, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import * as tf from '@tensorflow/tfjs';
 
 interface TrainingLog {
   epoch: number;
   loss: number;
   val_loss: number;
+  accuracy?: number;
+  val_accuracy?: number;
 }
 
 const TrainingPage: React.FC = () => {
@@ -26,6 +30,7 @@ const TrainingPage: React.FC = () => {
   const [trainingLogs, setTrainingLogs] = useState<TrainingLog[]>([]);
   const [epochs, setEpochs] = useState(50);
   const [batchSize, setBatchSize] = useState("32");
+  const [validationMetrics, setValidationMetrics] = useState<{accuracy: number, loss: number}[]>([]);
   const { toast } = useToast();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,6 +38,7 @@ const TrainingPage: React.FC = () => {
     if (!file) return;
 
     try {
+      systemLogger.log('training', 'Iniciando carregamento do CSV', { fileName: file.name });
       const text = await file.text();
       const lines = text.trim().split('\n').slice(1);
       
@@ -47,14 +53,52 @@ const TrainingPage: React.FC = () => {
       setTrainingData(processedData.map(d => d.numbers));
       setDates(processedData.map(d => d.date));
 
+      systemLogger.log('training', 'Dados carregados com sucesso', {
+        totalSamples: processedData.length,
+        firstSample: processedData[0].numbers
+      });
+
       toast({
         title: "Dados Carregados",
         description: `${processedData.length} registros processados.`
       });
     } catch (error) {
+      systemLogger.error('training', 'Erro ao carregar arquivo', { error });
       toast({
         title: "Erro ao Carregar Arquivo",
         description: "Formato de arquivo inválido",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const saveModel = async () => {
+    if (!model) {
+      toast({
+        title: "Erro",
+        description: "Nenhum modelo treinado para salvar",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      systemLogger.log('model', 'Iniciando salvamento do modelo');
+      
+      // Salva o modelo no formato necessário para a página de jogo
+      await model.save('downloads://modelo-aprendiz');
+      
+      systemLogger.log('model', 'Modelo salvo com sucesso');
+      
+      toast({
+        title: "Modelo Salvo",
+        description: "Arquivos modelo-aprendiz.json e modelo-aprendiz.weights.bin gerados"
+      });
+    } catch (error) {
+      systemLogger.error('model', 'Erro ao salvar modelo', { error });
+      toast({
+        title: "Erro ao Salvar",
+        description: "Falha ao gerar arquivos do modelo",
         variant: "destructive"
       });
     }
@@ -68,6 +112,12 @@ const TrainingPage: React.FC = () => {
     setTrainingLogs([]);
 
     try {
+      systemLogger.log('training', 'Iniciando treinamento do modelo', {
+        epochs,
+        batchSize,
+        dataSize: trainingData.length
+      });
+
       const model = createEnhancedModel();
       
       const features = trainingData.map((numbers, i) => {
@@ -84,11 +134,11 @@ const TrainingPage: React.FC = () => {
         numbers.map(n => n / 25)
       );
 
-      const validationMetrics = await performCrossValidation(
-        model,
-        features,
-        labels
-      );
+      // Validação cruzada
+      const metrics = await performCrossValidation(model, features, labels);
+      setValidationMetrics(metrics);
+
+      systemLogger.log('training', 'Validação cruzada concluída', { metrics });
 
       await model.fit(tf.tensor2d(features), tf.tensor2d(labels), {
         epochs: epochs,
@@ -102,22 +152,37 @@ const TrainingPage: React.FC = () => {
               setTrainingLogs(prevLogs => [...prevLogs, {
                 epoch: epoch + 1,
                 loss: logs.loss,
-                val_loss: logs.val_loss
+                val_loss: logs.val_loss,
+                accuracy: logs.acc,
+                val_accuracy: logs.val_acc
               }]);
+              
+              systemLogger.log('training', `Época ${epoch + 1}`, { 
+                loss: logs.loss,
+                val_loss: logs.val_loss,
+                accuracy: logs.acc,
+                convergenceRate: epoch > 0 ? 
+                  (prevLogs[prevLogs.length - 1].loss - logs.loss) / prevLogs[prevLogs.length - 1].loss : 
+                  0
+              });
             }
-            systemLogger.log('training', `Época ${epoch + 1}`, { logs });
           }
         }
       });
 
-      await model.save('indexeddb://lottery-model');
       setModel(model);
+      
+      systemLogger.log('training', 'Treinamento concluído', {
+        finalLoss: trainingLogs[trainingLogs.length - 1]?.loss,
+        totalEpochs: epochs
+      });
 
       toast({
         title: "Treinamento Concluído",
-        description: "Modelo treinado e salvo com sucesso!"
+        description: "Modelo treinado com sucesso!"
       });
     } catch (error) {
+      systemLogger.error('training', 'Erro no treinamento', { error });
       toast({
         title: "Erro no Treinamento",
         description: "Falha ao treinar modelo",
@@ -147,19 +212,44 @@ const TrainingPage: React.FC = () => {
           setBatchSize={setBatchSize}
         />
 
-        <Button
-          onClick={trainModel}
-          disabled={isTraining || !trainingData.length}
-          className="w-full"
-        >
-          {isTraining ? "Treinando..." : "Iniciar Treinamento"}
-        </Button>
+        {validationMetrics.length > 0 && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Média de Precisão na Validação: {
+                (validationMetrics.reduce((acc, curr) => acc + curr.accuracy, 0) / validationMetrics.length * 100).toFixed(2)
+              }%
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="flex gap-4">
+          <Button
+            onClick={trainModel}
+            disabled={isTraining || !trainingData.length}
+            className="flex-1"
+          >
+            {isTraining ? "Treinando..." : "Iniciar Treinamento"}
+          </Button>
+
+          <Button
+            onClick={saveModel}
+            disabled={!model}
+            variant="outline"
+            className="flex gap-2"
+          >
+            <Save className="h-4 w-4" />
+            Salvar Modelo
+          </Button>
+        </div>
 
         {isTraining && (
           <TrainingProgress trainingProgress={progress} />
         )}
 
-        <TrainingChart logs={trainingLogs} />
+        {trainingLogs.length > 0 && (
+          <TrainingChart logs={trainingLogs} />
+        )}
       </div>
     </Card>
   );
