@@ -4,17 +4,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 interface TrainingControlsProps {
-  batchSize: string;
-  setBatchSize: (value: string) => void;
   epochs: number;
   setEpochs: (value: number) => void;
+  batchSize: string;
+  setBatchSize: (value: string) => void;
 }
 
 const TrainingControls: React.FC<TrainingControlsProps> = ({
-  batchSize,
-  setBatchSize,
   epochs,
-  setEpochs
+  setEpochs,
+  batchSize,
+  setBatchSize
 }) => {
   return (
     <div className="space-y-4">
@@ -33,7 +33,7 @@ const TrainingControls: React.FC<TrainingControlsProps> = ({
 
       <div className="flex flex-col space-y-2">
         <Label>Batch Size</Label>
-        <Select value={batchSize} onValueChange={(value: string) => setBatchSize(value)}>
+        <Select value={batchSize} onValueChange={setBatchSize}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Batch Size" />
           </SelectTrigger>

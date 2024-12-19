@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,8 @@ const TrainingPage: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const [model, setModel] = useState<tf.LayersModel | null>(null);
   const [trainingLogs, setTrainingLogs] = useState<TrainingLog[]>([]);
+  const [epochs, setEpochs] = useState(50);
+  const [batchSize, setBatchSize] = useState("32");
   const { toast } = useToast();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,12 +91,12 @@ const TrainingPage: React.FC = () => {
       );
 
       await model.fit(tf.tensor2d(features), tf.tensor2d(labels), {
-        epochs: 50,
-        batchSize: 32,
+        epochs: epochs,
+        batchSize: parseInt(batchSize),
         validationSplit: 0.2,
         callbacks: {
           onEpochEnd: (epoch, logs) => {
-            const progress = ((epoch + 1) / 50) * 100;
+            const progress = ((epoch + 1) / epochs) * 100;
             setProgress(progress);
             if (logs) {
               setTrainingLogs(prevLogs => [...prevLogs, {
@@ -136,6 +138,13 @@ const TrainingPage: React.FC = () => {
           accept=".csv"
           onChange={handleFileUpload}
           className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+        />
+
+        <TrainingControls
+          epochs={epochs}
+          setEpochs={setEpochs}
+          batchSize={batchSize}
+          setBatchSize={setBatchSize}
         />
 
         <Button
