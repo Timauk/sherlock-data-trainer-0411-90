@@ -60,15 +60,47 @@ class SystemLogger {
   }
 
   public log(type: LogEntry['type'], message: string, details?: any) {
-    // Only log essential information
-    if (['error', 'system', 'game', 'model'].includes(type)) {
+    if (['error', 'system', 'game', 'model', 'training'].includes(type)) {
+      let qualityIndicator = '';
+      
+      if (details?.loss !== undefined) {
+        qualityIndicator += details.loss < 0.5 ? '✅ ' : '⚠️ ';
+      }
+      
+      if (details?.accuracy !== undefined) {
+        qualityIndicator += details.accuracy > 0.7 ? '✅ ' : '⚠️ ';
+      }
+
+      const enhancedMessage = qualityIndicator + message;
+      
       this.addLog({
         timestamp: new Date(),
         type,
-        message,
-        details,
+        message: enhancedMessage,
+        details: {
+          ...details,
+          qualityAssessment: {
+            isGoodLoss: details?.loss < 0.5,
+            isGoodAccuracy: details?.accuracy > 0.7,
+            recommendation: this.getRecommendation(details)
+          }
+        },
       });
     }
+  }
+
+  private getRecommendation(details: any): string {
+    if (!details) return '';
+    
+    if (details.loss > 0.5 && details.accuracy < 0.7) {
+      return 'O modelo precisa de mais treinamento ou ajustes';
+    } else if (details.loss < 0.5 && details.accuracy > 0.7) {
+      return 'O modelo está apresentando bom desempenho';
+    } else if (details.convergenceRate < 0.001) {
+      return 'A taxa de aprendizado está muito baixa, considere ajustar';
+    }
+    
+    return 'Continue monitorando o progresso';
   }
 
   public error(type: LogEntry['type'], message: string, details?: any) {

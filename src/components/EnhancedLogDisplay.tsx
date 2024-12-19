@@ -25,29 +25,32 @@ const EnhancedLogDisplay: React.FC = () => {
     };
   }, []);
 
-  const getLogColor = (type: string) => {
-    switch (type) {
-      case 'action':
-        return 'bg-blue-500';
-      case 'prediction':
-        return 'bg-green-500';
-      case 'performance':
-        return 'bg-yellow-500';
-      case 'system':
-        return 'bg-purple-500';
-      case 'lunar':
-        return 'bg-indigo-500';
-      case 'player':
-        return 'bg-orange-500';
-      case 'checkpoint':
-        return 'bg-red-500';
-      case 'learning':
-        return 'bg-cyan-500';
-      case 'model':
-        return 'bg-pink-500';
-      default:
-        return 'bg-gray-500';
+  const getLogColor = (type: string, details?: any) => {
+    // Cores base existentes
+    const baseColors = {
+      action: 'bg-blue-500',
+      prediction: 'bg-green-500',
+      performance: 'bg-yellow-500',
+      system: 'bg-purple-500',
+      lunar: 'bg-indigo-500',
+      player: 'bg-orange-500',
+      checkpoint: 'bg-red-500',
+      learning: 'bg-cyan-500',
+      model: 'bg-pink-500',
+      training: 'bg-emerald-500'
+    };
+
+    // Adiciona indicador de qualidade para logs de treinamento
+    if (type === 'training' && details?.qualityAssessment) {
+      const { isGoodLoss, isGoodAccuracy } = details.qualityAssessment;
+      if (isGoodLoss && isGoodAccuracy) {
+        return 'bg-green-600';
+      } else if (!isGoodLoss && !isGoodAccuracy) {
+        return 'bg-red-600';
+      }
     }
+
+    return baseColors[type] || 'bg-gray-500';
   };
 
   const filteredLogs = filter === 'all' 
@@ -72,6 +75,7 @@ const EnhancedLogDisplay: React.FC = () => {
           <option value="checkpoint">Checkpoints</option>
           <option value="learning">Aprendizado</option>
           <option value="model">Modelo</option>
+          <option value="training">Treinamento</option>
         </select>
       </div>
 
@@ -81,7 +85,7 @@ const EnhancedLogDisplay: React.FC = () => {
             <span className="text-xs text-gray-500 whitespace-nowrap">
               {new Date(log.timestamp).toLocaleTimeString()}
             </span>
-            <Badge variant="secondary" className={`${getLogColor(log.type)} text-white`}>
+            <Badge variant="secondary" className={`${getLogColor(log.type, log.details)} text-white`}>
               {log.type}
             </Badge>
             <div className="flex-1">
