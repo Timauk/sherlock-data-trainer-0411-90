@@ -9,7 +9,8 @@ export async function validateModelArchitecture(model) {
     systemLogger.log('model', 'Iniciando validação da arquitetura do modelo', {
       layersCount: model.layers.length,
       inputShape: model.inputs[0].shape,
-      outputShape: model.outputs[0].shape
+      outputShape: model.outputs[0].shape,
+      modelVersion: model.modelVersion || 'latest'
     });
 
     // Validar shape de entrada
@@ -31,7 +32,8 @@ export async function validateModelArchitecture(model) {
     systemLogger.log('model', 'Teste de predição realizado', {
       inputShape: testInput.shape,
       outputShape: testOutput.shape,
-      outputValues: Array.from(testOutput.dataSync()).slice(0, 5)
+      outputValues: Array.from(testOutput.dataSync()).slice(0, 5),
+      modelVersion: model.modelVersion || 'latest'
     });
 
     testInput.dispose();
@@ -61,6 +63,11 @@ export async function getOrCreateModel() {
       if (!isValid) {
         throw new Error('Falha na validação da arquitetura do modelo');
       }
+
+      systemLogger.log('model', 'Modelo global criado e validado com sucesso', {
+        modelVersion: globalModel.modelVersion || 'latest',
+        timestamp: new Date().toISOString()
+      });
     }
     
     return globalModel;

@@ -4,6 +4,7 @@ import { logger } from '../../src/utils/logging/logger.js';
 import { validateInputData, validatePlayerWeights } from './validation.js';
 import { enrichTrainingData } from '../../src/utils/features/lotteryFeatureEngineering.js';
 import { calculateReward } from '../../src/utils/rewardSystem.js';
+import { systemLogger } from '../../src/utils/logging/systemLogger.js';
 
 export async function processGameLogic(
   inputData,
@@ -36,9 +37,10 @@ export async function processGameLogic(
     const inputNumbers = inputData.slice(0, 15);
     const tensor = tf.tensor2d([inputNumbers]);
     
-    logger.info('Tensor criado:', {
-      shape: tensor.shape,
-      sampleData: inputNumbers
+    systemLogger.log('prediction', 'Gerando previsões com novo modelo treinado', {
+      inputShape: tensor.shape,
+      modelLayers: model.layers.length,
+      timestamp: new Date().toISOString()
     });
 
     const prediction = await model.predict(tensor);
@@ -53,11 +55,12 @@ export async function processGameLogic(
       const matches = playerPredictions.filter(num => drawnNumbers.includes(num)).length;
       const score = calculateReward(matches);
 
-      logger.info(`Jogador #${index + 1} resultados:`, {
+      systemLogger.log('player', `Jogador #${index + 1} resultados atualizados:`, {
         predictions: playerPredictions,
         matches,
         drawnNumbers,
-        score
+        score,
+        modelVersion: model.modelVersion || 'latest'
       });
 
       const matchHistory = {
@@ -65,7 +68,8 @@ export async function processGameLogic(
         matches,
         score,
         predictions: playerPredictions,
-        drawnNumbers
+        drawnNumbers,
+        timestamp: new Date().toISOString()
       };
 
       return {
@@ -73,7 +77,8 @@ export async function processGameLogic(
         matches,
         predictions: playerPredictions,
         score,
-        matchHistory
+        matchHistory,
+        modelVersion: model.modelVersion || 'latest'
       };
     });
 
@@ -89,7 +94,8 @@ export async function processGameLogic(
         layers: model.layers.length,
         totalParams: model.countParams(),
         backend: tf.getBackend(),
-        memoryInfo: tf.memory()
+        memoryInfo: tf.memory(),
+        timestamp: new Date().toISOString()
       }
     };
   } catch (error) {
