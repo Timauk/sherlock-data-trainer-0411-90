@@ -13,12 +13,25 @@ export const createTrainingConfig = (initialMetrics = null) => {
       {
         onEpochBegin: async (epoch) => {
           systemLogger.log('training', `Iniciando época ${epoch + 1}`);
+          
+          // Log memory usage at start of epoch
+          const memoryInfo = tf.memory();
+          systemLogger.log('training', 'Uso de memória no início da época', {
+            epoch: epoch + 1,
+            numTensors: memoryInfo.numTensors,
+            numDataBuffers: memoryInfo.numDataBuffers,
+            byteSize: memoryInfo.numBytes / (1024 * 1024), // Convert to MB
+          });
         },
         onEpochEnd: async (epoch, logs) => {
           const metrics = {
             loss: logs.loss,
             accuracy: logs.acc,
-            epoch: epoch
+            epoch: epoch,
+            modelSize: {
+              numTensors: tf.memory().numTensors,
+              byteSize: tf.memory().numBytes / 1024, // Convert to KB
+            }
           };
           
           const analysis = TrainingOptimizer.analyzeMetrics(metrics);
@@ -33,6 +46,7 @@ export const createTrainingConfig = (initialMetrics = null) => {
           
           systemLogger.log('training', `Época ${epoch + 1} finalizada:`, {
             ...logs,
+            modelSize: metrics.modelSize,
             qualityAssessment: {
               isGoodLoss: logs.loss < 0.5,
               isGoodAccuracy: logs.acc > 0.7
@@ -41,7 +55,13 @@ export const createTrainingConfig = (initialMetrics = null) => {
         },
         onBatchEnd: async (batch, logs) => {
           if (batch % 10 === 0) {
-            systemLogger.log('training', `Batch ${batch} métricas:`, logs);
+            systemLogger.log('training', `Batch ${batch} métricas:`, {
+              ...logs,
+              memoryUsage: {
+                numTensors: tf.memory().numTensors,
+                byteSize: tf.memory().numBytes / 1024 // Convert to KB
+              }
+            });
           }
         }
       },

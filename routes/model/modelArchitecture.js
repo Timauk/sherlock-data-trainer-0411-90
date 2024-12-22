@@ -51,16 +51,36 @@ export const createModelArchitecture = () => {
       metrics: ['accuracy']
     });
 
-    systemLogger.log('model', 'Modelo compilado com sucesso', {
+    // Log detailed model information
+    const modelSummary = {
       layers: model.layers.length,
       totalParams: model.countParams(),
       inputShape: model.inputs[0].shape,
       outputShape: model.outputs[0].shape,
+      layerDetails: model.layers.map(layer => ({
+        name: layer.name,
+        className: layer.getClassName(),
+        outputShape: layer.outputShape,
+        params: layer.countParams(),
+        config: layer.getConfig()
+      })),
       optimizer: model.optimizer.getConfig(),
       loss: model.loss,
       metrics: model.metrics
-    });
+    };
+
+    systemLogger.log('model', 'Modelo compilado com sucesso', modelSummary);
     
+    // Log memory usage after model creation
+    const memoryInfo = tf.memory();
+    systemLogger.log('model', 'Uso de memória após criação do modelo', {
+      numTensors: memoryInfo.numTensors,
+      numDataBuffers: memoryInfo.numDataBuffers,
+      byteSize: memoryInfo.numBytes / (1024 * 1024), // Convert to MB
+      unreliable: memoryInfo.unreliable,
+      reasons: memoryInfo.reasons
+    });
+
     return model;
   } catch (error) {
     systemLogger.error('model', 'Erro ao criar modelo', { 
