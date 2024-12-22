@@ -30,7 +30,9 @@ const corsOptions = {
       'http://localhost:8080',
       'https://lovable.dev',
       'https://dcc838c0-148c-47bb-abaf-cbdd03ce84f5.lovableproject.com',
-      'https://id-preview--dcc838c0-148c-47bb-abaf-cbdd03ce84f5.lovable.app'
+      'https://id-preview--dcc838c0-148c-47bb-abaf-cbdd03ce84f5.lovable.app',
+      '.lovableproject.com', // Allow all subdomains
+      '.lovable.app' // Allow all subdomains
     ];
     
     // Debug logging
@@ -41,7 +43,13 @@ const corsOptions = {
       return callback(null, true);
     }
     
-    const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed));
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (allowed.startsWith('.')) {
+        // Handle wildcard subdomains
+        return origin.endsWith(allowed);
+      }
+      return origin.startsWith(allowed);
+    });
     
     if (isAllowed) {
       logger.info('\x1b[32m%s\x1b[0m', 'Origin allowed:', { origin });
