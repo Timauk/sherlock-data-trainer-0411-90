@@ -3,7 +3,7 @@ import { systemLogger } from '../../src/utils/logging/systemLogger.js';
 
 export const createModelArchitecture = () => {
   try {
-    // Force CPU backend
+    // Force CPU backend for consistency
     tf.setBackend('cpu');
     
     systemLogger.log('model', 'Iniciando criação da arquitetura do modelo', {
@@ -14,11 +14,22 @@ export const createModelArchitecture = () => {
     
     const model = tf.sequential();
     
-    // Input layer with correct shape
+    // Input layer - Reduzido para aceitar apenas os 15 números do jogo anterior
+    model.add(tf.layers.dense({
+      units: 128,
+      activation: 'relu',
+      inputShape: [15], // Apenas os 15 números do jogo anterior
+      kernelInitializer: 'heNormal',
+      kernelRegularizer: tf.regularizers.l2({ l2: 0.001 })
+    }));
+    
+    model.add(tf.layers.batchNormalization());
+    model.add(tf.layers.dropout({ rate: 0.2 }));
+    
+    // Hidden layer 1 - Processamento de padrões de baixo nível
     model.add(tf.layers.dense({
       units: 256,
       activation: 'relu',
-      inputShape: [13057], // Updated to match expected input shape
       kernelInitializer: 'heNormal',
       kernelRegularizer: tf.regularizers.l2({ l2: 0.001 })
     }));
@@ -26,7 +37,7 @@ export const createModelArchitecture = () => {
     model.add(tf.layers.batchNormalization());
     model.add(tf.layers.dropout({ rate: 0.3 }));
     
-    // Hidden layers
+    // Hidden layer 2 - Processamento de padrões de alto nível
     model.add(tf.layers.dense({
       units: 128,
       activation: 'relu',
@@ -37,16 +48,16 @@ export const createModelArchitecture = () => {
     model.add(tf.layers.batchNormalization());
     model.add(tf.layers.dropout({ rate: 0.2 }));
     
-    // Output layer
+    // Output layer - Probabilidades para cada número de 1 a 25
     model.add(tf.layers.dense({
-      units: 15,
-      activation: 'sigmoid',
+      units: 25,
+      activation: 'sigmoid', // Sigmoid para probabilidades independentes
       kernelInitializer: 'glorotNormal'
     }));
 
-    // Compile model
+    // Compile model com binary crossentropy para cada número
     model.compile({
-      optimizer: tf.train.adam(0.001),
+      optimizer: tf.train.adam(0.0005), // Learning rate reduzido para maior estabilidade
       loss: 'binaryCrossentropy',
       metrics: ['accuracy']
     });
