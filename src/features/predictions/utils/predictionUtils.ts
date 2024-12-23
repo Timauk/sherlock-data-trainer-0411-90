@@ -3,6 +3,7 @@ import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
 import { generateCorePredictions } from './predictionCore';
 import { PredictionResult } from '../types';
+import { extractFeatures } from '@/utils/features/featureEngineering';
 
 export const generatePredictions = async (
   champion: Player,
@@ -22,7 +23,7 @@ export const generatePredictions = async (
       throw new Error('Números do último concurso não disponíveis');
     }
 
-    // Gerar predições base
+    // Gerar predições base com features enriquecidas
     const probabilities = await generateCorePredictions(trainedModel, lastConcursoNumbers);
     
     // Aplicar pesos do campeão
@@ -61,9 +62,21 @@ export const generateDirectPredictions = async (
 ): Promise<number[][]> => {
   try {
     const predictions: number[][] = [];
+    const currentDate = new Date();
+    const historicalData = [lastNumbers];
     
     for (let i = 0; i < 10; i++) {
-      const probabilities = await generateCorePredictions(model, lastNumbers);
+      const features = extractFeatures(lastNumbers, currentDate, historicalData);
+      const enrichedInput = [
+        ...features.baseFeatures,
+        ...features.temporalFeatures,
+        ...features.lunarFeatures,
+        ...features.statisticalFeatures
+      ];
+      
+      const inputTensor = tf.tensor2d([enrichedInput]);
+      const prediction = model.predict(inputTensor) as tf.Tensor;
+      const probabilities = Array.from(await prediction.data());
       
       const numbers = probabilities
         .map((prob, index) => ({ number: index + 1, probability: prob }))
@@ -73,6 +86,9 @@ export const generateDirectPredictions = async (
         .sort((a, b) => a - b);
       
       predictions.push(numbers);
+      
+      inputTensor.dispose();
+      prediction.dispose();
     }
     
     return predictions;

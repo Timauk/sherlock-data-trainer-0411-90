@@ -5,6 +5,7 @@ import { validateInputData, validatePlayerWeights } from './validation.js';
 import { enrichTrainingData } from '../../src/utils/features/lotteryFeatureEngineering.js';
 import { calculateReward } from '../../src/utils/rewardSystem.js';
 import { systemLogger } from '../../src/utils/logging/systemLogger.js';
+import { extractFeatures } from '../../src/utils/features/featureEngineering.js';
 
 const PLAYER_BASE_WEIGHTS = {
   aprendizadoBase: 509,
@@ -55,12 +56,26 @@ export async function processGameLogic(
     }
 
     const inputNumbers = inputData.slice(0, 15);
-    const tensor = tf.tensor2d([inputNumbers]);
+    
+    // Enriquecer dados com as mesmas features do treinamento
+    const currentDate = new Date();
+    const historicalData = [inputNumbers];
+    const features = extractFeatures(inputNumbers, currentDate, historicalData);
+    
+    // Combinar todas as features
+    const enrichedInput = [
+      ...features.baseFeatures,
+      ...features.temporalFeatures,
+      ...features.lunarFeatures,
+      ...features.statisticalFeatures
+    ];
+    
+    const tensor = tf.tensor2d([enrichedInput]);
     
     systemLogger.log('prediction', 'Gerando previsões com modelo', {
       inputShape: tensor.shape,
       modelLayers: model.layers.length,
-      inputNumbers: inputNumbers,
+      enrichedFeatures: enrichedInput.length,
       timestamp: new Date().toISOString()
     });
 
