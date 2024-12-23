@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Player } from '@/types/gameTypes';
-import * as tf from '@tensorflow/tfjs';
 import { CheckCircle2, AlertCircle, Loader2, Zap } from 'lucide-react';
 import NumberSelector from './NumberSelector';
 import PredictionsList from './PredictionsList';
@@ -11,7 +10,7 @@ import { systemLogger } from '../utils/logging/systemLogger';
 import { PredictionsHeader } from './predictions/PredictionsHeader';
 import { PredictionResult } from '@/features/predictions/types';
 import { SystemStatus } from '@/features/predictions/components/SystemStatus';
-import { generatePredictions, generateDirectPredictions } from '@/features/predictions/utils/predictionUtils';
+import { generatePredictions, generateDirectPredictions } from '@/features/predictions/utils/predictionCore';
 
 interface ChampionPredictionsProps {
   champion: Player | undefined;
@@ -31,27 +30,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   const [predictions, setPredictions] = useState<PredictionResult[]>([]);
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [systemReady, setSystemReady] = useState(false);
   const { toast } = useToast();
-
-  useEffect(() => {
-    const allDataLoaded = Boolean(trainedModel && lastConcursoNumbers?.length > 0);
-    setSystemReady(allDataLoaded);
-
-    systemLogger.log('prediction', 'Sistema status atualizado', {
-      hasModel: !!trainedModel,
-      hasNumbers: lastConcursoNumbers?.length > 0,
-      isReady: allDataLoaded,
-      timestamp: new Date().toISOString()
-    });
-
-    if (allDataLoaded) {
-      toast({
-        title: "Sistema Pronto",
-        description: "Todos os dados foram carregados com sucesso.",
-      });
-    }
-  }, [trainedModel, lastConcursoNumbers, toast]);
 
   const handleNumbersSelected = useCallback((numbers: number[]) => {
     setSelectedNumbers(numbers);
@@ -64,15 +43,20 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   }, []);
 
   const handlePredictionsGenerated = useCallback(async () => {
-    try {
-      if (!champion || !trainedModel || !lastConcursoNumbers) {
-        throw new Error("Dados necessários não disponíveis");
-      }
+    if (!trainedModel || !lastConcursoNumbers) {
+      toast({
+        title: "Erro",
+        description: "Modelo ou dados não disponíveis",
+        variant: "destructive"
+      });
+      return;
+    }
 
+    try {
       setIsGenerating(true);
       
       const newPredictions = await generatePredictions(
-        champion,
+        champion!,
         trainedModel,
         lastConcursoNumbers,
         selectedNumbers
@@ -86,11 +70,6 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       });
 
     } catch (error) {
-      systemLogger.error('prediction', 'Erro na geração de previsões', {
-        error: error instanceof Error ? error.message : 'Erro desconhecido',
-        championId: champion?.id
-      });
-
       toast({
         title: "Erro na Geração",
         description: error instanceof Error ? error.message : "Erro desconhecido",
@@ -102,35 +81,29 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   }, [champion, trainedModel, lastConcursoNumbers, selectedNumbers, toast]);
 
   const handleDirectPredictions = async () => {
-    try {
-      if (!trainedModel || !lastConcursoNumbers) {
-        throw new Error("Modelo ou dados não disponíveis");
-      }
-
-      setIsGenerating(true);
-      
-      systemLogger.log('prediction', 'Iniciando geração direta', {
-        hasModel: !!trainedModel,
-        numbersLength: lastConcursoNumbers.length,
-        timestamp: new Date().toISOString()
+    if (!trainedModel || !lastConcursoNumbers) {
+      toast({
+        title: "Erro",
+        description: "Modelo ou dados não disponíveis",
+        variant: "destructive"
       });
+      return;
+    }
+
+    try {
+      setIsGenerating(true);
       
       const directResults = await generateDirectPredictions(trainedModel, lastConcursoNumbers);
       
       const formattedPredictions = directResults.map(numbers => ({
         numbers,
-        estimatedAccuracy: 100,
+        estimatedAccuracy: 0.75,
         targetMatches: 15,
         matchesWithSelected: selectedNumbers.filter(n => numbers.includes(n)).length,
         isGoodDecision: true
       }));
 
       setPredictions(formattedPredictions);
-      
-      systemLogger.log('prediction', 'Previsões diretas geradas', {
-        count: formattedPredictions.length,
-        timestamp: new Date().toISOString()
-      });
 
       toast({
         title: "Previsões Diretas Geradas",
@@ -138,11 +111,6 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       });
 
     } catch (error) {
-      systemLogger.error('prediction', 'Erro na geração direta', {
-        error: error instanceof Error ? error.message : 'Erro desconhecido',
-        timestamp: new Date().toISOString()
-      });
-
       toast({
         title: "Erro na Geração Direta",
         description: error instanceof Error ? error.message : "Erro desconhecido",
@@ -164,10 +132,10 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
         <CardHeader>
           <PredictionsHeader 
             status={{
-              color: systemReady ? 'bg-green-500' : 'bg-yellow-500',
-              text: systemReady ? 'Sistema Pronto para Gerar!' : `Aguardando dados necessários`,
-              icon: systemReady ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />,
-              ready: systemReady
+              color: trainedModel ? 'bg-green-500' : 'bg-yellow-500',
+              text: trainedModel ? 'Sistema Pronto para Gerar!' : 'Aguardando modelo',
+              icon: trainedModel ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />,
+              ready: !!trainedModel
             }}
             isGenerating={isGenerating}
             onGenerate={handlePredictionsGenerated}
@@ -188,14 +156,14 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
               />
             ) : (
               <div className="flex justify-center items-center h-full text-gray-500">
-                Aguardando entrada de dados ou processamento...
+                Clique em "Gerar Previsões" para começar
               </div>
             )}
             
             <Button
               onClick={handleDirectPredictions}
               className="w-full bg-orange-500 hover:bg-orange-600"
-              disabled={isGenerating}
+              disabled={!trainedModel || isGenerating}
             >
               <Zap className="mr-2 h-4 w-4" />
               DIRETÃO - Gerar 10 Jogos Direto do Modelo
