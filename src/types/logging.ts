@@ -3,9 +3,8 @@ export interface LogEntry {
   type: 'action' | 'prediction' | 'performance' | 'system' | 'lunar' | 'player' | 
         'checkpoint' | 'learning' | 'model' | 'initialization' | 'training' | 
         'csv' | 'bank' | 'evolution' | 'players' | 'game' | 'error' | 
-        'features' | 'weights' | 'tensor' | 'metrics' | 'validation' | 'reward';
-  message: string;
-  details?: any;
+        'features' | 'weights' | 'tensor' | 'metrics' | 'validation' | 'reward' |
+        'update' | 'champion';
 }
 
 export interface SystemLoggerInterface {

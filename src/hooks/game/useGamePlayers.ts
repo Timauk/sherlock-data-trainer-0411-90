@@ -50,7 +50,7 @@ export const useGamePlayers = () => {
 
       return initialPlayers;
     } catch (error) {
-      systemLogger.error('initialization', 'Erro ao criar jogadores', {
+      systemLogger.error('error', 'Erro ao criar jogadores', {
         error,
         timestamp: new Date().toISOString()
       });
@@ -64,7 +64,7 @@ export const useGamePlayers = () => {
     inputData: number[]
   ) => {
     try {
-      systemLogger.log('update', 'Iniciando atualização dos jogadores', {
+      systemLogger.log('players', 'Iniciando atualização dos jogadores', {
         playerCount: currentPlayers.length,
         timestamp: new Date().toISOString()
       });
@@ -92,7 +92,7 @@ export const useGamePlayers = () => {
       
       if (!champion || newChampion.score > champion.score) {
         setChampion(newChampion);
-        systemLogger.log('champion', `Novo campeão: Jogador #${newChampion.id}`, {
+        systemLogger.log('player', `Novo campeão: Jogador #${newChampion.id}`, {
           score: newChampion.score,
           predictions: newChampion.predictions,
           timestamp: new Date().toISOString()
@@ -101,7 +101,7 @@ export const useGamePlayers = () => {
 
       return updatedPlayers;
     } catch (error) {
-      systemLogger.error('update', 'Erro ao atualizar jogadores', {
+      systemLogger.error('error', 'Erro ao atualizar jogadores', {
         error,
         timestamp: new Date().toISOString()
       });
