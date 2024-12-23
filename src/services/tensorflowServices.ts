@@ -1,22 +1,30 @@
 import * as tf from '@tensorflow/tfjs';
 import { systemLogger } from '@/utils/logging/systemLogger';
 
-// Get base API URL from environment or default
 const getApiUrl = () => {
-  const url = import.meta.env.VITE_API_URL || window.location.origin.replace(/:\d+$/, ':3001');
-  return url.replace(/:\/+$/, ''); // Remove trailing :/ if present
+  // Remove any trailing slashes and port numbers
+  const url = import.meta.env.VITE_API_URL || 
+              window.location.origin.replace(/:\d+$/, '').replace(/\/$/, '');
+              
+  // If it's a lovableproject.com URL, ensure we're using HTTPS
+  if (url.includes('lovableproject.com')) {
+    return url.replace('http://', 'https://');
+  }
+  
+  return url;
 };
 
 export class TensorFlowServices {
   static API_BASE_URL = getApiUrl();
 
-  // TF Setup
   static async initialize() {
     try {
       await tf.ready();
       
-      // Test API connection
-      const response = await fetch(`${this.API_BASE_URL}/test`, {
+      const testUrl = `${this.API_BASE_URL}/test`;
+      systemLogger.log('system', 'Testing API connection', { url: testUrl });
+      
+      const response = await fetch(testUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -28,6 +36,9 @@ export class TensorFlowServices {
         throw new Error(`API test failed with status ${response.status}`);
       }
 
+      const data = await response.json();
+      systemLogger.log('system', 'API connection successful', { data });
+      
       return true;
     } catch (error) {
       systemLogger.error('system', 'Failed to initialize TensorFlow or connect to API', { 

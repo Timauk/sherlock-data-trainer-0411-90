@@ -35,11 +35,6 @@ const corsOptions = {
       '.lovable.app'
     ];
     
-    logger.info('\x1b[33m%s\x1b[0m', 'CORS Request:', { 
-      origin,
-      timestamp: new Date().toISOString()
-    });
-    
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
       logger.info('\x1b[33m%s\x1b[0m', 'Allowing request with no origin');
@@ -48,7 +43,9 @@ const corsOptions = {
     
     const isAllowed = allowedOrigins.some(allowed => {
       if (allowed.startsWith('.')) {
-        return origin.includes(allowed);
+        // Remove port number from origin for domain matching
+        const originWithoutPort = origin.replace(/:\d+$/, '');
+        return originWithoutPort.includes(allowed);
       }
       return origin === allowed;
     });
@@ -77,7 +74,6 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
-// Request logging middleware with more details
 app.use((req, res, next) => {
   logger.info('\x1b[32m%s\x1b[0m', 'New request:', {
     method: req.method,
@@ -131,25 +127,23 @@ app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
 app.use('/api/processing', processingRouter);
 
-// Test route with enhanced error logging
-app.get('/test', (req, res) => {
-  logger.info('\x1b[32m%s\x1b[0m', 'Test route accessed', {
-    timestamp: new Date().toISOString(),
-    ip: req.ip,
-    userAgent: req.get('user-agent')
-  });
-  res.json({ 
-    message: 'Server is running',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Root route handler
+// Root route handler with improved response
 app.get('/', (req, res) => {
   res.json({ 
     status: 'ok',
     message: 'API is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
+  });
+});
+
+// Test route with enhanced error logging
+app.get('/test', (req, res) => {
+  res.json({ 
+    message: 'Server is running',
+    timestamp: new Date().toISOString(),
+    origin: req.get('origin'),
+    host: req.get('host')
   });
 });
 
