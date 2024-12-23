@@ -14,14 +14,16 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Log initialization
+// Log initialization with more details
 logger.info('\x1b[32m%s\x1b[0m', 'Starting server...', {
   nodeVersion: process.version,
   platform: process.platform,
-  arch: process.arch
+  arch: process.arch,
+  port: PORT,
+  environment: process.env.NODE_ENV || 'development'
 });
 
-// CORS configuration with improved error handling
+// CORS configuration with improved error handling and logging
 const corsOptions = {
   origin: function(origin, callback) {
     const allowedOrigins = [
@@ -29,15 +31,16 @@ const corsOptions = {
       'http://localhost:5173',
       'http://localhost:8080',
       'https://lovable.dev',
-      'https://dcc838c0-148c-47bb-abaf-cbdd03ce84f5.lovableproject.com',
-      'https://id-preview--dcc838c0-148c-47bb-abaf-cbdd03ce84f5.lovable.app',
-      '.lovableproject.com', // Allow all subdomains
-      '.lovable.app' // Allow all subdomains
+      '.lovableproject.com',
+      '.lovable.app'
     ];
     
-    // Debug logging
-    logger.info('\x1b[33m%s\x1b[0m', 'CORS Request from origin:', { origin });
+    logger.info('\x1b[33m%s\x1b[0m', 'CORS Request:', { 
+      origin,
+      timestamp: new Date().toISOString()
+    });
     
+    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
       logger.info('\x1b[33m%s\x1b[0m', 'Allowing request with no origin');
       return callback(null, true);
@@ -45,10 +48,9 @@ const corsOptions = {
     
     const isAllowed = allowedOrigins.some(allowed => {
       if (allowed.startsWith('.')) {
-        // Handle wildcard subdomains
-        return origin.endsWith(allowed);
+        return origin.includes(allowed);
       }
-      return origin.startsWith(allowed);
+      return origin === allowed;
     });
     
     if (isAllowed) {
@@ -56,7 +58,11 @@ const corsOptions = {
       return callback(null, true);
     }
     
-    logger.warn('\x1b[31m%s\x1b[0m', 'Origin rejected:', { origin });
+    logger.warn('\x1b[31m%s\x1b[0m', 'Origin rejected:', { 
+      origin,
+      allowedOrigins,
+      timestamp: new Date().toISOString()
+    });
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -69,15 +75,16 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-
-// Pre-flight requests
 app.options('*', cors(corsOptions));
 
+// Request logging middleware with more details
 app.use((req, res, next) => {
-  logger.info('\x1b[32m%s\x1b[0m', 'Nova requisição:', {
+  logger.info('\x1b[32m%s\x1b[0m', 'New request:', {
     method: req.method,
     path: req.path,
     ip: req.ip,
+    origin: req.get('origin'),
+    userAgent: req.get('user-agent'),
     timestamp: new Date().toISOString()
   });
   next();
@@ -89,7 +96,7 @@ app.use(express.urlencoded({ limit: '100mb', extended: true }));
 app.use(express.static('public'));
 app.use(cacheMiddleware);
 
-// Create necessary directories with absolute paths
+// Create necessary directories
 const dirs = [
   path.join(__dirname, 'checkpoints'),
   path.join(__dirname, 'logs'),
@@ -124,41 +131,66 @@ app.use('/api/checkpoint', checkpointRouter);
 app.use('/api/status', statusRouter);
 app.use('/api/processing', processingRouter);
 
-// Test route with error logging
+// Test route with enhanced error logging
 app.get('/test', (req, res) => {
-  logger.info('\x1b[32m%s\x1b[0m', 'Teste de rota acessado');
-  res.json({ message: 'Server is running' });
+  logger.info('\x1b[32m%s\x1b[0m', 'Test route accessed', {
+    timestamp: new Date().toISOString(),
+    ip: req.ip,
+    userAgent: req.get('user-agent')
+  });
+  res.json({ 
+    message: 'Server is running',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Initialize TensorFlow.js with error handling
+// Root route handler
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    message: 'API is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Initialize TensorFlow.js with enhanced error handling
 try {
   await tf.ready();
-  logger.info('\x1b[32m%s\x1b[0m', 'TensorFlow.js inicializado com sucesso', {
+  logger.info('\x1b[32m%s\x1b[0m', 'TensorFlow.js initialized successfully', {
     backend: tf.getBackend(),
-    memory: tf.memory()
+    memory: tf.memory(),
+    timestamp: new Date().toISOString()
   });
 } catch (error) {
-  logger.error('\x1b[31m%s\x1b[0m', 'Erro ao inicializar TensorFlow.js:', {
+  logger.error('\x1b[31m%s\x1b[0m', 'Error initializing TensorFlow.js:', {
     error: error.message,
-    stack: error.stack
+    stack: error.stack,
+    timestamp: new Date().toISOString()
   });
 }
 
-// Monitoramento de memória com logs em amarelo (warning)
+// Memory monitoring with enhanced logging
 setInterval(() => {
   const usage = process.memoryUsage();
-  logger.warn('\x1b[33m%s\x1b[0m', 'Uso de Memória do Servidor:', {
+  logger.warn('\x1b[33m%s\x1b[0m', 'Server Memory Usage:', {
     heapUsed: `${Math.round(usage.heapUsed / 1024 / 1024)}MB`,
     heapTotal: `${Math.round(usage.heapTotal / 1024 / 1024)}MB`,
     rss: `${Math.round(usage.rss / 1024 / 1024)}MB`,
     external: `${Math.round(usage.external / 1024 / 1024)}MB`,
-    arrayBuffers: `${Math.round(usage.arrayBuffers / 1024 / 1024)}MB`
+    arrayBuffers: `${Math.round(usage.arrayBuffers / 1024 / 1024)}MB`,
+    timestamp: new Date().toISOString()
   });
 }, 300000);
 
-// WebSocket error handling
+// Enhanced error handling middleware
 app.use((err, req, res, next) => {
   if (err.name === 'UnauthorizedError') {
+    logger.error('\x1b[31m%s\x1b[0m', 'Authorization error:', {
+      error: err.message,
+      path: req.path,
+      ip: req.ip,
+      timestamp: new Date().toISOString()
+    });
     res.status(401).json({ error: 'Invalid token' });
     return;
   }
@@ -168,16 +200,18 @@ app.use((err, req, res, next) => {
     stack: err.stack,
     path: req.path,
     method: req.method,
+    ip: req.ip,
     timestamp: new Date().toISOString()
   });
 
   res.status(500).json({
     error: 'Internal server error',
-    message: err.message
+    message: err.message,
+    timestamp: new Date().toISOString()
   });
 });
 
-// Start server with error handling
+// Start server with enhanced error handling
 try {
   const server = app.listen(PORT, () => {
     logger.info('\x1b[32m%s\x1b[0m', `Server started successfully`, {
