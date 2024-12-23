@@ -23,6 +23,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
     systemLogger.log('player', `Renderizando card do jogador #${player.id}`, {
       score: player.score,
       hasPredictions: player.predictions?.length > 0,
+      predictions: player.predictions,
       weights: player.weights?.length,
       timestamp: new Date().toISOString()
     });

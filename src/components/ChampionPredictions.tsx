@@ -34,28 +34,24 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   const [systemReady, setSystemReady] = useState(false);
   const { toast } = useToast();
 
-  const getMissingItems = useCallback(() => {
-    const items = [];
-    if (!champion) items.push('campeão');
-    if (!trainedModel) items.push('modelo');
-    if (!lastConcursoNumbers?.length) items.push('números do último concurso');
-    return items;
-  }, [champion, trainedModel, lastConcursoNumbers]);
-
   useEffect(() => {
-    const items = getMissingItems();
-    systemLogger.log('system', 'Estado dos componentes de previsão', {
-      champion: { exists: !!champion, type: typeof champion, hasId: champion?.id !== undefined },
-      model: { 
-        loaded: !!trainedModel, 
-        hasOptimizer: trainedModel?.optimizer !== undefined,
-        compiled: trainedModel?.optimizer !== undefined 
-      },
-      lastNumbers: { exists: !!lastConcursoNumbers, length: lastConcursoNumbers?.length },
-      missingItems: items,
+    const allDataLoaded = Boolean(trainedModel && lastConcursoNumbers?.length > 0);
+    setSystemReady(allDataLoaded);
+
+    systemLogger.log('prediction', 'Sistema status atualizado', {
+      hasModel: !!trainedModel,
+      hasNumbers: lastConcursoNumbers?.length > 0,
+      isReady: allDataLoaded,
       timestamp: new Date().toISOString()
     });
-  }, [champion, trainedModel, lastConcursoNumbers, getMissingItems]);
+
+    if (allDataLoaded) {
+      toast({
+        title: "Sistema Pronto",
+        description: "Todos os dados foram carregados com sucesso.",
+      });
+    }
+  }, [trainedModel, lastConcursoNumbers, toast]);
 
   const handleNumbersSelected = useCallback((numbers: number[]) => {
     setSelectedNumbers(numbers);
@@ -113,6 +109,12 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
 
       setIsGenerating(true);
       
+      systemLogger.log('prediction', 'Iniciando geração direta', {
+        hasModel: !!trainedModel,
+        numbersLength: lastConcursoNumbers.length,
+        timestamp: new Date().toISOString()
+      });
+      
       const directResults = await generateDirectPredictions(trainedModel, lastConcursoNumbers);
       
       const formattedPredictions = directResults.map(numbers => ({
@@ -125,12 +127,22 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
 
       setPredictions(formattedPredictions);
       
+      systemLogger.log('prediction', 'Previsões diretas geradas', {
+        count: formattedPredictions.length,
+        timestamp: new Date().toISOString()
+      });
+
       toast({
         title: "Previsões Diretas Geradas",
         description: "10 jogos foram gerados diretamente do modelo!",
       });
 
     } catch (error) {
+      systemLogger.error('prediction', 'Erro na geração direta', {
+        error: error instanceof Error ? error.message : 'Erro desconhecido',
+        timestamp: new Date().toISOString()
+      });
+
       toast({
         title: "Erro na Geração Direta",
         description: error instanceof Error ? error.message : "Erro desconhecido",
@@ -140,19 +152,6 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       setIsGenerating(false);
     }
   };
-
-  useEffect(() => {
-    const allDataLoaded = Boolean(trainedModel?.optimizer && lastConcursoNumbers?.length > 0);
-    setSystemReady(allDataLoaded);
-
-    if (allDataLoaded) {
-      toast({
-        title: "Sistema Pronto",
-        description: "Todos os dados foram carregados com sucesso.",
-      });
-      systemLogger.log('system', 'Sistema pronto para gerar previsões');
-    }
-  }, [trainedModel, lastConcursoNumbers, toast]);
 
   return (
     <div className="space-y-4">
@@ -196,7 +195,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
             <Button
               onClick={handleDirectPredictions}
               className="w-full bg-orange-500 hover:bg-orange-600"
-              disabled={!systemReady || isGenerating}
+              disabled={isGenerating}
             >
               <Zap className="mr-2 h-4 w-4" />
               DIRETÃO - Gerar 10 Jogos Direto do Modelo
@@ -209,4 +208,3 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
 };
 
 export default ChampionPredictions;
-
