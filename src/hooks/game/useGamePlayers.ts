@@ -1,44 +1,28 @@
 import { useState, useCallback } from 'react';
 import { Player } from '@/types/gameTypes';
-import { gameLogger } from '@/utils/logging/gameLogger';
-import { PredictionService } from '@/services/predictionService';
-import { useToast } from "@/hooks/use-toast";
+import { systemLogger } from '@/utils/logging/systemLogger';
+import { usePlayerPredictions } from './usePlayerPredictions';
+import { PLAYER_BASE_WEIGHTS } from '@/utils/constants';
 import * as tf from '@tensorflow/tfjs';
-
-const BASE_WEIGHTS = {
-  aprendizadoBase: 509,
-  adaptabilidade: 517,
-  memoria: 985,
-  intuicao: 341,
-  precisao: 658,
-  consistencia: 979,
-  inovacao: 717,
-  equilibrio: 453,
-  foco: 117,
-  resiliencia: 235,
-  otimizacao: 371,
-  cooperacao: 126,
-  especializacao: 372,
-  generalizacao: 50,
-  evolucao: 668,
-  estabilidade: 444,
-  criatividade: 178
-};
 
 export const useGamePlayers = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [champion, setChampion] = useState<Player | null>(null);
-  const { toast } = useToast();
+  const { generatePrediction } = usePlayerPredictions();
 
   const initializePlayers = useCallback((numPlayers: number = 10) => {
     try {
-      gameLogger.logPlayerEvent(0, 'Iniciando criação de jogadores', { numPlayers });
+      systemLogger.log('initialization', 'Iniciando criação dos jogadores', {
+        numPlayers,
+        timestamp: new Date().toISOString()
+      });
       
       const initialPlayers: Player[] = Array.from({ length: numPlayers }, (_, index) => {
-        const weights = Object.values(BASE_WEIGHTS);
+        const weights = Object.values(PLAYER_BASE_WEIGHTS);
         
-        gameLogger.logPlayerEvent(index + 1, 'Criando jogador com pesos iniciais', {
-          weights: BASE_WEIGHTS
+        systemLogger.log('player', `Criando jogador #${index + 1}`, {
+          weights: PLAYER_BASE_WEIGHTS,
+          timestamp: new Date().toISOString()
         });
 
         return {
@@ -59,48 +43,45 @@ export const useGamePlayers = () => {
       setChampion(initialPlayers[0]);
       setPlayers(initialPlayers);
 
-      gameLogger.logPlayerEvent(0, 'Jogadores criados com sucesso', {
+      systemLogger.log('initialization', 'Jogadores criados com sucesso', {
         count: initialPlayers.length,
-        weights: BASE_WEIGHTS
-      });
-
-      toast({
-        title: "Jogadores Inicializados",
-        description: `${numPlayers} jogadores foram criados com sucesso!`
+        timestamp: new Date().toISOString()
       });
 
       return initialPlayers;
     } catch (error) {
-      gameLogger.logGameError(error as Error, 'initializePlayers');
-      toast({
-        title: "Erro na Inicialização",
-        description: "Falha ao criar jogadores",
-        variant: "destructive"
+      systemLogger.error('initialization', 'Erro ao criar jogadores', {
+        error,
+        timestamp: new Date().toISOString()
       });
-      return [];
+      throw error;
     }
-  }, [toast]);
+  }, []);
 
   const updatePlayers = useCallback(async (
     currentPlayers: Player[],
-    model: tf.LayersModel | null
+    model: tf.LayersModel,
+    inputData: number[]
   ) => {
-    if (!model) {
-      gameLogger.logGameError(
-        new Error('Modelo não disponível'),
-        'updatePlayers'
-      );
-      return;
-    }
-
     try {
-      gameLogger.logPlayerEvent(0, 'Iniciando atualização dos jogadores', {
-        playerCount: currentPlayers.length
+      systemLogger.log('update', 'Iniciando atualização dos jogadores', {
+        playerCount: currentPlayers.length,
+        timestamp: new Date().toISOString()
       });
 
-      const updatedPlayers = await PredictionService.generateBatchPredictions(
-        currentPlayers,
-        model
+      const updatedPlayers = await Promise.all(
+        currentPlayers.map(async (player) => {
+          const predictions = await generatePrediction(player, model, inputData);
+          return {
+            ...player,
+            predictions,
+            modelConnection: {
+              ...player.modelConnection,
+              lastPrediction: predictions,
+              lastUpdate: new Date().toISOString()
+            }
+          };
+        })
       );
 
       setPlayers(updatedPlayers);
@@ -111,26 +92,22 @@ export const useGamePlayers = () => {
       
       if (!champion || newChampion.score > champion.score) {
         setChampion(newChampion);
-        gameLogger.logPlayerEvent(newChampion.id, 'Novo campeão', {
+        systemLogger.log('champion', `Novo campeão: Jogador #${newChampion.id}`, {
           score: newChampion.score,
-          fitness: newChampion.fitness,
-          weights: BASE_WEIGHTS
-        });
-
-        toast({
-          title: "Novo Campeão!",
-          description: `Jogador #${newChampion.id} é o novo líder!`
+          predictions: newChampion.predictions,
+          timestamp: new Date().toISOString()
         });
       }
+
+      return updatedPlayers;
     } catch (error) {
-      gameLogger.logGameError(error as Error, 'updatePlayers');
-      toast({
-        title: "Erro na Atualização",
-        description: "Falha ao atualizar jogadores",
-        variant: "destructive"
+      systemLogger.error('update', 'Erro ao atualizar jogadores', {
+        error,
+        timestamp: new Date().toISOString()
       });
+      throw error;
     }
-  }, [champion, toast]);
+  }, [champion, generatePrediction]);
 
   return {
     players,
