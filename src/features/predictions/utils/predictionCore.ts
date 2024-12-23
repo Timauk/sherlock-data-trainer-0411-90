@@ -1,12 +1,12 @@
 import * as tf from '@tensorflow/tfjs';
 import { systemLogger } from '@/utils/logging/systemLogger';
+import { extractFeatures } from '@/utils/features/featureEngineering';
 
 export const generateCorePredictions = async (
   model: tf.LayersModel,
   inputData: number[]
 ): Promise<number[]> => {
   try {
-    // Log input data for debugging
     systemLogger.log('prediction', 'Gerando predições base', {
       inputShape: inputData.length,
       inputData
@@ -21,11 +21,21 @@ export const generateCorePredictions = async (
       inputData = paddedData.slice(0, 15);
     }
 
-    // Normalizar os dados de entrada (0-1)
-    const normalizedInput = inputData.map(num => num / 25);
+    // Enriquecer dados com features adicionais (mesmo processo usado no treino)
+    const currentDate = new Date();
+    const historicalData = [inputData]; // Usar apenas o dado atual como histórico
+    const features = extractFeatures(inputData, currentDate, historicalData);
     
-    // Criar tensor com formato correto
-    const reshapedInput = tf.tensor2d([normalizedInput]);
+    // Combinar todas as features em um único array
+    const enrichedInput = [
+      ...features.baseFeatures,
+      ...features.temporalFeatures,
+      ...features.lunarFeatures,
+      ...features.statisticalFeatures
+    ];
+    
+    // Criar tensor com formato correto [1, 22]
+    const reshapedInput = tf.tensor2d([enrichedInput]);
     
     // Gerar predição
     const prediction = model.predict(reshapedInput) as tf.Tensor;
