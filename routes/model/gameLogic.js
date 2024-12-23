@@ -7,16 +7,16 @@ import { calculateReward } from '../../src/utils/rewardSystem.js';
 import { systemLogger } from '../../src/utils/logging/systemLogger.js';
 
 const PLAYER_BASE_WEIGHTS = {
-  aprendizadoBase: 185,
-  adaptabilidade: 874,
-  memoria: 617,
-  intuicao: 166,
-  precisao: 234,
-  consistencia: 168,
-  inovacao: 855,
-  equilibrio: 828,
-  foco: 974,
-  resiliencia: 67,
+  aprendizadoBase: 509,
+  adaptabilidade: 517,
+  memoria: 985,
+  intuicao: 341,
+  precisao: 658,
+  consistencia: 979,
+  inovacao: 717,
+  equilibrio: 453,
+  foco: 117,
+  resiliencia: 235,
   otimizacao: 371,
   cooperacao: 126,
   especializacao: 372,
@@ -73,7 +73,6 @@ export async function processGameLogic(
     });
 
     const playerResults = playerWeights.map((weights, index) => {
-      // Aplicar os pesos base do jogador
       const playerPredictions = result.slice(0, 15).map((num, i) => {
         const baseWeight = Object.values(PLAYER_BASE_WEIGHTS)[i] || 1;
         return Math.max(1, Math.min(25, Math.round(num * (baseWeight / 1000))));

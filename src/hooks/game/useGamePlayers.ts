@@ -5,24 +5,37 @@ import { PredictionService } from '@/services/predictionService';
 import { useToast } from "@/hooks/use-toast";
 import * as tf from '@tensorflow/tfjs';
 
-/**
- * Hook para gerenciar o estado e comportamento dos jogadores
- */
+const BASE_WEIGHTS = {
+  aprendizadoBase: 509,
+  adaptabilidade: 517,
+  memoria: 985,
+  intuicao: 341,
+  precisao: 658,
+  consistencia: 979,
+  inovacao: 717,
+  equilibrio: 453,
+  foco: 117,
+  resiliencia: 235,
+  otimizacao: 371,
+  cooperacao: 126,
+  especializacao: 372,
+  generalizacao: 50,
+  evolucao: 668,
+  estabilidade: 444,
+  criatividade: 178
+};
+
 export const useGamePlayers = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [champion, setChampion] = useState<Player | null>(null);
   const { toast } = useToast();
 
-  /**
-   * Inicializa jogadores com pesos aleatórios
-   */
   const initializePlayers = useCallback((numPlayers: number = 10) => {
     try {
       gameLogger.logPlayerEvent(0, 'Iniciando criação de jogadores', { numPlayers });
       
       const initialPlayers: Player[] = Array.from({ length: numPlayers }, (_, index) => {
-        // Reduzindo número de pesos para teste
-        const weights = Array.from({ length: 100 }, () => Math.random());
+        const weights = Object.values(BASE_WEIGHTS);
         
         return {
           id: index + 1,
@@ -43,7 +56,8 @@ export const useGamePlayers = () => {
       setPlayers(initialPlayers);
 
       gameLogger.logPlayerEvent(0, 'Jogadores criados com sucesso', {
-        count: initialPlayers.length
+        count: initialPlayers.length,
+        weights: BASE_WEIGHTS
       });
 
       toast({
@@ -63,9 +77,6 @@ export const useGamePlayers = () => {
     }
   }, [toast]);
 
-  /**
-   * Atualiza jogadores com novas predições do modelo
-   */
   const updatePlayers = useCallback(async (
     currentPlayers: Player[],
     model: tf.LayersModel | null
@@ -86,7 +97,6 @@ export const useGamePlayers = () => {
 
       setPlayers(updatedPlayers);
       
-      // Atualizar campeão se necessário
       const newChampion = updatedPlayers.reduce((prev, current) => 
         current.score > prev.score ? current : prev
       );
@@ -95,7 +105,8 @@ export const useGamePlayers = () => {
         setChampion(newChampion);
         gameLogger.logPlayerEvent(newChampion.id, 'Novo campeão', {
           score: newChampion.score,
-          fitness: newChampion.fitness
+          fitness: newChampion.fitness,
+          weights: BASE_WEIGHTS
         });
 
         toast({

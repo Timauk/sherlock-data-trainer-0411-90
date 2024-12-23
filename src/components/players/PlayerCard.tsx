@@ -19,21 +19,17 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   onPlayerClick,
   onClonePlayer,
 }) => {
-  // Log do estado do jogador ao montar/atualizar
   useEffect(() => {
     systemLogger.log('player', `Renderizando card do jogador #${player.id}`, {
       score: player.score,
-      hasPredictions: player.predictions?.length > 0,
       predictions: player.predictions,
-      weights: player.weights?.length,
-      fitness: player.fitness,
+      weights: player.weights,
       timestamp: new Date().toISOString()
     });
   }, [player]);
 
   const getLastMatchHistory = () => {
     if (!player.matchHistory || player.matchHistory.length === 0) {
-      systemLogger.log('player', `Jogador #${player.id} sem histórico de partidas`);
       return {
         matches: 0,
         score: 0,
@@ -48,16 +44,10 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 
   const formatNumbers = (numbers: number[]): string => {
     if (!numbers || numbers.length === 0) {
-      return 'Nenhum número disponível';
+      return 'Aguardando predições...';
     }
     return numbers.map(n => n.toString().padStart(2, '0')).join(', ');
   };
-
-  // Validação de dados do jogador
-  if (!player || typeof player.id === 'undefined') {
-    systemLogger.error('player', 'Dados inválidos do jogador', { player });
-    return null;
-  }
 
   return (
     <Card 
@@ -78,13 +68,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
       <div className="space-y-2">
         <div className="bg-muted p-2 rounded">
           <p className="text-sm font-medium">Previsões Atuais:</p>
-          {player.predictions && player.predictions.length > 0 ? (
-            <p className="text-sm">{formatNumbers(player.predictions)}</p>
-          ) : (
-            <p className="text-sm text-yellow-600 dark:text-yellow-400">
-              Aguardando predições do modelo...
-            </p>
-          )}
+          <p className="text-sm">{formatNumbers(player.predictions)}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
