@@ -2,6 +2,7 @@ import * as tf from '@tensorflow/tfjs';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
 import { PredictionResult } from '../types';
+import { generateCorePredictions } from './predictionCore';
 
 export const generatePredictions = async (
   champion: Player,
@@ -10,32 +11,35 @@ export const generatePredictions = async (
   selectedNumbers: number[]
 ): Promise<PredictionResult[]> => {
   try {
-    const inputTensor = tf.tensor2d([lastConcursoNumbers]);
-    const prediction = trainedModel.predict(inputTensor) as tf.Tensor;
-    const probabilities = Array.from(await prediction.data());
+    systemLogger.log('prediction', 'Starting prediction generation', {
+      hasChampion: !!champion,
+      hasModel: !!trainedModel,
+      inputNumbers: lastConcursoNumbers
+    });
+
+    const probabilities = await generateCorePredictions(trainedModel, lastConcursoNumbers);
     
     const predictions = probabilities
       .map((prob, index) => ({
         number: index + 1,
-        probability: prob * (champion.weights[index] || 1)
+        probability: prob * (champion.weights[index % champion.weights.length] || 1)
       }))
       .sort((a, b) => b.probability - a.probability)
       .slice(0, 15)
       .map(p => p.number)
       .sort((a, b) => a - b);
 
-    inputTensor.dispose();
-    prediction.dispose();
+    const matches = predictions.filter(n => selectedNumbers.includes(n)).length;
 
     return [{
       numbers: predictions,
       estimatedAccuracy: 0.75,
       targetMatches: 15,
-      matchesWithSelected: predictions.filter(n => selectedNumbers.includes(n)).length,
-      isGoodDecision: true
+      matchesWithSelected: matches,
+      isGoodDecision: matches >= 8
     }];
   } catch (error) {
-    systemLogger.error('prediction', 'Erro ao gerar previsões', { error });
+    systemLogger.error('prediction', 'Error generating predictions', { error });
     throw error;
   }
 };
@@ -44,24 +48,25 @@ export const generateDirectPredictions = async (
   model: tf.LayersModel,
   lastNumbers: number[]
 ): Promise<number[][]> => {
-  const predictions: number[][] = [];
-  for (let i = 0; i < 10; i++) {
-    const inputTensor = tf.tensor2d([lastNumbers]);
-    const prediction = model.predict(inputTensor) as tf.Tensor;
-    const probabilities = Array.from(await prediction.data());
+  try {
+    const predictions: number[][] = [];
     
-    const numbers = probabilities
-      .map((prob, index) => ({ number: index + 1, probability: prob }))
-      .sort((a, b) => b.probability - a.probability)
-      .slice(0, 15)
-      .map(p => p.number)
-      .sort((a, b) => a - b);
+    for (let i = 0; i < 10; i++) {
+      const probabilities = await generateCorePredictions(model, lastNumbers);
+      
+      const numbers = probabilities
+        .map((prob, index) => ({ number: index + 1, probability: prob }))
+        .sort((a, b) => b.probability - a.probability)
+        .slice(0, 15)
+        .map(p => p.number)
+        .sort((a, b) => a - b);
+      
+      predictions.push(numbers);
+    }
     
-    predictions.push(numbers);
-    
-    inputTensor.dispose();
-    prediction.dispose();
+    return predictions;
+  } catch (error) {
+    systemLogger.error('prediction', 'Error in direct predictions', { error });
+    throw error;
   }
-  
-  return predictions;
 };

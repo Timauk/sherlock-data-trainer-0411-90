@@ -1,5 +1,5 @@
 import React from 'react';
-import { temporalAccuracyTracker } from '@/features/predictions/utils/predictionCore';
+import { systemLogger } from '@/utils/logging/systemLogger';
 
 export interface DiagnosticResult {
   phase: string;
@@ -13,9 +13,8 @@ const SystemDiagnostics: React.FC = () => {
     <div>
       <h2>System Diagnostics</h2>
       <div>
-        <h3>Temporal Accuracy</h3>
-        <p>Average Accuracy: {temporalAccuracyTracker.getAverageAccuracy().toFixed(2)}%</p>
-        <p>Accuracy History: {JSON.stringify(temporalAccuracyTracker.accuracyHistory)}</p>
+        <h3>System Status</h3>
+        <p>Status: Active</p>
       </div>
     </div>
   );
