@@ -37,6 +37,10 @@ export const useGamePlayers = () => {
       const initialPlayers: Player[] = Array.from({ length: numPlayers }, (_, index) => {
         const weights = Object.values(BASE_WEIGHTS);
         
+        gameLogger.logPlayerEvent(index + 1, 'Criando jogador com pesos iniciais', {
+          weights: BASE_WEIGHTS
+        });
+
         return {
           id: index + 1,
           score: 0,
@@ -90,6 +94,10 @@ export const useGamePlayers = () => {
     }
 
     try {
+      gameLogger.logPlayerEvent(0, 'Iniciando atualização dos jogadores', {
+        playerCount: currentPlayers.length
+      });
+
       const updatedPlayers = await PredictionService.generateBatchPredictions(
         currentPlayers,
         model

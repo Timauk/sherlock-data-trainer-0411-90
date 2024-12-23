@@ -22,14 +22,27 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   useEffect(() => {
     systemLogger.log('player', `Renderizando card do jogador #${player.id}`, {
       score: player.score,
-      predictions: player.predictions,
-      weights: player.weights,
+      hasPredictions: player.predictions?.length > 0,
+      weights: player.weights?.length,
       timestamp: new Date().toISOString()
     });
   }, [player]);
 
+  const formatNumbers = (numbers: number[]): string => {
+    if (!numbers || numbers.length === 0) {
+      systemLogger.log('player', `Jogador #${player.id} sem predições`, {
+        timestamp: new Date().toISOString()
+      });
+      return 'Aguardando predições...';
+    }
+    return numbers.map(n => n.toString().padStart(2, '0')).join(', ');
+  };
+
   const getLastMatchHistory = () => {
     if (!player.matchHistory || player.matchHistory.length === 0) {
+      systemLogger.log('player', `Jogador #${player.id} sem histórico`, {
+        timestamp: new Date().toISOString()
+      });
       return {
         matches: 0,
         score: 0,
@@ -42,16 +55,14 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 
   const lastMatch = getLastMatchHistory();
 
-  const formatNumbers = (numbers: number[]): string => {
-    if (!numbers || numbers.length === 0) {
-      return 'Aguardando predições...';
-    }
-    return numbers.map(n => n.toString().padStart(2, '0')).join(', ');
-  };
-
   return (
     <Card 
-      onClick={() => onPlayerClick(player)}
+      onClick={() => {
+        systemLogger.log('player', `Card do jogador #${player.id} clicado`, {
+          timestamp: new Date().toISOString()
+        });
+        onPlayerClick(player);
+      }}
       className={`p-4 rounded-lg shadow cursor-pointer transition-all hover:shadow-lg
         ${isTopPlayer ? 'bg-yellow-100 dark:bg-yellow-900 border-2 border-yellow-500' : 'bg-card'}`}
     >
@@ -90,7 +101,13 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
         )}
 
         <Button 
-          onClick={(e) => onClonePlayer(player, e)}
+          onClick={(e) => {
+            e.stopPropagation();
+            systemLogger.log('player', `Clonando jogador #${player.id}`, {
+              timestamp: new Date().toISOString()
+            });
+            onClonePlayer(player, e);
+          }}
           className="w-full mt-2"
           variant="default"
         >
