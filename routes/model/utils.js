@@ -9,31 +9,29 @@ export async function validateModelArchitecture(model) {
     systemLogger.log('model', 'Iniciando validação da arquitetura do modelo', {
       layersCount: model.layers.length,
       inputShape: model.inputs[0].shape,
-      outputShape: model.outputs[0].shape,
-      modelVersion: model.modelVersion || 'latest'
+      outputShape: model.outputs[0].shape
     });
 
     // Validar shape de entrada
     const inputShape = model.inputs[0].shape[1];
-    if (inputShape !== 13057) {
-      throw new Error(`Input shape inválido: esperado 13057, recebido ${inputShape}`);
+    if (inputShape !== 15) {
+      throw new Error(`Input shape inválido: esperado 15, recebido ${inputShape}`);
     }
 
     // Validar shape de saída
     const outputShape = model.outputs[0].shape[1];
-    if (outputShape !== 15) {
-      throw new Error(`Output shape inválido: esperado 15, recebido ${outputShape}`);
+    if (outputShape !== 25) {
+      throw new Error(`Output shape inválido: esperado 25, recebido ${outputShape}`);
     }
 
     // Teste com dados dummy
-    const testInput = tf.zeros([1, 13057]);
+    const testInput = tf.zeros([1, 15]);
     const testOutput = model.predict(testInput);
     
     systemLogger.log('model', 'Teste de predição realizado', {
       inputShape: testInput.shape,
       outputShape: testOutput.shape,
-      outputValues: Array.from(testOutput.dataSync()).slice(0, 5),
-      modelVersion: model.modelVersion || 'latest'
+      outputValues: Array.from(testOutput.dataSync()).slice(0, 5)
     });
 
     testInput.dispose();
@@ -52,11 +50,6 @@ export async function validateModelArchitecture(model) {
 export async function getOrCreateModel() {
   try {
     if (!globalModel) {
-      systemLogger.log('model', 'Iniciando criação do modelo global', {
-        backend: tf.getBackend(),
-        memory: tf.memory()
-      });
-
       globalModel = await createModelArchitecture();
       
       const isValid = await validateModelArchitecture(globalModel);
@@ -65,7 +58,6 @@ export async function getOrCreateModel() {
       }
 
       systemLogger.log('model', 'Modelo global criado e validado com sucesso', {
-        modelVersion: globalModel.modelVersion || 'latest',
         timestamp: new Date().toISOString()
       });
     }
