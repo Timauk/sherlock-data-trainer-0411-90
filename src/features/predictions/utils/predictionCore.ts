@@ -7,29 +7,45 @@ export const generateCorePredictions = async (
 ): Promise<number[]> => {
   try {
     // Log input data for debugging
-    systemLogger.log('prediction', 'Generating core predictions', {
+    systemLogger.log('prediction', 'Gerando predições base', {
       inputShape: inputData.length,
       inputData
     });
 
-    // Ensure input data is properly formatted for the model
-    const reshapedInput = tf.tensor2d([inputData]);
+    // Garantir que temos exatamente 15 números
+    if (inputData.length !== 15) {
+      const paddedData = [...inputData];
+      while (paddedData.length < 15) {
+        paddedData.push(0);
+      }
+      inputData = paddedData.slice(0, 15);
+    }
+
+    // Normalizar os dados de entrada (0-1)
+    const normalizedInput = inputData.map(num => num / 25);
     
-    // Get model prediction
+    // Criar tensor com formato correto
+    const reshapedInput = tf.tensor2d([normalizedInput]);
+    
+    // Gerar predição
     const prediction = model.predict(reshapedInput) as tf.Tensor;
     const probabilities = Array.from(await prediction.data());
     
-    // Clean up tensors
+    // Limpar tensors
     reshapedInput.dispose();
     prediction.dispose();
     
-    systemLogger.log('prediction', 'Core predictions generated successfully', {
+    systemLogger.log('prediction', 'Predições base geradas com sucesso', {
       outputLength: probabilities.length
     });
 
     return probabilities;
   } catch (error) {
-    systemLogger.error('prediction', 'Error in core prediction generation', { error });
-    throw new Error('Failed to generate core predictions: ' + error.message);
+    systemLogger.error('prediction', 'Erro na geração de predições base', { 
+      error,
+      inputShape: inputData.length,
+      modelInputShape: model.inputs[0].shape
+    });
+    throw new Error('Falha ao gerar predições base: ' + error.message);
   }
 };

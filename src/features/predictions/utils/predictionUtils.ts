@@ -11,22 +11,27 @@ export const generatePredictions = async (
   selectedNumbers: number[]
 ): Promise<PredictionResult[]> => {
   try {
-    systemLogger.log('prediction', 'Starting prediction generation', {
+    systemLogger.log('prediction', 'Iniciando geração de predições', {
       hasChampion: !!champion,
       hasModel: !!trainedModel,
       inputNumbers: lastConcursoNumbers
     });
 
-    // Generate base predictions
+    // Garantir que temos os 15 números do último concurso
+    if (!lastConcursoNumbers || lastConcursoNumbers.length === 0) {
+      throw new Error('Números do último concurso não disponíveis');
+    }
+
+    // Gerar predições base
     const probabilities = await generateCorePredictions(trainedModel, lastConcursoNumbers);
     
-    // Apply champion weights
+    // Aplicar pesos do campeão
     const weightedPredictions = probabilities.map((prob, index) => ({
       number: index + 1,
-      probability: prob * (champion.weights[index % champion.weights.length] || 1)
+      probability: prob * (champion?.weights?.[index % (champion?.weights?.length || 1)] || 1)
     }));
 
-    // Select top 15 numbers
+    // Selecionar os 15 números mais prováveis
     const predictions = weightedPredictions
       .sort((a, b) => b.probability - a.probability)
       .slice(0, 15)
@@ -45,7 +50,7 @@ export const generatePredictions = async (
       isGoodDecision: matches >= 8
     }];
   } catch (error) {
-    systemLogger.error('prediction', 'Error generating predictions', { error });
+    systemLogger.error('prediction', 'Erro ao gerar predições', { error });
     throw error;
   }
 };
@@ -72,7 +77,7 @@ export const generateDirectPredictions = async (
     
     return predictions;
   } catch (error) {
-    systemLogger.error('prediction', 'Error in direct predictions', { error });
+    systemLogger.error('prediction', 'Erro nas predições diretas', { error });
     throw error;
   }
 };

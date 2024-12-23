@@ -62,10 +62,17 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
     try {
       setIsGenerating(true);
       
+      // Garantir que temos exatamente 15 números
+      const inputNumbers = [...lastConcursoNumbers];
+      while (inputNumbers.length < 15) {
+        inputNumbers.push(0);
+      }
+      const normalizedInput = inputNumbers.slice(0, 15);
+      
       const newPredictions = await generatePredictions(
         champion,
         trainedModel,
-        lastConcursoNumbers,
+        normalizedInput,
         selectedNumbers
       );
 
@@ -77,6 +84,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       });
 
     } catch (error) {
+      console.error('Erro detalhado:', error);
       toast({
         title: "Erro na Geração",
         description: error instanceof Error ? error.message : "Erro desconhecido",
