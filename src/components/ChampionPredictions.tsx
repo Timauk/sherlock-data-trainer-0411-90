@@ -50,7 +50,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   }, []);
 
   const handlePredictionsGenerated = useCallback(async () => {
-    if (!trainedModel || !lastConcursoNumbers) {
+    if (!trainedModel || !champion || !lastConcursoNumbers) {
       toast({
         title: "Erro",
         description: "Modelo ou dados não disponíveis",
@@ -63,7 +63,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
       setIsGenerating(true);
       
       const newPredictions = await generatePredictions(
-        champion!,
+        champion,
         trainedModel,
         lastConcursoNumbers,
         selectedNumbers

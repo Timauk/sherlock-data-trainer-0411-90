@@ -1,8 +1,8 @@
 import * as tf from '@tensorflow/tfjs';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
-import { PredictionResult } from '../types';
 import { generateCorePredictions } from './predictionCore';
+import { PredictionResult } from '../types';
 
 export const generatePredictions = async (
   champion: Player,
@@ -17,19 +17,25 @@ export const generatePredictions = async (
       inputNumbers: lastConcursoNumbers
     });
 
+    // Generate base predictions
     const probabilities = await generateCorePredictions(trainedModel, lastConcursoNumbers);
     
-    const predictions = probabilities
-      .map((prob, index) => ({
-        number: index + 1,
-        probability: prob * (champion.weights[index % champion.weights.length] || 1)
-      }))
+    // Apply champion weights
+    const weightedPredictions = probabilities.map((prob, index) => ({
+      number: index + 1,
+      probability: prob * (champion.weights[index % champion.weights.length] || 1)
+    }));
+
+    // Select top 15 numbers
+    const predictions = weightedPredictions
       .sort((a, b) => b.probability - a.probability)
       .slice(0, 15)
       .map(p => p.number)
       .sort((a, b) => a - b);
 
-    const matches = predictions.filter(n => selectedNumbers.includes(n)).length;
+    const matches = selectedNumbers.length > 0 
+      ? predictions.filter(n => selectedNumbers.includes(n)).length 
+      : 0;
 
     return [{
       numbers: predictions,
