@@ -32,6 +32,13 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
+  // Gerar predições automaticamente quando o modelo e campeão estiverem disponíveis
+  useEffect(() => {
+    if (trainedModel && champion && lastConcursoNumbers.length > 0) {
+      handlePredictionsGenerated();
+    }
+  }, [trainedModel, champion, lastConcursoNumbers]);
+
   const handleNumbersSelected = useCallback((numbers: number[]) => {
     setSelectedNumbers(numbers);
     setPredictions(prev =>
@@ -75,6 +82,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
         description: error instanceof Error ? error.message : "Erro desconhecido",
         variant: "destructive"
       });
+      systemLogger.error('prediction', 'Erro ao gerar predições', { error });
     } finally {
       setIsGenerating(false);
     }
@@ -116,6 +124,7 @@ const ChampionPredictions: React.FC<ChampionPredictionsProps> = ({
         description: error instanceof Error ? error.message : "Erro desconhecido",
         variant: "destructive"
       });
+      systemLogger.error('prediction', 'Erro na geração direta', { error });
     } finally {
       setIsGenerating(false);
     }
