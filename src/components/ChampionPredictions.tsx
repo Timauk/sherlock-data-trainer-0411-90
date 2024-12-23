@@ -10,10 +10,11 @@ import { systemLogger } from '../utils/logging/systemLogger';
 import { PredictionsHeader } from './predictions/PredictionsHeader';
 import { PredictionResult } from '@/features/predictions/types';
 import { generatePredictions, generateDirectPredictions } from '@/features/predictions/utils/predictionUtils';
+import type { LayersModel } from '@tensorflow/tfjs';
 
 interface ChampionPredictionsProps {
   champion: Player | undefined;
-  trainedModel: tf.LayersModel | null;
+  trainedModel: LayersModel | null;
   lastConcursoNumbers: number[];
   isServerProcessing?: boolean;
   csvProgress?: number;
