@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
-import { PLAYER_BASE_WEIGHTS, PREDICTION_CONFIG } from '@/utils/constants';
+import { PLAYER_BASE_WEIGHTS } from '@/utils/constants';
 
 export const usePlayerPredictions = () => {
   const generatePrediction = useCallback(async (
@@ -24,16 +24,20 @@ export const usePlayerPredictions = () => {
       const prediction = model.predict(inputTensor) as tf.Tensor;
       const probabilities = Array.from(await prediction.data());
 
-      // Aplicar pesos do jogador
-      const weightedPredictions = probabilities.map((prob, index) => ({
-        number: index + 1,
-        probability: prob * (Object.values(PLAYER_BASE_WEIGHTS)[index % Object.keys(PLAYER_BASE_WEIGHTS).length] / 1000)
-      }));
+      // Aplicar pesos individuais do jogador para personalizar a predição
+      const weightedPredictions = probabilities.map((prob, index) => {
+        const playerWeight = player.weights[index % player.weights.length];
+        const baseWeight = Object.values(PLAYER_BASE_WEIGHTS)[index % Object.keys(PLAYER_BASE_WEIGHTS).length];
+        return {
+          number: index + 1,
+          probability: prob * (playerWeight / 1000) * (baseWeight / 1000)
+        };
+      });
 
-      // Ordenar e selecionar os números mais prováveis
+      // Ordenar e selecionar os 15 números mais prováveis
       const selectedNumbers = weightedPredictions
         .sort((a, b) => b.probability - a.probability)
-        .slice(0, PREDICTION_CONFIG.NUMBERS_PER_GAME)
+        .slice(0, 15)
         .map(p => p.number)
         .sort((a, b) => a - b);
 

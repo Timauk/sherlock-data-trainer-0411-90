@@ -18,13 +18,12 @@ export const useGamePlayers = () => {
       });
       
       const initialPlayers: Player[] = Array.from({ length: numPlayers }, (_, index) => {
-        const weights = Object.values(PLAYER_BASE_WEIGHTS);
-        
-        systemLogger.log('player', `Criando jogador #${index + 1}`, {
-          weights: PLAYER_BASE_WEIGHTS,
-          timestamp: new Date().toISOString()
+        // Criar pesos personalizados para cada jogador
+        const weights = Object.values(PLAYER_BASE_WEIGHTS).map(baseWeight => {
+          const variation = (Math.random() - 0.5) * 0.2; // 20% de variação
+          return Math.max(1, Math.round(baseWeight * (1 + variation)));
         });
-
+        
         return {
           id: index + 1,
           score: 0,
@@ -42,11 +41,6 @@ export const useGamePlayers = () => {
 
       setChampion(initialPlayers[0]);
       setPlayers(initialPlayers);
-
-      systemLogger.log('initialization', 'Jogadores criados com sucesso', {
-        count: initialPlayers.length,
-        timestamp: new Date().toISOString()
-      });
 
       return initialPlayers;
     } catch (error) {
@@ -86,6 +80,7 @@ export const useGamePlayers = () => {
 
       setPlayers(updatedPlayers);
       
+      // Atualizar campeão se necessário
       const newChampion = updatedPlayers.reduce((prev, current) => 
         current.score > prev.score ? current : prev
       );
