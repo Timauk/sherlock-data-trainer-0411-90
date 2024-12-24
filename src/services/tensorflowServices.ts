@@ -2,27 +2,24 @@ import * as tf from '@tensorflow/tfjs';
 import { systemLogger } from '@/utils/logging/systemLogger';
 
 const getApiUrl = () => {
-  // Remove trailing slashes and normalize URL
+  // Get base URL from env or window location
   const url = import.meta.env.VITE_API_URL || window.location.origin;
   
-  // Remove any trailing slashes
-  const baseUrl = url.replace(/\/+$/, '');
-  
-  // If it's a lovableproject.com URL, ensure we're using HTTPS and correct port
-  if (baseUrl.includes('lovableproject.com')) {
-    const cleanUrl = baseUrl
+  // Clean the URL by removing trailing slashes and normalizing
+  const cleanUrl = url
+    .replace(/\/+$/, '')         // Remove trailing slashes
+    .replace(/:\d+$/, '');       // Remove any existing port
+    
+  // If it's a lovableproject.com URL
+  if (cleanUrl.includes('lovableproject.com')) {
+    return cleanUrl
       .replace('http://', 'https://')  // Force HTTPS
-      .replace(/:\d*/, '')            // Remove any port number
-      .replace(/\/+$/, '');           // Remove trailing slashes again
-    return `${cleanUrl}:3001`;        // Add correct port
+      .replace(/:\d+/, '')             // Remove any port number again (just to be safe)
+      + ':3001';                       // Add the correct port
   }
   
-  // For localhost, ensure correct port
-  if (baseUrl.includes('localhost')) {
-    return baseUrl.replace(/:\d+/, ':3001');
-  }
-  
-  return baseUrl;
+  // For localhost or other environments
+  return cleanUrl + ':3001';
 };
 
 export class TensorFlowServices {
