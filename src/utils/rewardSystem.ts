@@ -8,9 +8,9 @@ export const calculateReward = (matches: number): number => {
     timestamp: new Date().toISOString()
   });
 
-  // Sistema de recompensa baseado no número de acertos
   let reward = 0;
   
+  // Sistema de recompensa baseado no número de acertos
   if (matches === 15) {
     reward = 32;
   } else if (matches === 14) {
@@ -35,7 +35,7 @@ export const calculateReward = (matches: number): number => {
 
   const endTime = performance.now();
 
-  systemLogger.log('reward', `Recompensa calculada para ${matches} acertos`, {
+  systemLogger.log('reward', `Recompensa calculada: ${reward}`, {
     matches,
     reward,
     processingTime: endTime - startTime,
@@ -63,7 +63,8 @@ export const logReward = (matches: number, playerId: number): string => {
     matches,
     reward,
     timestamp: new Date().toISOString(),
-    type: reward > 0 ? 'premiação' : reward < 0 ? 'penalidade' : 'neutro'
+    type: reward > 0 ? 'premiação' : reward < 0 ? 'penalidade' : 'neutro',
+    impactoScore: reward > 0 ? 'positivo' : reward < 0 ? 'negativo' : 'neutro'
   });
 
   return message;
