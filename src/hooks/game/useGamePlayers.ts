@@ -20,9 +20,8 @@ export const useGamePlayers = () => {
       });
       
       const initialPlayers: Player[] = Array.from({ length: numPlayers }, (_, index) => {
-        // Criar pesos personalizados para cada jogador
         const weights = Object.values(PLAYER_BASE_WEIGHTS).map(baseWeight => {
-          const variation = (Math.random() - 0.5) * 0.2; // 20% de variação
+          const variation = (Math.random() - 0.5) * 0.2;
           const finalWeight = Math.max(1, Math.round(baseWeight * (1 + variation)));
           
           systemLogger.log('weights', `Peso gerado para jogador #${index + 1}`, {
@@ -51,6 +50,7 @@ export const useGamePlayers = () => {
 
         systemLogger.log('player', `Jogador #${player.id} criado`, {
           weights: weights.length,
+          initialState: player,
           timestamp: new Date().toISOString()
         });
 
@@ -60,9 +60,15 @@ export const useGamePlayers = () => {
       setChampion(initialPlayers[0]);
       setPlayers(initialPlayers);
 
-      systemLogger.log('initialization', 'Jogadores inicializados com sucesso', {
+      systemLogger.log('player', 'Estado inicial dos jogadores', {
         totalPlayers: initialPlayers.length,
         championId: initialPlayers[0].id,
+        playersState: initialPlayers.map(p => ({
+          id: p.id,
+          score: p.score,
+          fitness: p.fitness,
+          weightsLength: p.weights.length
+        })),
         timestamp: new Date().toISOString()
       });
 
@@ -82,10 +88,16 @@ export const useGamePlayers = () => {
     inputData: number[]
   ) => {
     try {
-      systemLogger.log('players', 'Iniciando atualização dos jogadores', {
+      systemLogger.log('player', 'Iniciando atualização dos jogadores', {
         playerCount: currentPlayers.length,
         modelLayers: model.layers.length,
         inputDataLength: inputData.length,
+        currentPlayersState: currentPlayers.map(p => ({
+          id: p.id,
+          score: p.score,
+          fitness: p.fitness,
+          predictions: p.predictions
+        })),
         timestamp: new Date().toISOString()
       });
 
@@ -98,10 +110,16 @@ export const useGamePlayers = () => {
           systemLogger.log('prediction', `Predições geradas para jogador #${player.id}`, {
             predictionTime: endTime - startTime,
             predictionsLength: predictions.length,
+            predictions,
+            playerState: {
+              previousScore: player.score,
+              previousFitness: player.fitness,
+              weights: player.weights.length
+            },
             timestamp: new Date().toISOString()
           });
 
-          return {
+          const updatedPlayer = {
             ...player,
             predictions,
             modelConnection: {
@@ -110,26 +128,56 @@ export const useGamePlayers = () => {
               lastUpdate: new Date().toISOString()
             }
           };
+
+          systemLogger.log('player', `Estado atualizado do jogador #${player.id}`, {
+            previousState: {
+              score: player.score,
+              fitness: player.fitness,
+              predictions: player.predictions
+            },
+            newState: {
+              score: updatedPlayer.score,
+              fitness: updatedPlayer.fitness,
+              predictions: updatedPlayer.predictions
+            },
+            timestamp: new Date().toISOString()
+          });
+
+          return updatedPlayer;
         })
       );
 
       setPlayers(updatedPlayers);
       
-      // Atualizar campeão se necessário
       const newChampion = updatedPlayers.reduce((prev, current) => 
         current.score > prev.score ? current : prev
       );
       
       if (!champion || newChampion.score > champion.score) {
-        setChampion(newChampion);
-        systemLogger.log('player', `Novo campeão: Jogador #${newChampion.id}`, {
+        systemLogger.log('player', `Novo campeão detectado: Jogador #${newChampion.id}`, {
           previousChampionId: champion?.id,
-          newScore: newChampion.score,
-          oldScore: champion?.score,
+          previousChampionScore: champion?.score,
+          newChampionScore: newChampion.score,
           improvement: champion ? newChampion.score - champion.score : 'N/A',
+          championState: {
+            fitness: newChampion.fitness,
+            predictions: newChampion.predictions,
+            weights: newChampion.weights.length
+          },
           timestamp: new Date().toISOString()
         });
+
+        setChampion(newChampion);
       }
+
+      systemLogger.log('player', 'Resumo da atualização dos jogadores', {
+        totalPlayers: updatedPlayers.length,
+        averageScore: updatedPlayers.reduce((acc, p) => acc + p.score, 0) / updatedPlayers.length,
+        highestScore: Math.max(...updatedPlayers.map(p => p.score)),
+        lowestScore: Math.min(...updatedPlayers.map(p => p.score)),
+        championId: newChampion.id,
+        timestamp: new Date().toISOString()
+      });
 
       return updatedPlayers;
     } catch (error) {

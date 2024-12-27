@@ -14,20 +14,23 @@ export const usePlayerPredictions = () => {
       systemLogger.log('prediction', `Iniciando predição para jogador #${player.id}`, {
         inputDataLength: inputData.length,
         weightsLength: player.weights.length,
-        modelLayers: model.layers.length,
+        playerState: {
+          score: player.score,
+          fitness: player.fitness,
+          previousPredictions: player.predictions
+        },
         timestamp: new Date().toISOString()
       });
 
-      // Criar tensor com os dados de entrada
       const inputTensor = tf.tensor2d([inputData]);
       
       systemLogger.log('tensor', 'Tensor de entrada criado', {
         shape: inputTensor.shape,
         dtype: inputTensor.dtype,
-        playerId: player.id
+        playerId: player.id,
+        timestamp: new Date().toISOString()
       });
       
-      // Gerar predição base do modelo
       const prediction = model.predict(inputTensor) as tf.Tensor;
       const probabilities = Array.from(await prediction.data());
 
@@ -35,10 +38,10 @@ export const usePlayerPredictions = () => {
         playerId: player.id,
         probabilitiesLength: probabilities.length,
         minProb: Math.min(...probabilities),
-        maxProb: Math.max(...probabilities)
+        maxProb: Math.max(...probabilities),
+        timestamp: new Date().toISOString()
       });
 
-      // Aplicar pesos individuais do jogador
       const weightedPredictions = probabilities.map((prob, index) => {
         const playerWeight = player.weights[index % player.weights.length];
         const baseWeight = Object.values(PLAYER_BASE_WEIGHTS)[index % Object.keys(PLAYER_BASE_WEIGHTS).length];
@@ -49,7 +52,8 @@ export const usePlayerPredictions = () => {
           originalProb: prob,
           playerWeight,
           baseWeight,
-          weightedProb
+          weightedProb,
+          timestamp: new Date().toISOString()
         });
         
         return {
@@ -58,7 +62,6 @@ export const usePlayerPredictions = () => {
         };
       });
 
-      // Ordenar e selecionar os 15 números mais prováveis
       const selectedNumbers = weightedPredictions
         .sort((a, b) => b.probability - a.probability)
         .slice(0, 15)
@@ -67,10 +70,14 @@ export const usePlayerPredictions = () => {
 
       systemLogger.log('prediction', `Predição final para jogador #${player.id}`, {
         predictions: selectedNumbers,
+        weightedPredictions: weightedPredictions.slice(0, 15),
+        playerState: {
+          score: player.score,
+          fitness: player.fitness
+        },
         timestamp: new Date().toISOString()
       });
 
-      // Limpar tensores
       inputTensor.dispose();
       prediction.dispose();
 
