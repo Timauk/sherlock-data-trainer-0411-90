@@ -20,17 +20,25 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
   onClonePlayer,
 }) => {
   useEffect(() => {
-    systemLogger.log('player', `Card do jogador #${player.id} renderizado`, {
+    systemLogger.log('player', `Renderizando PlayerCard #${player.id}`, {
+      playerId: player.id,
       score: player.score,
       hasPredictions: player.predictions?.length > 0,
       predictions: player.predictions,
       weights: player.weights?.length,
+      modelConnection: player.modelConnection,
+      matchHistory: player.matchHistory,
       timestamp: new Date().toISOString()
     });
   }, [player]);
 
   const formatNumbers = (numbers: number[]): string => {
     if (!numbers || numbers.length === 0) {
+      systemLogger.log('player', `Jogador #${player.id} sem predições`, {
+        playerId: player.id,
+        modelStatus: player.modelConnection?.lastUpdate || 'Nunca atualizado',
+        timestamp: new Date().toISOString()
+      });
       return 'Aguardando predições...';
     }
     return numbers.map(n => n.toString().padStart(2, '0')).join(', ');
@@ -38,6 +46,10 @@ const PlayerCard: React.FC<PlayerCardProps> = ({
 
   const getLastMatchHistory = () => {
     if (!player.matchHistory || player.matchHistory.length === 0) {
+      systemLogger.log('player', `Jogador #${player.id} sem histórico de partidas`, {
+        playerId: player.id,
+        timestamp: new Date().toISOString()
+      });
       return {
         matches: 0,
         score: 0,

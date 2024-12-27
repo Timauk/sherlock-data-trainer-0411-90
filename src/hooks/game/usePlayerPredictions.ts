@@ -12,12 +12,19 @@ export const usePlayerPredictions = () => {
   ): Promise<number[]> => {
     try {
       systemLogger.log('prediction', `Iniciando predição para jogador #${player.id}`, {
+        playerId: player.id,
         inputDataLength: inputData.length,
         weightsLength: player.weights.length,
+        modelInfo: {
+          hasModel: !!model,
+          layersCount: model?.layers?.length,
+          isCompiled: model?.compiled
+        },
         playerState: {
           score: player.score,
           fitness: player.fitness,
-          previousPredictions: player.predictions
+          previousPredictions: player.predictions,
+          modelConnection: player.modelConnection
         },
         timestamp: new Date().toISOString()
       });
@@ -73,7 +80,12 @@ export const usePlayerPredictions = () => {
         weightedPredictions: weightedPredictions.slice(0, 15),
         playerState: {
           score: player.score,
-          fitness: player.fitness
+          fitness: player.fitness,
+          modelConnection: {
+            ...player.modelConnection,
+            lastPrediction: selectedNumbers,
+            lastUpdate: new Date().toISOString()
+          }
         },
         timestamp: new Date().toISOString()
       });
@@ -87,6 +99,7 @@ export const usePlayerPredictions = () => {
         error,
         inputData,
         playerWeights: player.weights,
+        modelStatus: player.modelConnection,
         timestamp: new Date().toISOString()
       });
       throw error;
