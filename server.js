@@ -7,6 +7,7 @@ import compression from 'compression';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { connectionLogger } from './src/utils/logging/connectionLogger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,6 +36,13 @@ const corsOptions = {
       '.lovable.app'
     ];
     
+    // Log all CORS requests
+    logger.info('CORS request received', {
+      origin,
+      allowedOrigins,
+      timestamp: new Date().toISOString()
+    });
+    
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
       logger.info('\x1b[33m%s\x1b[0m', 'Allowing request with no origin');
@@ -43,7 +51,6 @@ const corsOptions = {
     
     const isAllowed = allowedOrigins.some(allowed => {
       if (allowed.startsWith('.')) {
-        // Remove port number from origin for domain matching
         const originWithoutPort = origin.replace(/:\d+$/, '');
         return originWithoutPort.includes(allowed);
       }
@@ -60,6 +67,10 @@ const corsOptions = {
       allowedOrigins,
       timestamp: new Date().toISOString()
     });
+    
+    // Log CORS error
+    connectionLogger.logCorsError(origin, allowedOrigins.join(', '));
+    
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -216,14 +227,17 @@ try {
     });
   });
 
-  // WebSocket error handling
+  // Enhanced WebSocket error handling
   server.on('upgrade', (request, socket, head) => {
+    const url = request.url;
+    connectionLogger.logWebSocketAttempt(url);
+    
     socket.on('error', (err) => {
-      logger.error('\x1b[31m%s\x1b[0m', 'WebSocket error:', {
-        error: err.message,
-        stack: err.stack,
-        timestamp: new Date().toISOString()
-      });
+      connectionLogger.logWebSocketError(url, err);
+    });
+    
+    socket.on('connect', () => {
+      connectionLogger.logWebSocketSuccess(url);
     });
   });
 
