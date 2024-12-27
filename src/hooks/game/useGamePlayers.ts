@@ -122,7 +122,7 @@ export const useGamePlayers = () => {
       
       if (!champion || newChampion.score > champion.score) {
         setChampion(newChampion);
-        systemLogger.log('champion', `Novo campeão: Jogador #${newChampion.id}`, {
+        systemLogger.log('player', `Novo campeão: Jogador #${newChampion.id}`, {
           previousChampionId: champion?.id,
           newScore: newChampion.score,
           oldScore: champion?.score,

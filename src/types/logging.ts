@@ -4,7 +4,9 @@ export interface LogEntry {
         'checkpoint' | 'learning' | 'model' | 'initialization' | 'training' | 
         'csv' | 'bank' | 'evolution' | 'players' | 'game' | 'error' | 
         'features' | 'weights' | 'tensor' | 'metrics' | 'validation' | 'reward' |
-        'update' | 'champion';
+        'update' | 'champion' | 'clone';
+  message: string;
+  details?: any;
 }
 
 export interface SystemLoggerInterface {
