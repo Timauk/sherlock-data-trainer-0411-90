@@ -7,7 +7,6 @@ import { Player } from '@/types/gameTypes';
 import { systemLogger } from '@/utils/logging/systemLogger';
 import { PLAYER_BASE_WEIGHTS } from '@/utils/constants';
 
-// Componente principal que gerencia os cards dos jogadores
 export const PlayerSystem = ({ players, onPlayerClick, onClonePlayer }: {
   players: Player[];
   onPlayerClick: (player: Player) => void;
@@ -16,6 +15,9 @@ export const PlayerSystem = ({ players, onPlayerClick, onClonePlayer }: {
   useEffect(() => {
     systemLogger.log('players', 'Sistema de jogadores inicializado', {
       totalPlayers: players.length,
+      averageScore: players.reduce((acc, p) => acc + p.score, 0) / players.length,
+      highestScore: Math.max(...players.map(p => p.score)),
+      lowestScore: Math.min(...players.map(p => p.score)),
       timestamp: new Date().toISOString()
     });
   }, [players]);
@@ -37,7 +39,6 @@ export const PlayerSystem = ({ players, onPlayerClick, onClonePlayer }: {
   );
 };
 
-// Card individual do jogador
 const PlayerCard = ({ 
   player, 
   isTopPlayer, 
@@ -51,12 +52,15 @@ const PlayerCard = ({
 }) => {
   useEffect(() => {
     systemLogger.log('player', `Card do jogador #${player.id} renderizado`, {
-      predictions: player.predictions,
-      weights: player.weights,
+      predictions: player.predictions?.length || 0,
+      weights: player.weights?.length || 0,
       score: player.score,
+      isTopPlayer,
+      fitness: player.fitness,
+      generation: player.generation,
       timestamp: new Date().toISOString()
     });
-  }, [player]);
+  }, [player, isTopPlayer]);
 
   const formatNumbers = (numbers: number[]): string => {
     if (!numbers || numbers.length === 0) {
@@ -70,7 +74,12 @@ const PlayerCard = ({
 
   return (
     <Card 
-      onClick={() => onPlayerClick(player)}
+      onClick={() => {
+        systemLogger.log('player', `Card do jogador #${player.id} clicado`, {
+          timestamp: new Date().toISOString()
+        });
+        onPlayerClick(player);
+      }}
       className={`p-4 rounded-lg shadow cursor-pointer transition-all hover:shadow-lg
         ${isTopPlayer ? 'bg-yellow-100 dark:bg-yellow-900 border-2 border-yellow-500' : 'bg-card'}`}
     >

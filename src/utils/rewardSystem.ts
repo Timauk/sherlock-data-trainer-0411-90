@@ -1,7 +1,9 @@
 import { systemLogger } from './logging/systemLogger';
 
 export const calculateReward = (matches: number): number => {
-  systemLogger.log('reward', 'Calculando recompensa', {
+  const startTime = performance.now();
+  
+  systemLogger.log('reward', 'Iniciando cálculo de recompensa', {
     matches,
     timestamp: new Date().toISOString()
   });
@@ -31,9 +33,12 @@ export const calculateReward = (matches: number): number => {
     reward = -32; // Penalização máxima para menos de 7 acertos
   }
 
+  const endTime = performance.now();
+
   systemLogger.log('reward', `Recompensa calculada para ${matches} acertos`, {
     matches,
     reward,
+    processingTime: endTime - startTime,
     formula: 'Tabela fixa de pontuação',
     timestamp: new Date().toISOString()
   });
@@ -57,7 +62,8 @@ export const logReward = (matches: number, playerId: number): string => {
     playerId,
     matches,
     reward,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    type: reward > 0 ? 'premiação' : reward < 0 ? 'penalidade' : 'neutro'
   });
 
   return message;
