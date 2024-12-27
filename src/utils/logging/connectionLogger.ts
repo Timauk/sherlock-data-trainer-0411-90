@@ -2,42 +2,47 @@ import { systemLogger } from './systemLogger';
 
 class ConnectionLogger {
   logWebSocketError(url: string, error: any) {
-    systemLogger.error('connection', 'WebSocket connection failed', {
+    systemLogger.error('system', 'WebSocket connection failed', {
       url,
       error: error?.message || error,
       timestamp: new Date().toISOString(),
-      stack: error?.stack
+      stack: error?.stack,
+      type: 'connection'
     });
   }
 
   logWebSocketAttempt(url: string) {
-    systemLogger.log('connection', 'Attempting WebSocket connection', {
+    systemLogger.log('system', 'Attempting WebSocket connection', {
       url,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      type: 'connection'
     });
   }
 
   logWebSocketSuccess(url: string) {
-    systemLogger.log('connection', 'WebSocket connection established', {
+    systemLogger.log('system', 'WebSocket connection established', {
       url,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      type: 'connection'
     });
   }
 
   logCorsError(url: string, origin: string) {
-    systemLogger.error('connection', 'CORS error detected', {
+    systemLogger.error('system', 'CORS error detected', {
       url,
       origin,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      type: 'connection'
     });
   }
 
   logFetchError(url: string, error: any) {
-    systemLogger.error('connection', 'Fetch request failed', {
+    systemLogger.error('system', 'Fetch request failed', {
       url,
       error: error?.message || error,
       status: error?.status,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      type: 'connection'
     });
   }
 }
