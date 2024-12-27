@@ -18,7 +18,7 @@ export const usePlayerPredictions = () => {
         modelInfo: {
           hasModel: !!model,
           layersCount: model?.layers?.length,
-          isCompiled: model?.compiled
+          isCompiled: model?.optimizer !== null
         },
         playerState: {
           score: player.score,
