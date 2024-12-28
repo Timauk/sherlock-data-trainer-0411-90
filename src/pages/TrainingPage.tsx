@@ -6,6 +6,9 @@ import { systemLogger } from '@/utils/logging/systemLogger';
 import TrainingProgress from '@/components/training/TrainingProgress';
 import TrainingControls from '@/components/training/TrainingControls';
 import TrainingChart from '@/components/TrainingChart';
+import TrainingLegend from '@/components/training/TrainingLegend';
+import TrainingAdvancedControls from '@/components/training/TrainingAdvancedControls';
+import RealTimeSuggestions from '@/components/training/RealTimeSuggestions';
 import { extractFeatures } from '@/utils/features/featureEngineering';
 import { createEnhancedModel } from '@/utils/training/modelArchitecture';
 import { performCrossValidation } from '@/utils/training/crossValidation';
@@ -36,6 +39,12 @@ const TrainingPage: React.FC = () => {
     validationMetrics,
     setValidationMetrics
   } = useTrainingState();
+
+  // Novos estados para controles avançados
+  const [learningRate, setLearningRate] = React.useState(0.001);
+  const [validationSplit, setValidationSplit] = React.useState(0.2);
+  const [optimizer, setOptimizer] = React.useState("adam");
+  const [useEarlyStopping, setUseEarlyStopping] = React.useState(true);
   
   const { toast } = useToast();
 
@@ -149,13 +158,12 @@ const TrainingPage: React.FC = () => {
       systemLogger.log('training', 'Iniciando treinamento do modelo', {
         epochs,
         batchSize,
+        learningRate,
+        optimizer,
+        validationSplit,
+        useEarlyStopping,
         dataSize: trainingData.length,
-        timestamp: new Date().toISOString(),
-        configuration: {
-          learningRate: 0.001,
-          optimizer: 'adam',
-          lossFunction: 'binaryCrossentropy'
-        }
+        timestamp: new Date().toISOString()
       });
 
       const model = createEnhancedModel();
@@ -194,40 +202,49 @@ const TrainingPage: React.FC = () => {
       await model.fit(tf.tensor2d(features), tf.tensor2d(labels), {
         epochs: epochs,
         batchSize: parseInt(batchSize),
-        validationSplit: 0.2,
-        callbacks: {
-          onEpochBegin: (epoch) => {
-            systemLogger.log('training', `Iniciando época ${epoch + 1}`, {
-              timestamp: new Date().toISOString()
-            });
-          },
-          onEpochEnd: (epoch, logs) => {
-            const progress = ((epoch + 1) / epochs) * 100;
-            setProgress(progress);
-            if (logs) {
-              setTrainingLogs(currentLogs => [...currentLogs, {
-                epoch: epoch + 1,
-                loss: logs.loss,
-                val_loss: logs.val_loss,
-                accuracy: logs.acc,
-                val_accuracy: logs.val_acc
-              }]);
-              
-              const convergenceRate = epoch > 0 && trainingLogs.length > 0 ? 
-                (trainingLogs[trainingLogs.length - 1].loss - logs.loss) / trainingLogs[trainingLogs.length - 1].loss : 
-                0;
-              
-              systemLogger.log('training', `Época ${epoch + 1} finalizada`, { 
-                loss: logs.loss,
-                val_loss: logs.val_loss,
-                accuracy: logs.acc,
-                convergenceRate,
-                progress: `${progress.toFixed(2)}%`,
-                timeElapsed: new Date().toISOString()
+        validationSplit: validationSplit,
+        optimizer: tf.train[optimizer](learningRate),
+        callbacks: [
+          ...(useEarlyStopping ? [
+            tf.callbacks.earlyStopping({
+              monitor: 'val_loss',
+              patience: 5
+            })
+          ] : []),
+          {
+            onEpochBegin: (epoch) => {
+              systemLogger.log('training', `Iniciando época ${epoch + 1}`, {
+                timestamp: new Date().toISOString()
               });
+            },
+            onEpochEnd: (epoch, logs) => {
+              const progress = ((epoch + 1) / epochs) * 100;
+              setProgress(progress);
+              
+              if (logs) {
+                const convergenceRate = epoch > 0 && trainingLogs.length > 0 ? 
+                  (trainingLogs[trainingLogs.length - 1].loss - logs.loss) / trainingLogs[trainingLogs.length - 1].loss : 
+                  0;
+
+                setTrainingLogs(currentLogs => [...currentLogs, {
+                  epoch: epoch + 1,
+                  loss: logs.loss,
+                  val_loss: logs.val_loss,
+                  accuracy: logs.acc,
+                  val_accuracy: logs.val_acc,
+                  convergenceRate
+                }]);
+                
+                systemLogger.log('training', `Época ${epoch + 1} finalizada`, { 
+                  ...logs,
+                  convergenceRate,
+                  progress: `${progress.toFixed(2)}%`,
+                  timeElapsed: new Date().toISOString()
+                });
+              }
             }
           }
-        }
+        ]
       });
 
       setModel(model);
@@ -258,64 +275,93 @@ const TrainingPage: React.FC = () => {
     }
   };
 
+  const lastLog = trainingLogs[trainingLogs.length - 1];
+
   return (
     <Card className="p-6 space-y-6">
       <h1 className="text-2xl font-bold">Treinamento Avançado</h1>
       
-      <div className="space-y-4">
-        <input
-          type="file"
-          accept=".csv"
-          onChange={handleFileUpload}
-          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
-        />
+      <TrainingLegend />
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <input
+            type="file"
+            accept=".csv"
+            onChange={handleFileUpload}
+            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+          />
 
-        <TrainingControls
-          epochs={epochs}
-          setEpochs={setEpochs}
-          batchSize={batchSize}
-          setBatchSize={setBatchSize}
-        />
+          <TrainingControls
+            epochs={epochs}
+            setEpochs={setEpochs}
+            batchSize={batchSize}
+            setBatchSize={setBatchSize}
+          />
 
-        {validationMetrics.length > 0 && (
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              Média de Precisão na Validação: {
-                (validationMetrics.reduce((acc, curr) => acc + curr.accuracy, 0) / validationMetrics.length * 100).toFixed(2)
-              }%
-            </AlertDescription>
-          </Alert>
-        )}
+          <TrainingAdvancedControls
+            learningRate={learningRate}
+            setLearningRate={setLearningRate}
+            validationSplit={validationSplit}
+            setValidationSplit={setValidationSplit}
+            optimizer={optimizer}
+            setOptimizer={setOptimizer}
+            useEarlyStopping={useEarlyStopping}
+            setUseEarlyStopping={setUseEarlyStopping}
+          />
 
-        <div className="flex gap-4">
-          <Button
-            onClick={trainModel}
-            disabled={isTraining || !trainingData.length}
-            className="flex-1"
-          >
-            {isTraining ? "Treinando..." : "Iniciar Treinamento"}
-          </Button>
+          <div className="flex gap-4">
+            <Button
+              onClick={trainModel}
+              disabled={isTraining || !trainingData.length}
+              className="flex-1"
+            >
+              {isTraining ? "Treinando..." : "Iniciar Treinamento"}
+            </Button>
 
-          <Button
-            onClick={saveModel}
-            disabled={!model}
-            variant="outline"
-            className="flex gap-2"
-          >
-            <Save className="h-4 w-4" />
-            Salvar Modelo
-          </Button>
+            <Button
+              onClick={saveModel}
+              disabled={!model}
+              variant="outline"
+              className="flex gap-2"
+            >
+              <Save className="h-4 w-4" />
+              Salvar Modelo
+            </Button>
+          </div>
         </div>
 
-        {isTraining && (
-          <TrainingProgress trainingProgress={progress} />
-        )}
+        <div className="space-y-4">
+          {lastLog && (
+            <RealTimeSuggestions
+              loss={lastLog.loss}
+              accuracy={lastLog.accuracy}
+              valLoss={lastLog.val_loss}
+              epoch={lastLog.epoch}
+              convergenceRate={lastLog.convergenceRate}
+            />
+          )}
 
-        {trainingLogs.length > 0 && (
-          <TrainingChart logs={trainingLogs} />
-        )}
+          {validationMetrics.length > 0 && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Média de Precisão na Validação: {
+                  (validationMetrics.reduce((acc, curr) => acc + curr.accuracy, 0) / validationMetrics.length * 100).toFixed(2)
+                }%
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
       </div>
+
+      {isTraining && (
+        <TrainingProgress trainingProgress={progress} />
+      )}
+
+      {trainingLogs.length > 0 && (
+        <TrainingChart logs={trainingLogs} />
+      )}
     </Card>
   );
 };
