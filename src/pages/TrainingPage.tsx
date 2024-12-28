@@ -10,6 +10,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from 'lucide-react';
 import { useTrainingState } from '@/hooks/useTrainingState';
 import { useTrainingLogic } from '@/hooks/useTrainingLogic';
+import { systemLogger } from '@/utils/logging/systemLogger';
+import { useToast } from "@/hooks/use-toast";
 
 const TrainingPage: React.FC = () => {
   const {
@@ -36,6 +38,8 @@ const TrainingPage: React.FC = () => {
     validationMetrics,
     trainModel
   } = useTrainingLogic();
+
+  const { toast } = useToast();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
