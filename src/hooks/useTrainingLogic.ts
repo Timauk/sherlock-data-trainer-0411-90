@@ -27,6 +27,11 @@ export const useTrainingLogic = () => {
   ) => {
     if (!trainingData.length) {
       systemLogger.warn('training', 'Tentativa de treinar sem dados');
+      toast({
+        title: "Erro",
+        description: "Nenhum dado de treinamento fornecido",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -45,89 +50,123 @@ export const useTrainingLogic = () => {
         timestamp: new Date().toISOString()
       });
 
+      // Verificar se o TensorFlow está pronto
+      await tf.ready();
+      
       const newModel = createEnhancedModel(optimizer, learningRate);
       
+      // Log do formato dos dados
+      systemLogger.log('training', 'Formato dos dados de entrada', {
+        primeiraAmostra: trainingData[0],
+        tamanhoAmostra: trainingData[0].length,
+        totalAmostras: trainingData.length
+      });
+      
       const features = trainingData.map((numbers, i) => {
-        const allFeatures = extractFeatures(numbers, dates[i], trainingData);
-        return [
-          ...allFeatures.baseFeatures,
-          ...allFeatures.temporalFeatures,
-          ...allFeatures.lunarFeatures,
-          ...allFeatures.statisticalFeatures
-        ];
+        try {
+          const allFeatures = extractFeatures(numbers, dates[i], trainingData);
+          return [
+            ...allFeatures.baseFeatures,
+            ...allFeatures.temporalFeatures,
+            ...allFeatures.lunarFeatures,
+            ...allFeatures.statisticalFeatures
+          ];
+        } catch (error) {
+          systemLogger.error('training', 'Erro ao extrair features', { 
+            error: error instanceof Error ? error.message : 'Erro desconhecido',
+            amostra: numbers,
+            indice: i 
+          });
+          throw error;
+        }
       });
 
       const labels = trainingData.map(numbers => numbers.map(n => n / 25));
 
+      // Validação cruzada
       const metrics = await performCrossValidation(newModel, features, labels);
       setValidationMetrics(metrics);
 
-      await newModel.fit(tf.tensor2d(features), tf.tensor2d(labels), {
-        epochs: epochs,
-        batchSize: parseInt(batchSize),
-        validationSplit: validationSplit,
-        callbacks: [
-          ...(useEarlyStopping ? [
-            tf.callbacks.earlyStopping({
-              monitor: 'val_loss',
-              patience: 5
-            })
-          ] : []),
-          {
-            onEpochBegin: (epoch) => {
-              systemLogger.log('training', `Iniciando época ${epoch + 1}`, {
-                timestamp: new Date().toISOString()
-              });
-            },
-            onEpochEnd: (epoch, logs) => {
-              const progress = ((epoch + 1) / epochs) * 100;
-              setProgress(progress);
-              
-              if (logs) {
-                const convergenceRate = epoch > 0 && trainingLogs.length > 0 ? 
-                  (trainingLogs[trainingLogs.length - 1].loss - logs.loss) / trainingLogs[trainingLogs.length - 1].loss : 
-                  0;
+      // Converter para tensores
+      const xs = tf.tensor2d(features);
+      const ys = tf.tensor2d(labels);
 
-                setTrainingLogs(currentLogs => [...currentLogs, {
-                  epoch: epoch + 1,
-                  loss: logs.loss,
-                  val_loss: logs.val_loss,
-                  accuracy: logs.acc,
-                  val_accuracy: logs.val_acc,
-                  convergenceRate
-                }]);
-                
-                systemLogger.log('training', `Época ${epoch + 1} finalizada`, { 
-                  ...logs,
-                  convergenceRate,
-                  progress: `${progress.toFixed(2)}%`,
-                  timeElapsed: new Date().toISOString()
+      try {
+        const result = await newModel.fit(xs, ys, {
+          epochs: epochs,
+          batchSize: parseInt(batchSize),
+          validationSplit: validationSplit,
+          callbacks: [
+            ...(useEarlyStopping ? [
+              tf.callbacks.earlyStopping({
+                monitor: 'val_loss',
+                patience: 5
+              })
+            ] : []),
+            {
+              onEpochBegin: (epoch) => {
+                systemLogger.log('training', `Iniciando época ${epoch + 1}`, {
+                  timestamp: new Date().toISOString(),
+                  memoriaUsada: tf.memory()
                 });
+              },
+              onEpochEnd: (epoch, logs) => {
+                const progress = ((epoch + 1) / epochs) * 100;
+                setProgress(progress);
+                
+                if (logs) {
+                  const convergenceRate = epoch > 0 && trainingLogs.length > 0 ? 
+                    (trainingLogs[trainingLogs.length - 1].loss - logs.loss) / trainingLogs[trainingLogs.length - 1].loss : 
+                    0;
+
+                  setTrainingLogs(currentLogs => [...currentLogs, {
+                    epoch: epoch + 1,
+                    loss: logs.loss,
+                    val_loss: logs.val_loss,
+                    accuracy: logs.acc,
+                    val_accuracy: logs.val_acc,
+                    convergenceRate
+                  }]);
+                  
+                  systemLogger.log('training', `Época ${epoch + 1} finalizada`, { 
+                    ...logs,
+                    convergenceRate,
+                    progress: `${progress.toFixed(2)}%`,
+                    timeElapsed: new Date().toISOString()
+                  });
+                }
               }
             }
-          }
-        ]
-      });
+          ]
+        });
 
-      setModel(newModel);
-      
-      systemLogger.log('training', 'Treinamento concluído', {
-        finalLoss: trainingLogs[trainingLogs.length - 1]?.loss,
-        totalEpochs: epochs,
-        finalAccuracy: trainingLogs[trainingLogs.length - 1]?.accuracy,
-        timestamp: new Date().toISOString()
-      });
+        setModel(newModel);
+        
+        systemLogger.log('training', 'Treinamento concluído com sucesso', {
+          finalLoss: result.history.loss[result.history.loss.length - 1],
+          totalEpochs: epochs,
+          finalAccuracy: result.history.acc[result.history.acc.length - 1],
+          timestamp: new Date().toISOString()
+        });
 
-      toast({
-        title: "Treinamento Concluído",
-        description: "Modelo treinado com sucesso!"
-      });
+        toast({
+          title: "Sucesso",
+          description: "Modelo treinado com sucesso!",
+          variant: "default"
+        });
+      } finally {
+        // Limpar tensores
+        xs.dispose();
+        ys.dispose();
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       systemLogger.error('training', 'Erro detalhado no treinamento', { 
         error: errorMessage,
         stack: error instanceof Error ? error.stack : undefined,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        modelState: model ? 'existente' : 'null',
+        memoria: tf.memory()
       });
       
       toast({
