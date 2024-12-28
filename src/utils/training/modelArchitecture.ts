@@ -1,7 +1,7 @@
 import * as tf from '@tensorflow/tfjs';
 import { systemLogger } from '../logging/systemLogger';
 
-export const createEnhancedModel = () => {
+export const createEnhancedModel = (optimizer: string = 'adam', learningRate: number = 0.001) => {
   const model = tf.sequential();
 
   // Input layer para features combinadas
@@ -33,8 +33,22 @@ export const createEnhancedModel = () => {
     kernelInitializer: 'glorotNormal'
   }));
 
+  // Configurar otimizador baseado no parâmetro
+  let optimizerInstance;
+  switch (optimizer) {
+    case 'sgd':
+      optimizerInstance = tf.train.sgd(learningRate);
+      break;
+    case 'rmsprop':
+      optimizerInstance = tf.train.rmsprop(learningRate);
+      break;
+    case 'adam':
+    default:
+      optimizerInstance = tf.train.adam(learningRate);
+  }
+
   model.compile({
-    optimizer: tf.train.adam(0.001),
+    optimizer: optimizerInstance,
     loss: 'binaryCrossentropy',
     metrics: ['accuracy']
   });

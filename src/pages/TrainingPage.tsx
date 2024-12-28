@@ -40,7 +40,6 @@ const TrainingPage: React.FC = () => {
     setValidationMetrics
   } = useTrainingState();
 
-  // Novos estados para controles avançados
   const [learningRate, setLearningRate] = React.useState(0.001);
   const [validationSplit, setValidationSplit] = React.useState(0.2);
   const [optimizer, setOptimizer] = React.useState("adam");
@@ -165,7 +164,7 @@ const TrainingPage: React.FC = () => {
         timestamp: new Date().toISOString()
       });
 
-      const model = createEnhancedModel();
+      const model = createEnhancedModel(optimizer, learningRate);
       
       systemLogger.log('training', 'Iniciando extração de features', {
         dataSize: trainingData.length
