@@ -4,21 +4,23 @@ import { systemLogger } from '@/utils/logging/systemLogger';
 const getApiUrl = () => {
   const url = import.meta.env.VITE_API_URL || window.location.origin;
   
-  // First remove any trailing slashes and ports
-  const cleanUrl = url.replace(/\/+$/, '').replace(/:\d+$/, '');
+  // First remove any trailing slashes, colons and ports
+  const cleanUrl = url
+    .replace(/\/+$/, '')  // Remove trailing slashes
+    .replace(/:\/*$/, '') // Remove trailing colons with optional slashes
+    .replace(/:\d+$/, ''); // Remove any existing port
   
   if (cleanUrl.includes('lovableproject.com')) {
     // For lovableproject.com domains, ensure HTTPS and add port 3001
     return cleanUrl
       .replace('http://', 'https://')
-      .replace(/:\d+/, '') // Remove any existing port
       .concat(':3001'); // Add the correct port
   }
   
   // For localhost or other environments
   return cleanUrl.includes('localhost') 
-    ? cleanUrl.replace(/:\d+/, ':3001')  // Replace any port with 3001
-    : `${cleanUrl}:3001`; // Add port 3001
+    ? `${cleanUrl}:3001`  // Add port 3001
+    : cleanUrl; // Keep as is for other environments
 };
 
 export class TensorFlowServices {
@@ -31,7 +33,8 @@ export class TensorFlowServices {
       const testUrl = `${this.API_BASE_URL}/test`;
       systemLogger.log('system', 'Testing API connection', { 
         url: testUrl,
-        baseUrl: this.API_BASE_URL 
+        baseUrl: this.API_BASE_URL,
+        timestamp: new Date().toISOString()
       });
       
       const response = await fetch(testUrl, {
@@ -49,14 +52,16 @@ export class TensorFlowServices {
       const data = await response.json();
       systemLogger.log('system', 'API connection successful', { 
         data,
-        baseUrl: this.API_BASE_URL
+        baseUrl: this.API_BASE_URL,
+        timestamp: new Date().toISOString()
       });
       
       return true;
     } catch (error) {
       systemLogger.error('system', 'Failed to initialize TensorFlow or connect to API', { 
         error,
-        apiUrl: this.API_BASE_URL 
+        apiUrl: this.API_BASE_URL,
+        timestamp: new Date().toISOString()
       });
       return false;
     }
