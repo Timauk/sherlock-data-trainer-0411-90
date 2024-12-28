@@ -102,12 +102,21 @@ const TrainingChart: React.FC<TrainingChartProps> = ({ logs }) => {
     },
     scales: {
       y: {
+        type: 'linear' as const,
+        display: true,
+        position: 'left' as const,
         beginAtZero: true,
         grid: {
-          drawBorder: false
+          display: true,
+          borderDash: [] as number[],
+          drawOnChartArea: true,
+          drawTicks: true,
+          color: 'rgba(0, 0, 0, 0.1)'
         }
       },
       x: {
+        type: 'category' as const,
+        display: true,
         grid: {
           display: false
         }
