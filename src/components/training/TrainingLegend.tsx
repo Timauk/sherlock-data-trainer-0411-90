@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { InfoCircle } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface MetricExplanation {
@@ -46,7 +46,7 @@ const TrainingLegend = () => {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
-                <InfoCircle className="h-4 w-4 text-muted-foreground" />
+                <Info className="h-4 w-4 text-muted-foreground" />
               </TooltipTrigger>
               <TooltipContent>
                 <p>Guia para interpretação das métricas de treinamento</p>

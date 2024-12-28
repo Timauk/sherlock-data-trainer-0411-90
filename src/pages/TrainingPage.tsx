@@ -159,7 +159,6 @@ const TrainingPage: React.FC = () => {
         epochs,
         batchSize,
         learningRate,
-        optimizer,
         validationSplit,
         useEarlyStopping,
         dataSize: trainingData.length,
@@ -203,7 +202,6 @@ const TrainingPage: React.FC = () => {
         epochs: epochs,
         batchSize: parseInt(batchSize),
         validationSplit: validationSplit,
-        optimizer: tf.train[optimizer](learningRate),
         callbacks: [
           ...(useEarlyStopping ? [
             tf.callbacks.earlyStopping({
